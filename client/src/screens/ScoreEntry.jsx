@@ -86,7 +86,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
   };
 
   const addSet = () => {
-    if (sets.length < 3) {
+    if (sets.length < 10) {
       setSets([...sets, { team1Score: '', team2Score: '' }]);
     }
   };
@@ -417,7 +417,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
               </div>
             ))}
 
-            {sets.length < 3 && (
+            {sets.length < 10 && (
               <Button variant="ghost" size="sm" onClick={addSet}>
                 + Добавить сет
               </Button>

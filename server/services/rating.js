@@ -36,7 +36,7 @@ function calculateSetModifiers(sets) {
 
   if (hasBlowout) multiplier *= config.RATING.BLOWOUT_MULTIPLIER;
   if (hasTight) multiplier *= config.RATING.TIGHT_MULTIPLIER;
-  if (sets.length === 3) multiplier *= config.RATING.THREE_SET_MULTIPLIER;
+  if (sets.length >= 3) multiplier *= config.RATING.THREE_SET_MULTIPLIER;
 
   return multiplier;
 }

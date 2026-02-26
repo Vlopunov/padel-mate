@@ -541,8 +541,8 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
     const matchId = parseInt(req.params.id);
     const { sets, teams } = req.body;
 
-    if (!sets || !Array.isArray(sets) || sets.length < 1 || sets.length > 3) {
-      return res.status(400).json({ error: "Укажите от 1 до 3 сетов" });
+    if (!sets || !Array.isArray(sets) || sets.length < 1 || sets.length > 10) {
+      return res.status(400).json({ error: "Укажите от 1 до 10 сетов" });
     }
 
     if (!teams || !Array.isArray(teams) || teams.length !== 4) {
