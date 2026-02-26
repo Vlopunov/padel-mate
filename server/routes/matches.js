@@ -46,6 +46,93 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+// Create past match (already played) — skips RECRUITING, goes straight to FULL
+router.post("/past", authMiddleware, async (req, res) => {
+  try {
+    const { venueId, date, durationMin, playerIds, matchType, notes } = req.body;
+
+    if (!venueId || !date || !durationMin) {
+      return res.status(400).json({ error: "Заполните обязательные поля" });
+    }
+
+    if (!playerIds || !Array.isArray(playerIds) || playerIds.length !== 3) {
+      return res.status(400).json({ error: "Укажите 3 других игроков" });
+    }
+
+    // All 4 players: creator + 3 selected
+    const allPlayerIds = [req.userId, ...playerIds.map((id) => parseInt(id))];
+    const uniqueIds = new Set(allPlayerIds);
+    if (uniqueIds.size !== 4) {
+      return res.status(400).json({ error: "Все 4 игрока должны быть разными" });
+    }
+
+    // Verify all players exist
+    const players = await prisma.user.findMany({
+      where: { id: { in: allPlayerIds } },
+      select: { id: true, firstName: true },
+    });
+    if (players.length !== 4) {
+      return res.status(400).json({ error: "Один или несколько игроков не найдены" });
+    }
+
+    // Create match in FULL status with all 4 players approved
+    const match = await prisma.match.create({
+      data: {
+        creatorId: req.userId,
+        venueId: parseInt(venueId),
+        date: new Date(date),
+        durationMin: parseInt(durationMin),
+        levelMin: 1.0,
+        levelMax: 4.0,
+        courtBooked: false,
+        matchType: matchType || "RATED",
+        notes: notes || null,
+        status: "FULL",
+        players: {
+          create: allPlayerIds.map((id, idx) => ({
+            userId: id,
+            team: idx < 2 ? 1 : 2, // temporary, will be reassigned during score entry
+            status: "APPROVED",
+          })),
+        },
+      },
+      include: {
+        venue: true,
+        players: {
+          include: {
+            user: {
+              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, telegramId: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Notify other players about the recorded match
+    const dateStr = new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+    const creator = players.find((p) => p.id === req.userId);
+    for (const mp of match.players) {
+      if (mp.userId !== req.userId && mp.user.telegramId) {
+        try {
+          const text =
+            `📝 <b>${creator.firstName}</b> записал сыгранный матч.\n` +
+            `📅 ${dateStr}\n` +
+            `📍 ${match.venue?.name || "—"}\n\n` +
+            `Ожидайте записи счёта и подтвердите результат.`;
+          await sendTelegramMessage(mp.user.telegramId.toString(), text);
+        } catch (notifErr) {
+          console.error("Past match notification error:", notifErr);
+        }
+      }
+    }
+
+    res.json(match);
+  } catch (err) {
+    console.error("Create past match error:", err);
+    res.status(500).json({ error: "Ошибка создания матча" });
+  }
+});
+
 // List matches
 router.get("/", authMiddleware, async (req, res) => {
   try {

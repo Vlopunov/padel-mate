@@ -69,6 +69,7 @@ export const api = {
     },
     getById: (id) => api.fetch(`/matches/${id}`),
     create: (data) => api.fetch('/matches', { method: 'POST', body: JSON.stringify(data) }),
+    createPast: (data) => api.fetch('/matches/past', { method: 'POST', body: JSON.stringify(data) }),
     join: (id) => api.fetch(`/matches/${id}/join`, { method: 'POST' }),
     leave: (id) => api.fetch(`/matches/${id}/leave`, { method: 'POST' }),
     delete: (id) => api.fetch(`/matches/${id}`, { method: 'DELETE' }),
