@@ -113,6 +113,10 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
       alert('Заполните все поля');
       return;
     }
+    if (new Date(pastForm.date) > new Date()) {
+      alert('Дата сыгранного матча не может быть в будущем');
+      return;
+    }
     setStep('pastPlayers');
     setSelectedPlayers([]);
     setSearchQuery('');
@@ -439,6 +443,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
               type="datetime-local"
               value={pastForm.date}
               onChange={(v) => setPastForm({ ...pastForm, date: v })}
+              max={(() => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); })()}
             />
 
             <Select

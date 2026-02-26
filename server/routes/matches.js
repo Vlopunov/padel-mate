@@ -60,6 +60,11 @@ router.post("/past", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Заполните обязательные поля" });
     }
 
+    // Past match date must be in the past
+    if (new Date(date) > new Date()) {
+      return res.status(400).json({ error: "Дата сыгранного матча не может быть в будущем" });
+    }
+
     if (!playerIds || !Array.isArray(playerIds) || playerIds.length !== 3) {
       return res.status(400).json({ error: "Укажите 3 других игроков" });
     }
