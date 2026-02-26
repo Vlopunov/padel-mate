@@ -33,6 +33,33 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: require("./config/app").APP_NAME });
 });
 
+// One-time admin setup (protected by BOT_TOKEN)
+app.post("/api/setup-admin", async (req, res) => {
+  const { PrismaClient } = require("@prisma/client");
+  const prisma = new PrismaClient();
+  try {
+    const { telegramId, secret } = req.body;
+    if (!secret || secret !== process.env.BOT_TOKEN) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const user = await prisma.user.upsert({
+      where: { telegramId: BigInt(telegramId) },
+      update: { isAdmin: true },
+      create: {
+        telegramId: BigInt(telegramId),
+        firstName: "Admin",
+        city: "MINSK",
+        isAdmin: true,
+        onboarded: false,
+      },
+    });
+    res.json({ ok: true, userId: user.id, isAdmin: user.isAdmin });
+  } catch (err) {
+    console.error("Setup admin error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve built client (if dist exists)
 const clientDist = path.join(__dirname, "../client/dist");
 console.log("NODE_ENV:", process.env.NODE_ENV);
