@@ -132,4 +132,12 @@ app.listen(PORT, () => {
       console.error("Bot start error:", err);
     }
   }
+
+  // Start match reminder scheduler
+  try {
+    const { startReminderScheduler } = require("./services/reminders");
+    startReminderScheduler();
+  } catch (err) {
+    console.error("Reminder scheduler error:", err);
+  }
 });

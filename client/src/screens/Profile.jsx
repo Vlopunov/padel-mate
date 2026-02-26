@@ -154,7 +154,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, marginBottom: 12 }}>Настройки</h4>
 
         <Select
-          label={'\u{1F514} Напоминания'}
+          label={'\u{1F514} Напоминание о матче'}
           value={String(user.reminderMinutes)}
           onChange={(v) => handleUpdate('reminderMinutes', parseInt(v))}
           options={[

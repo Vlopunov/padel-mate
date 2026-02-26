@@ -128,13 +128,14 @@ model Match {
 }
 
 model MatchPlayer {
-  id      Int    @id @default(autoincrement())
-  matchId Int
-  match   Match  @relation(fields: [matchId], references: [id])
-  userId  Int
-  user    User   @relation(fields: [userId], references: [id])
-  team    Int
-  status  String @default("APPROVED")
+  id           Int      @id @default(autoincrement())
+  matchId      Int
+  match        Match    @relation(fields: [matchId], references: [id])
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  team         Int
+  status       String   @default("APPROVED")
+  reminderSent Boolean  @default(false)
 
   @@unique([matchId, userId])
 }

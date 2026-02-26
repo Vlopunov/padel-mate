@@ -67,10 +67,25 @@ async function notifyNewAchievement(telegramId, achievement) {
 }
 
 async function notifyMatchReminder(telegramId, match, minutesBefore) {
+  const matchDate = new Date(match.date);
+  const timeStr = matchDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = matchDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+
+  let timeLabel;
+  if (minutesBefore >= 60) {
+    const hours = Math.floor(minutesBefore / 60);
+    const mins = minutesBefore % 60;
+    timeLabel = mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`;
+  } else {
+    timeLabel = `${minutesBefore} мин`;
+  }
+
   const text =
-    `⏰ <b>Напоминание:</b> через ${minutesBefore} мин у вас матч!\n` +
-    `📍 ${match.venue.name}\n` +
-    `🕐 ${new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}`;
+    `⏰ <b>Напоминание о матче!</b>\n\n` +
+    `Через <b>${timeLabel}</b> у вас матч:\n` +
+    `📍 ${match.venue?.name || "—"}\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `⏱ ${match.durationMin} мин`;
   await sendTelegramMessage(telegramId, text);
 }
 
