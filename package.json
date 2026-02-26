@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd client && npm install && npm run build && cd ../server && DATABASE_URL=postgresql://build:build@localhost:5432/build npm install && cd ../bot && npm install",
+    "build": "cd client && npm install --include=dev && npm run build && cd ../server && DATABASE_URL=postgresql://x:x@x:5432/x npm install --include=dev && cd ../bot && npm install --include=dev",
     "start": "cd server && npx prisma generate && npx prisma db push --accept-data-loss && node index.js",
     "dev": "cd server && node index.js"
   },
