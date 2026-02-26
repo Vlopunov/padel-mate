@@ -4,6 +4,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
+import { Checkbox } from '../components/ui/Checkbox';
 import { api } from '../services/api';
 
 const TOURNAMENT_STATUSES = [
@@ -43,6 +44,50 @@ const FORMAT_LABELS = {
   mixto: 'Микст',
 };
 
+// ─── Match constants ───
+
+const MATCH_STATUS_LABELS = {
+  RECRUITING: 'Набор', FULL: 'Собран', IN_PROGRESS: 'Играют',
+  PENDING_SCORE: 'Счёт', PENDING_CONFIRMATION: 'Подтв.',
+  COMPLETED: 'Завершён', CANCELLED: 'Отменён',
+};
+
+const MATCH_STATUS_COLORS = {
+  RECRUITING: COLORS.accent, FULL: COLORS.purple, IN_PROGRESS: COLORS.warning,
+  PENDING_SCORE: COLORS.warning, PENDING_CONFIRMATION: COLORS.warning,
+  COMPLETED: '#4CAF50', CANCELLED: COLORS.danger,
+};
+
+const MATCH_STATUS_OPTIONS = [
+  { value: 'RECRUITING', label: 'Набор' },
+  { value: 'FULL', label: 'Собран' },
+  { value: 'PENDING_CONFIRMATION', label: 'Подтверждение' },
+  { value: 'COMPLETED', label: 'Завершён' },
+  { value: 'CANCELLED', label: 'Отменён' },
+];
+
+const PLAYER_STATUS_COLORS = {
+  APPROVED: '#4CAF50',
+  PENDING: COLORS.warning,
+  INVITED: COLORS.purple,
+};
+
+const PLAYER_STATUS_LABELS = {
+  APPROVED: 'Принят',
+  PENDING: 'Заявка',
+  INVITED: 'Приглашён',
+};
+
+// Multi-court venues (same as CreateMatch)
+const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk'];
+
+// Generate time slots every 30 min from 06:00 to 23:30
+const TIME_SLOTS = [];
+for (let h = 6; h <= 23; h++) {
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:00`, label: `${String(h).padStart(2, '0')}:00` });
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${String(h).padStart(2, '0')}:30` });
+}
+
 export function Admin({ onBack }) {
   const [tab, setTab] = useState('stats');
   const [stats, setStats] = useState(null);
@@ -53,6 +98,11 @@ export function Admin({ onBack }) {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
   const [newRating, setNewRating] = useState('');
+
+  // Match state
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const [showMatchEditForm, setShowMatchEditForm] = useState(false);
+  const [matchFilter, setMatchFilter] = useState('all');
 
   // Tournament create/edit state
   const [showTournamentForm, setShowTournamentForm] = useState(false);
@@ -68,7 +118,7 @@ export function Admin({ onBack }) {
     loadData();
   }, [tab]);
 
-  // Load venues for tournament form
+  // Load venues for forms
   useEffect(() => {
     api.venues.list().then(setVenues).catch(console.error);
   }, []);
@@ -132,7 +182,34 @@ export function Admin({ onBack }) {
     if (!confirm(`Удалить матч #${matchId}?`)) return;
     try {
       await api.admin.deleteMatch(matchId);
+      setSelectedMatch(null);
       loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleUpdateMatch(matchId, data) {
+    try {
+      const updated = await api.admin.updateMatch(matchId, data);
+      // Update in matches list
+      setMatches((prev) => prev.map((m) => (m.id === matchId ? updated : m)));
+      setSelectedMatch(updated);
+      return updated;
+    } catch (err) {
+      alert(err.message || 'Ошибка обновления');
+    }
+  }
+
+  async function handleRemovePlayer(matchId, userId) {
+    if (!confirm('Удалить игрока из матча?')) return;
+    try {
+      await api.admin.removePlayer(matchId, userId);
+      // Reload match data
+      const data = await api.admin.matches();
+      setMatches(data);
+      const updated = data.find((m) => m.id === matchId);
+      if (updated) setSelectedMatch(updated);
     } catch (err) {
       alert(err.message);
     }
@@ -208,7 +285,6 @@ export function Admin({ onBack }) {
     if (!confirm('Удалить регистрацию?')) return;
     try {
       await api.admin.deleteRegistration(tournamentId, regId);
-      // Refresh tournament detail
       const data = await api.admin.tournaments();
       setTournaments(data);
       const updated = data.find((t) => t.id === selectedTournament?.id);
@@ -230,23 +306,23 @@ export function Admin({ onBack }) {
     }
   }
 
-  const STATUS_LABELS = {
-    RECRUITING: 'Набор', FULL: 'Собран', IN_PROGRESS: 'Играют',
-    PENDING_SCORE: 'Счёт', PENDING_CONFIRMATION: 'Подтв.',
-    COMPLETED: 'Завершён', CANCELLED: 'Отменён',
-  };
-
-  const STATUS_COLORS = {
-    RECRUITING: COLORS.accent, FULL: COLORS.purple,
-    COMPLETED: '#4CAF50', CANCELLED: COLORS.danger,
-  };
-
   const levelOptions = [];
   for (let l = 1.0; l <= 4.0; l += 0.5) {
     levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
   }
 
   const filteredVenues = venues.filter((v) => v.city === tForm.city);
+
+  // Match filter logic
+  const filteredMatches = matchFilter === 'all'
+    ? matches
+    : matches.filter((m) => {
+        if (matchFilter === 'active') return ['RECRUITING', 'FULL'].includes(m.status);
+        if (matchFilter === 'completed') return m.status === 'COMPLETED';
+        if (matchFilter === 'cancelled') return m.status === 'CANCELLED';
+        if (matchFilter === 'pending') return ['PENDING_SCORE', 'PENDING_CONFIRMATION'].includes(m.status);
+        return true;
+      });
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -281,7 +357,13 @@ export function Admin({ onBack }) {
         ].map((t) => (
           <button
             key={t.key}
-            onClick={() => { setTab(t.key); setSelectedTournament(null); setShowTournamentForm(false); }}
+            onClick={() => {
+              setTab(t.key);
+              setSelectedTournament(null);
+              setShowTournamentForm(false);
+              setSelectedMatch(null);
+              setShowMatchEditForm(false);
+            }}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 12, border: 'none',
               fontSize: 12, fontWeight: 600, cursor: 'pointer',
@@ -405,21 +487,57 @@ export function Admin({ onBack }) {
         </div>
       )}
 
-      {/* Matches */}
-      {!loading && tab === 'matches' && (
+      {/* ─── Matches ─── */}
+      {!loading && tab === 'matches' && !selectedMatch && !showMatchEditForm && (
         <div>
-          <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 12 }}>
-            {'\uD83C\uDFBE'} Последние 50 матчей
+          {/* Filter tabs */}
+          <div style={{
+            display: 'flex', gap: 4, marginBottom: 14, overflowX: 'auto',
+            WebkitOverflowScrolling: 'touch', paddingBottom: 2,
+          }}>
+            {[
+              { key: 'all', label: 'Все' },
+              { key: 'active', label: 'Активные' },
+              { key: 'pending', label: 'Подтв.' },
+              { key: 'completed', label: 'Заверш.' },
+              { key: 'cancelled', label: 'Отмен.' },
+            ].map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setMatchFilter(f.key)}
+                style={{
+                  padding: '6px 14px', borderRadius: 10, border: 'none', whiteSpace: 'nowrap',
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  background: matchFilter === f.key ? COLORS.accent : COLORS.surface,
+                  color: matchFilter === f.key ? '#000' : COLORS.textDim,
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
-          {matches.length === 0 && (
+
+          <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 12 }}>
+            {'\uD83C\uDFBE'} {filteredMatches.length} {matchFilter === 'all' ? `из ${matches.length}` : ''} матчей
+          </div>
+
+          {filteredMatches.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: COLORS.textDim }}>Матчей пока нет</div>
           )}
-          {matches.map((m) => {
-            const statusColor = STATUS_COLORS[m.status] || COLORS.textDim;
-            const statusLabel = STATUS_LABELS[m.status] || m.status;
+
+          {filteredMatches.map((m) => {
+            const statusColor = MATCH_STATUS_COLORS[m.status] || COLORS.textDim;
+            const statusLabel = MATCH_STATUS_LABELS[m.status] || m.status;
             const date = new Date(m.date);
+            const approvedPlayers = m.players?.filter((p) => p.status === 'APPROVED') || [];
+            const endTime = new Date(date.getTime() + m.durationMin * 60000);
+
             return (
-              <Card key={m.id} style={{ marginBottom: 10, padding: 14 }}>
+              <Card
+                key={m.id}
+                style={{ marginBottom: 10, padding: 14, cursor: 'pointer' }}
+                onClick={() => setSelectedMatch(m)}
+              >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>#{m.id}</span>
@@ -427,6 +545,8 @@ export function Admin({ onBack }) {
                       {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
                       {' '}
                       {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      {' \u2014 '}
+                      {endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <span style={{
@@ -436,28 +556,57 @@ export function Admin({ onBack }) {
                     {statusLabel}
                   </span>
                 </div>
-                <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 4 }}>
-                  {'\uD83D\uDCCD'} {m.venue?.name || '—'}
+
+                <div style={{ display: 'flex', gap: 10, fontSize: 12, color: COLORS.textDim, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span>{'\uD83D\uDCCD'} {m.venue?.name || '\u2014'}</span>
+                  <span>{m.matchType === 'RATED' ? '\uD83C\uDFC6' : '\uD83D\uDE0A'} {m.matchType === 'RATED' ? 'Рейтинг' : 'Друж.'}</span>
+                  <span>Ур. {m.levelMin}\u2014{m.levelMax}</span>
                 </div>
-                {m.players?.length > 0 && (
-                  <div style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 8 }}>
-                    {'\uD83D\uDC65'} {m.players.map((p) => p.user.firstName).join(', ')}
-                  </div>
-                )}
-                <button
-                  onClick={() => handleDeleteMatch(m.id)}
-                  style={{
-                    padding: '6px 12px', borderRadius: 8, border: `1px solid ${COLORS.danger}30`,
-                    background: 'transparent', color: COLORS.danger,
-                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  {'\uD83D\uDDD1\uFE0F'} Удалить
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <span style={{ color: COLORS.textDim }}>
+                    {'\uD83D\uDC65'} {approvedPlayers.length}/4
+                  </span>
+                  <span style={{ color: COLORS.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {approvedPlayers.map((p) => p.user.firstName).join(', ') || '\u2014'}
+                  </span>
+                  {m.sets?.length > 0 && (
+                    <span style={{ color: COLORS.accent, fontWeight: 700, flexShrink: 0 }}>
+                      {m.sets.map((s) => `${s.team1Score}:${s.team2Score}`).join(' ')}
+                    </span>
+                  )}
+                  <span style={{ color: COLORS.textDim, fontSize: 16 }}>{'\u203A'}</span>
+                </div>
               </Card>
             );
           })}
         </div>
+      )}
+
+      {/* Match Detail */}
+      {!loading && tab === 'matches' && selectedMatch && !showMatchEditForm && (
+        <MatchDetail
+          match={selectedMatch}
+          venues={venues}
+          onBack={() => setSelectedMatch(null)}
+          onEdit={() => setShowMatchEditForm(true)}
+          onDelete={() => handleDeleteMatch(selectedMatch.id)}
+          onChangeStatus={(status) => handleUpdateMatch(selectedMatch.id, { status })}
+          onRemovePlayer={(userId) => handleRemovePlayer(selectedMatch.id, userId)}
+        />
+      )}
+
+      {/* Match Edit Form */}
+      {!loading && tab === 'matches' && showMatchEditForm && selectedMatch && (
+        <MatchEditForm
+          match={selectedMatch}
+          venues={venues}
+          onBack={() => setShowMatchEditForm(false)}
+          onSave={async (data) => {
+            const updated = await handleUpdateMatch(selectedMatch.id, data);
+            if (updated) setShowMatchEditForm(false);
+          }}
+        />
       )}
 
       {/* Tournaments */}
@@ -504,13 +653,13 @@ export function Admin({ onBack }) {
 
                 <div style={{ display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span>{'\uD83D\uDCC5'} {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  <span>{'\uD83D\uDCCD'} {t.venue?.name || '—'}</span>
+                  <span>{'\uD83D\uDCCD'} {t.venue?.name || '\u2014'}</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim }}>
                   <span>{'\uD83D\uDC65'} {t.teamsRegistered}/{t.maxTeams} пар</span>
                   <span>{'\uD83C\uDFBE'} {FORMAT_LABELS[t.format] || t.format}</span>
-                  <span>Ур. {t.levelMin}—{t.levelMax}</span>
+                  <span>Ур. {t.levelMin}\u2014{t.levelMax}</span>
                   {t.price && <span>{'\uD83D\uDCB0'} {t.price}</span>}
                 </div>
               </Card>
@@ -749,6 +898,559 @@ export function Admin({ onBack }) {
   );
 }
 
+// ─── Match Detail View ───
+
+function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, onRemovePlayer }) {
+  const m = match;
+  const date = new Date(m.date);
+  const endTime = new Date(date.getTime() + m.durationMin * 60000);
+  const statusColor = MATCH_STATUS_COLORS[m.status] || COLORS.textDim;
+  const statusLabel = MATCH_STATUS_LABELS[m.status] || m.status;
+
+  const team1 = m.players?.filter((p) => p.team === 1 && p.status === 'APPROVED') || [];
+  const team2 = m.players?.filter((p) => p.team === 2 && p.status === 'APPROVED') || [];
+  const pending = m.players?.filter((p) => p.status === 'PENDING') || [];
+  const invited = m.players?.filter((p) => p.status === 'INVITED') || [];
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+            borderRadius: 10, width: 32, height: 32, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            color: COLORS.textDim, fontSize: 16,
+          }}
+        >
+          {'\u2190'}
+        </button>
+        <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, flex: 1 }}>
+          Матч #{m.id}
+        </span>
+        <span style={{
+          fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 8,
+          background: `${statusColor}20`, color: statusColor,
+        }}>
+          {statusLabel}
+        </span>
+      </div>
+
+      {/* Info */}
+      <Card style={{ marginBottom: 12, padding: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <InfoRow icon={'\uD83D\uDCC5'} label="Дата" value={date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
+          <InfoRow
+            icon={'\uD83D\uDD52'}
+            label="Время"
+            value={`${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} \u2014 ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} (${m.durationMin} мин)`}
+          />
+          <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={m.venue?.name || '\u2014'} />
+          {m.courtBooked && (
+            <InfoRow icon={'\u2705'} label="Корт" value={m.courtNumber ? `#${m.courtNumber} (забронирован)` : 'Забронирован'} />
+          )}
+          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${m.levelMin} \u2014 ${m.levelMax}`} />
+          <InfoRow icon={'\uD83C\uDFC6'} label="Тип" value={m.matchType === 'RATED' ? 'Рейтинговый' : 'Дружеский'} />
+          <InfoRow icon={'\uD83D\uDC64'} label="Создатель" value={m.creator ? `${m.creator.firstName} ${m.creator.lastName || ''} (${m.creator.rating})` : `ID: ${m.creatorId}`} />
+          {m.notes && <InfoRow icon={'\uD83D\uDCDD'} label="Заметки" value={m.notes} />}
+          <InfoRow icon={'\uD83D\uDD50'} label="Создан" value={new Date(m.createdAt).toLocaleString('ru-RU')} />
+        </div>
+      </Card>
+
+      {/* Status control */}
+      <Card style={{ marginBottom: 12, padding: 14 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Изменить статус</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {['RECRUITING', 'FULL', 'PENDING_CONFIRMATION', 'COMPLETED', 'CANCELLED'].map((s) => {
+            const active = m.status === s;
+            const clr = MATCH_STATUS_COLORS[s] || COLORS.textDim;
+            return (
+              <button
+                key={s}
+                onClick={() => !active && onChangeStatus(s)}
+                style={{
+                  padding: '6px 12px', borderRadius: 10, border: 'none',
+                  background: active ? `${clr}30` : COLORS.surface,
+                  color: active ? clr : COLORS.textDim,
+                  fontSize: 11, fontWeight: 600, cursor: active ? 'default' : 'pointer',
+                  opacity: active ? 1 : 0.8,
+                }}
+              >
+                {MATCH_STATUS_LABELS[s]}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Players */}
+      <Card style={{ marginBottom: 12, padding: 14 }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+          {'\uD83D\uDC65'} Игроки ({m.players?.length || 0})
+        </p>
+
+        {/* Team 1 */}
+        {team1.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.accent, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Команда 1
+            </p>
+            {team1.map((p) => (
+              <PlayerRow key={p.id} player={p} onRemove={() => onRemovePlayer(p.user.id)} isCreator={p.user.id === m.creatorId} />
+            ))}
+          </div>
+        )}
+
+        {/* Team 2 */}
+        {team2.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.purple, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Команда 2
+            </p>
+            {team2.map((p) => (
+              <PlayerRow key={p.id} player={p} onRemove={() => onRemovePlayer(p.user.id)} isCreator={p.user.id === m.creatorId} />
+            ))}
+          </div>
+        )}
+
+        {/* Pending */}
+        {pending.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.warning, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Ожидают одобрения
+            </p>
+            {pending.map((p) => (
+              <PlayerRow key={p.id} player={p} onRemove={() => onRemovePlayer(p.user.id)} />
+            ))}
+          </div>
+        )}
+
+        {/* Invited */}
+        {invited.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.purple, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Приглашены
+            </p>
+            {invited.map((p) => (
+              <PlayerRow key={p.id} player={p} onRemove={() => onRemovePlayer(p.user.id)} />
+            ))}
+          </div>
+        )}
+
+        {(!m.players || m.players.length === 0) && (
+          <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>
+            Нет игроков
+          </p>
+        )}
+      </Card>
+
+      {/* Score */}
+      {m.sets && m.sets.length > 0 && (
+        <Card style={{ marginBottom: 12, padding: 14 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+            {'\uD83D\uDCCB'} Счёт
+          </p>
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 0,
+            background: COLORS.surface, borderRadius: 12, overflow: 'hidden',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, color: COLORS.accent, textAlign: 'center' }}>
+              Команда 1
+            </div>
+            <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, color: COLORS.textDim, textAlign: 'center' }}>
+              Сет
+            </div>
+            <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 700, color: COLORS.purple, textAlign: 'center' }}>
+              Команда 2
+            </div>
+
+            {m.sets.map((s) => {
+              const t1Won = s.team1Score > s.team2Score;
+              return (
+                <React.Fragment key={s.setNumber}>
+                  <div style={{
+                    padding: '8px 12px', fontSize: 18, fontWeight: 700, textAlign: 'center',
+                    color: t1Won ? COLORS.accent : COLORS.text,
+                    borderTop: `1px solid ${COLORS.border}`,
+                  }}>
+                    {s.team1Score}
+                    {s.team1Tiebreak != null && (
+                      <sup style={{ fontSize: 10, color: COLORS.textDim }}>{s.team1Tiebreak}</sup>
+                    )}
+                  </div>
+                  <div style={{
+                    padding: '8px 12px', fontSize: 12, color: COLORS.textDim, textAlign: 'center',
+                    borderTop: `1px solid ${COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {s.setNumber}
+                  </div>
+                  <div style={{
+                    padding: '8px 12px', fontSize: 18, fontWeight: 700, textAlign: 'center',
+                    color: !t1Won ? COLORS.purple : COLORS.text,
+                    borderTop: `1px solid ${COLORS.border}`,
+                  }}>
+                    {s.team2Score}
+                    {s.team2Tiebreak != null && (
+                      <sup style={{ fontSize: 10, color: COLORS.textDim }}>{s.team2Tiebreak}</sup>
+                    )}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {m.scoreSubmittedAt && (
+            <p style={{ fontSize: 11, color: COLORS.textDim, marginTop: 8 }}>
+              Счёт записан: {new Date(m.scoreSubmittedAt).toLocaleString('ru-RU')}
+            </p>
+          )}
+        </Card>
+      )}
+
+      {/* Confirmations */}
+      {m.confirmations && m.confirmations.length > 0 && (
+        <Card style={{ marginBottom: 12, padding: 14 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+            {'\u2705'} Подтверждения ({m.confirmations.length})
+          </p>
+          {m.confirmations.map((c) => (
+            <div key={c.id} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 10px', borderRadius: 8, background: COLORS.surface, marginBottom: 4,
+            }}>
+              <span style={{ fontSize: 14 }}>{c.confirmed ? '\u2705' : '\u23F3'}</span>
+              <span style={{ fontSize: 13, color: COLORS.text }}>{c.user?.firstName || `ID: ${c.userId}`}</span>
+              <span style={{ fontSize: 11, color: COLORS.textDim, marginLeft: 'auto' }}>
+                {new Date(c.createdAt).toLocaleString('ru-RU')}
+              </span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Comments */}
+      {m.comments && m.comments.length > 0 && (
+        <Card style={{ marginBottom: 12, padding: 14 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+            {'\uD83D\uDCAC'} Комментарии ({m.comments.length})
+          </p>
+          {m.comments.map((c) => (
+            <div key={c.id} style={{
+              padding: '8px 10px', borderRadius: 10, background: COLORS.surface, marginBottom: 6,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent }}>
+                  {c.user?.firstName || 'Пользователь'}
+                </span>
+                <span style={{ fontSize: 10, color: COLORS.textDim }}>
+                  {new Date(c.createdAt).toLocaleString('ru-RU')}
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: COLORS.text, margin: 0, lineHeight: 1.4 }}>{c.text}</p>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button
+          onClick={onEdit}
+          style={{
+            flex: 1, padding: '12px 0', borderRadius: 14, border: `1px solid ${COLORS.border}`,
+            background: 'transparent', color: COLORS.text,
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {'\u270F\uFE0F'} Редактировать
+        </button>
+        <button
+          onClick={onDelete}
+          style={{
+            padding: '12px 20px', borderRadius: 14, border: `1px solid ${COLORS.danger}30`,
+            background: 'transparent', color: COLORS.danger,
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          {'\uD83D\uDDD1\uFE0F'} Удалить
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Player Row (for MatchDetail) ───
+
+function PlayerRow({ player, onRemove, isCreator }) {
+  const u = player.user;
+  const statusColor = PLAYER_STATUS_COLORS[player.status] || COLORS.textDim;
+  const statusLabel = PLAYER_STATUS_LABELS[player.status] || player.status;
+  const level = getLevel(u.rating);
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '8px 10px', borderRadius: 10, background: COLORS.surface, marginBottom: 4,
+    }}>
+      {/* Avatar */}
+      {u.photoUrl ? (
+        <img
+          src={u.photoUrl}
+          alt=""
+          style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }}
+        />
+      ) : (
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%', background: `${COLORS.accent}20`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700, color: COLORS.accent,
+        }}>
+          {u.firstName?.[0] || '?'}
+        </div>
+      )}
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>
+            {u.firstName} {u.lastName || ''}
+          </span>
+          {isCreator && (
+            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4, background: `${COLORS.accent}20`, color: COLORS.accent }}>
+              ORG
+            </span>
+          )}
+          <span style={{
+            fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 4,
+            background: `${statusColor}20`, color: statusColor,
+          }}>
+            {statusLabel}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, fontSize: 11, color: COLORS.textDim, marginTop: 2 }}>
+          <span>{u.rating}</span>
+          {level && <span>{level.name}</span>}
+          {u.username && <span>@{u.username}</span>}
+        </div>
+      </div>
+
+      {/* Remove button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        style={{
+          padding: '4px 8px', borderRadius: 6, border: `1px solid ${COLORS.danger}30`,
+          background: 'transparent', color: COLORS.danger,
+          fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+        }}
+      >
+        {'\u274C'}
+      </button>
+    </div>
+  );
+}
+
+// ─── Match Edit Form ───
+
+function MatchEditForm({ match, venues, onBack, onSave }) {
+  const m = match;
+  const d = new Date(m.date);
+  const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+  const [form, setForm] = useState({
+    date: dateStr,
+    time: timeStr,
+    durationMin: String(m.durationMin),
+    venueId: String(m.venueId),
+    courtBooked: m.courtBooked,
+    courtNumber: m.courtNumber ? String(m.courtNumber) : '',
+    levelMin: String(m.levelMin),
+    levelMax: String(m.levelMax),
+    matchType: m.matchType,
+    notes: m.notes || '',
+    status: m.status,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const selectedVenue = venues.find((v) => String(v.id) === form.venueId);
+  const isMultiCourt = selectedVenue && MULTI_COURT_VENUES.includes(selectedVenue.name);
+  const showCourtNumber = form.courtBooked && isMultiCourt;
+
+  const courtOptions = selectedVenue
+    ? Array.from({ length: selectedVenue.courts || 1 }, (_, i) => ({
+        value: String(i + 1),
+        label: `Корт ${i + 1}`,
+      }))
+    : [];
+
+  const levelOptions = [];
+  for (let l = 1.0; l <= 4.0; l += 0.5) {
+    levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
+  }
+
+  async function handleSave() {
+    if (!form.date || !form.time || !form.venueId) {
+      alert('Заполните дату, время и площадку');
+      return;
+    }
+    setSaving(true);
+    const dateTime = new Date(`${form.date}T${form.time}`);
+    await onSave({
+      venueId: parseInt(form.venueId),
+      date: dateTime.toISOString(),
+      durationMin: parseInt(form.durationMin),
+      levelMin: parseFloat(form.levelMin),
+      levelMax: parseFloat(form.levelMax),
+      courtBooked: form.courtBooked,
+      courtNumber: showCourtNumber && form.courtNumber ? parseInt(form.courtNumber) : null,
+      matchType: form.matchType,
+      notes: form.notes || null,
+      status: form.status,
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+            borderRadius: 10, width: 32, height: 32, display: 'flex',
+            alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+            color: COLORS.textDim, fontSize: 16,
+          }}
+        >
+          {'\u2190'}
+        </button>
+        <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text }}>
+          {'\u270F\uFE0F'} Редактирование матча #{m.id}
+        </span>
+      </div>
+
+      {/* Date & Time */}
+      <Card style={{ marginBottom: 12 }}>
+        <Input
+          label={'\uD83D\uDCC5 Дата'}
+          type="date"
+          value={form.date}
+          onChange={(v) => setForm({ ...form, date: v })}
+        />
+        <Select
+          label={'\uD83D\uDD52 Время начала'}
+          value={form.time}
+          onChange={(v) => setForm({ ...form, time: v })}
+          options={TIME_SLOTS}
+        />
+        <Select
+          label={'\u23F1\uFE0F Длительность'}
+          value={form.durationMin}
+          onChange={(v) => setForm({ ...form, durationMin: v })}
+          options={[
+            { value: '60', label: '1 час' },
+            { value: '90', label: '1.5 часа' },
+            { value: '120', label: '2 часа' },
+            { value: '150', label: '2.5 часа' },
+            { value: '180', label: '3 часа' },
+          ]}
+        />
+      </Card>
+
+      {/* Venue & Court */}
+      <Card style={{ marginBottom: 12 }}>
+        <Select
+          label={'\uD83D\uDCCD Площадка'}
+          value={form.venueId}
+          onChange={(v) => { setForm({ ...form, venueId: v, courtNumber: '' }); }}
+          options={venues.map((v) => ({ value: String(v.id), label: v.name }))}
+        />
+        <Checkbox
+          checked={form.courtBooked}
+          onChange={(v) => { setForm({ ...form, courtBooked: v, courtNumber: v ? form.courtNumber : '' }); }}
+          label="Корт забронирован"
+        />
+        {showCourtNumber && (
+          <Select
+            label="Номер корта"
+            value={form.courtNumber}
+            onChange={(v) => setForm({ ...form, courtNumber: v })}
+            placeholder="Выберите корт"
+            options={courtOptions}
+          />
+        )}
+      </Card>
+
+      {/* Level & Type */}
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Select
+            label="Уровень от"
+            value={form.levelMin}
+            onChange={(v) => setForm({ ...form, levelMin: v })}
+            options={levelOptions}
+            style={{ flex: 1 }}
+          />
+          <Select
+            label="Уровень до"
+            value={form.levelMax}
+            onChange={(v) => setForm({ ...form, levelMax: v })}
+            options={levelOptions}
+            style={{ flex: 1 }}
+          />
+        </div>
+
+        <Select
+          label="Тип матча"
+          value={form.matchType}
+          onChange={(v) => setForm({ ...form, matchType: v })}
+          options={[
+            { value: 'RATED', label: '\uD83C\uDFC6 Рейтинговый' },
+            { value: 'FRIENDLY', label: '\uD83D\uDE0A Дружеский' },
+          ]}
+        />
+      </Card>
+
+      {/* Status */}
+      <Card style={{ marginBottom: 12 }}>
+        <Select
+          label="Статус матча"
+          value={form.status}
+          onChange={(v) => setForm({ ...form, status: v })}
+          options={MATCH_STATUS_OPTIONS}
+        />
+      </Card>
+
+      {/* Notes */}
+      <Card style={{ marginBottom: 20 }}>
+        <Textarea
+          label="Комментарий"
+          value={form.notes}
+          onChange={(v) => setForm({ ...form, notes: v })}
+          placeholder="Дополнительная информация..."
+          rows={2}
+        />
+      </Card>
+
+      <button
+        onClick={handleSave}
+        disabled={saving || !form.date || !form.time || !form.venueId}
+        style={{
+          width: '100%', padding: '14px 0', borderRadius: 14, border: 'none',
+          background: !saving && form.date && form.time && form.venueId ? COLORS.accent : COLORS.border,
+          color: !saving && form.date && form.time && form.venueId ? '#000' : COLORS.textDim,
+          fontSize: 15, fontWeight: 700, cursor: 'pointer',
+        }}
+      >
+        {saving ? 'Сохранение...' : '\u2705 Сохранить'}
+      </button>
+    </div>
+  );
+}
+
 // ─── Tournament Detail View ───
 
 function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, onChangeStatus }) {
@@ -794,9 +1496,9 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
           {t.endDate && (
             <InfoRow icon={'\uD83D\uDCC5'} label="До" value={new Date(t.endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
           )}
-          <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={t.venue?.name || '—'} />
+          <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={t.venue?.name || '\u2014'} />
           <InfoRow icon={'\uD83C\uDFBE'} label="Формат" value={FORMAT_LABELS[t.format] || t.format} />
-          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${t.levelMin} — ${t.levelMax}`} />
+          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${t.levelMin} \u2014 ${t.levelMax}`} />
           <InfoRow icon={'\uD83D\uDC65'} label="Пар" value={`${t.teamsRegistered}/${t.maxTeams}`} />
           {t.price && <InfoRow icon={'\uD83D\uDCB0'} label="Цена" value={t.price} />}
           {t.ratingMultiplier !== 1.0 && <InfoRow icon={'\u2B50'} label="Множитель" value={`x${t.ratingMultiplier}`} />}

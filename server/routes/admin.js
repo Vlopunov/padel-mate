@@ -96,16 +96,33 @@ router.delete("/users/:id", authMiddleware, adminMiddleware, async (req, res) =>
   }
 });
 
-// List all matches
+// List all matches (extended data)
 router.get("/matches", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const matches = await prisma.match.findMany({
       include: {
         venue: true,
-        players: { include: { user: { select: { id: true, firstName: true, rating: true } } } },
+        creator: { select: { id: true, firstName: true, lastName: true, username: true, rating: true } },
+        players: {
+          include: {
+            user: { select: { id: true, firstName: true, lastName: true, username: true, rating: true, photoUrl: true } },
+          },
+        },
+        sets: { orderBy: { setNumber: "asc" } },
+        confirmations: {
+          include: {
+            user: { select: { id: true, firstName: true } },
+          },
+        },
+        comments: {
+          include: {
+            user: { select: { id: true, firstName: true, photoUrl: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
       orderBy: { date: "desc" },
-      take: 50,
+      take: 100,
     });
     res.json(matches);
   } catch (err) {
@@ -114,10 +131,88 @@ router.get("/matches", authMiddleware, adminMiddleware, async (req, res) => {
   }
 });
 
+// Update match (admin — no status restrictions)
+router.patch("/matches/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const { venueId, date, durationMin, levelMin, levelMax, courtBooked, courtNumber, matchType, notes, status } = req.body;
+    const data = {};
+    if (venueId !== undefined) data.venueId = parseInt(venueId);
+    if (date !== undefined) data.date = new Date(date);
+    if (durationMin !== undefined) data.durationMin = parseInt(durationMin);
+    if (levelMin !== undefined) data.levelMin = parseFloat(levelMin);
+    if (levelMax !== undefined) data.levelMax = parseFloat(levelMax);
+    if (courtBooked !== undefined) data.courtBooked = courtBooked;
+    if (courtNumber !== undefined) data.courtNumber = courtNumber ? parseInt(courtNumber) : null;
+    if (matchType !== undefined) data.matchType = matchType;
+    if (notes !== undefined) data.notes = notes || null;
+    if (status !== undefined) data.status = status;
+
+    const updated = await prisma.match.update({
+      where: { id: matchId },
+      data,
+      include: {
+        venue: true,
+        creator: { select: { id: true, firstName: true, lastName: true, username: true, rating: true } },
+        players: {
+          include: {
+            user: { select: { id: true, firstName: true, lastName: true, username: true, rating: true, photoUrl: true } },
+          },
+        },
+        sets: { orderBy: { setNumber: "asc" } },
+        confirmations: {
+          include: {
+            user: { select: { id: true, firstName: true } },
+          },
+        },
+        comments: {
+          include: {
+            user: { select: { id: true, firstName: true, photoUrl: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Admin update match error:", err);
+    res.status(500).json({ error: "Ошибка обновления матча" });
+  }
+});
+
+// Remove player from match (admin)
+router.delete("/matches/:id/remove-player/:userId", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const userId = parseInt(req.params.userId);
+
+    // Delete player record
+    await prisma.matchPlayer.deleteMany({ where: { matchId, userId } });
+    // Delete score confirmation if exists
+    await prisma.scoreConfirmation.deleteMany({ where: { matchId, userId } });
+
+    // Check remaining approved players — revert to RECRUITING if < 4
+    const approvedCount = await prisma.matchPlayer.count({
+      where: { matchId, status: "APPROVED" },
+    });
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (match && match.status === "FULL" && approvedCount < 4) {
+      await prisma.match.update({ where: { id: matchId }, data: { status: "RECRUITING" } });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Admin remove player error:", err);
+    res.status(500).json({ error: "Ошибка удаления игрока" });
+  }
+});
+
 // Delete match (admin)
 router.delete("/matches/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
+    await prisma.matchComment.deleteMany({ where: { matchId } });
     await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
     await prisma.matchSet.deleteMany({ where: { matchId } });
     await prisma.matchPlayer.deleteMany({ where: { matchId } });
