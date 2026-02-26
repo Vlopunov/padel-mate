@@ -63,6 +63,9 @@ router.post("/onboard", authMiddleware, async (req, res) => {
       source = "survey";
     }
 
+    // Clamp rating to valid range
+    rating = Math.max(500, Math.min(5000, rating));
+
     const user = await prisma.user.update({
       where: { id: req.userId },
       data: {

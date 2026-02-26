@@ -106,20 +106,25 @@ function convertExternalRating(system, value) {
   const num = parseFloat(value);
   if (isNaN(num)) return 1200;
 
+  let rating = 1200;
+
   if (system === "raceto") {
-    if (num <= 2) return 1000;
-    if (num <= 3) return 1000 + (num - 2) * 400;
-    if (num <= 4) return 1400 + (num - 3) * 400;
-    return 1800 + (num - 4) * 400;
+    const clamped = Math.max(1, Math.min(8, num));
+    if (clamped <= 2) rating = 1000;
+    else if (clamped <= 3) rating = 1000 + (clamped - 2) * 400;
+    else if (clamped <= 4) rating = 1400 + (clamped - 3) * 400;
+    else rating = 1800 + (clamped - 4) * 400;
+  } else if (system === "playtomic") {
+    const clamped = Math.max(1, Math.min(8, num));
+    if (clamped <= 2) rating = 1000;
+    else if (clamped <= 3) rating = 1000 + (clamped - 2) * 400;
+    else rating = 1400 + (clamped - 3) * 400;
+  } else {
+    rating = Math.round(num);
   }
 
-  if (system === "playtomic") {
-    if (num <= 2) return 1000;
-    if (num <= 3) return 1000 + (num - 2) * 400;
-    return 1400 + (num - 3) * 400;
-  }
-
-  return Math.max(800, Math.min(2400, Math.round(num)));
+  // Clamp final rating to 500–5000
+  return Math.max(500, Math.min(5000, rating));
 }
 
 module.exports = {

@@ -58,8 +58,22 @@ export function Onboarding({ onComplete }) {
     if (city) setStep(2);
   };
 
+  const getRatingLimits = () => {
+    if (ratingSystem === 'raceto') return { min: 1, max: 8, step: '0.1', placeholder: 'От 1 до 8 (напр. 3.5)' };
+    if (ratingSystem === 'playtomic') return { min: 1, max: 8, step: '0.1', placeholder: 'От 1 до 8 (напр. 4.0)' };
+    return { min: 500, max: 5000, step: '1', placeholder: 'От 500 до 5000' };
+  };
+
+  const isRatingValid = () => {
+    if (!ratingSystem || !ratingValue) return false;
+    const num = parseFloat(ratingValue);
+    if (isNaN(num)) return false;
+    const limits = getRatingLimits();
+    return num >= limits.min && num <= limits.max;
+  };
+
   const handleExternalRating = () => {
-    if (ratingSystem && ratingValue) {
+    if (isRatingValid()) {
       finishOnboarding('external');
     }
   };
@@ -189,7 +203,7 @@ export function Onboarding({ onComplete }) {
             <Select
               label="Система"
               value={ratingSystem}
-              onChange={setRatingSystem}
+              onChange={(v) => { setRatingSystem(v); setRatingValue(''); }}
               placeholder="Выберите систему"
               options={[
                 { value: 'raceto', label: 'Raceto' },
@@ -198,20 +212,35 @@ export function Onboarding({ onComplete }) {
               ]}
             />
 
-            <Input
-              label="Рейтинг"
-              value={ratingValue}
-              onChange={setRatingValue}
-              placeholder="Например: 3.5"
-              type="number"
-            />
+            {(() => {
+              const limits = getRatingLimits();
+              return (
+                <>
+                  <Input
+                    label="Рейтинг"
+                    value={ratingValue}
+                    onChange={setRatingValue}
+                    placeholder={limits.placeholder}
+                    type="number"
+                    min={limits.min}
+                    max={limits.max}
+                    step={limits.step}
+                  />
+                  {ratingValue && !isRatingValid() && (
+                    <p style={{ color: COLORS.danger, fontSize: 13, marginTop: 4 }}>
+                      Введите значение от {limits.min} до {limits.max}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
-            <Button variant="ghost" onClick={() => setHasExternalRating(null)} style={{ flex: 1 }}>
+            <Button variant="ghost" onClick={() => { setHasExternalRating(null); setRatingValue(''); }} style={{ flex: 1 }}>
               Назад
             </Button>
-            <Button onClick={handleExternalRating} disabled={!ratingSystem || !ratingValue} style={{ flex: 2 }}>
+            <Button onClick={handleExternalRating} disabled={!isRatingValid()} style={{ flex: 2 }}>
               Продолжить
             </Button>
           </div>
