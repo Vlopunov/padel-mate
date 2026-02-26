@@ -190,7 +190,6 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               <div style={{ display: 'flex', gap: 12 }}>
                 {/* Team 1 */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4, fontWeight: 600 }}>Команда 1</div>
                   {team1.map((p) => (
                     <PlayerRow key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
                   ))}
@@ -202,7 +201,6 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 <div style={{ display: 'flex', alignItems: 'center', color: COLORS.textMuted, fontSize: 12, fontWeight: 700 }}>vs</div>
                 {/* Team 2 */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: COLORS.textMuted, marginBottom: 4, fontWeight: 600 }}>Команда 2</div>
                   {team2.map((p) => (
                     <PlayerRow key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
                   ))}
