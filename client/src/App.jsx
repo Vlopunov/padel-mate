@@ -55,7 +55,14 @@ export default function App() {
       }
 
       if (!authData) {
-        setError('Откройте приложение через Telegram');
+        // Debug info for troubleshooting
+        const tgAvailable = !!window.Telegram;
+        const webAppAvailable = !!window.Telegram?.WebApp;
+        const initDataValue = window.Telegram?.WebApp?.initData;
+        const version = window.Telegram?.WebApp?.version;
+        const platform = window.Telegram?.WebApp?.platform;
+        console.log('Auth debug:', { tgAvailable, webAppAvailable, initDataValue: initDataValue?.substring(0, 50), version, platform });
+        setError(`Откройте приложение через Telegram\n\nDebug: TG=${tgAvailable}, WebApp=${webAppAvailable}, initData=${!!initDataValue}, v=${version}, platform=${platform}`);
         setState('error');
         return;
       }
@@ -147,7 +154,7 @@ export default function App() {
         <div style={{ textAlign: 'center', padding: 20 }}>
           <span style={{ fontSize: 48, display: 'block', marginBottom: 16 }}>{'\u26A0\uFE0F'}</span>
           <p style={{ color: COLORS.danger, fontSize: 16, fontWeight: 600 }}>Ошибка</p>
-          <p style={{ color: COLORS.textDim, fontSize: 14, marginTop: 8 }}>{error}</p>
+          <p style={{ color: COLORS.textDim, fontSize: 14, marginTop: 8, whiteSpace: 'pre-line' }}>{error}</p>
         </div>
       </div>
     );
