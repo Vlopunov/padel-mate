@@ -185,30 +185,14 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               {match.venue?.name}
             </p>
 
-            {/* Players by team (approved only) */}
+            {/* Players (approved only) */}
             <div style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', gap: 12 }}>
-                {/* Team 1 */}
-                <div style={{ flex: 1 }}>
-                  {team1.map((p) => (
-                    <PlayerRow key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
-                  ))}
-                  {team1.length < 2 && Array.from({ length: 2 - team1.length }).map((_, i) => (
-                    <EmptySlot key={`e1-${i}`} />
-                  ))}
-                </div>
-                {/* VS divider */}
-                <div style={{ display: 'flex', alignItems: 'center', color: COLORS.textMuted, fontSize: 12, fontWeight: 700 }}>vs</div>
-                {/* Team 2 */}
-                <div style={{ flex: 1 }}>
-                  {team2.map((p) => (
-                    <PlayerRow key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
-                  ))}
-                  {team2.length < 2 && Array.from({ length: 2 - team2.length }).map((_, i) => (
-                    <EmptySlot key={`e2-${i}`} />
-                  ))}
-                </div>
-              </div>
+              {[...team1, ...team2].map((p) => (
+                <PlayerRow key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
+              ))}
+              {approved.length < 4 && Array.from({ length: 4 - approved.length }).map((_, i) => (
+                <EmptySlot key={`e-${i}`} />
+              ))}
             </div>
 
             {/* Pending players (visible to creator) */}
