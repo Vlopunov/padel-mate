@@ -255,6 +255,14 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </div>
               <div style={{ fontSize: 16, color: COLORS.accent, fontWeight: 600, marginTop: 2 }}>
                 {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                {match.durationMin > 0 && (() => {
+                  const endDate = new Date(date.getTime() + match.durationMin * 60000);
+                  return (
+                    <span style={{ color: COLORS.textDim, fontWeight: 500 }}>
+                      {' — '}{endDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -761,6 +769,11 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 </span>
                 <span style={{ fontSize: 14, color: COLORS.accent, fontWeight: 600 }}>
                   {date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  {match.durationMin > 0 && (
+                    <span style={{ color: COLORS.textDim, fontWeight: 500 }}>
+                      {' — '}{new Date(date.getTime() + match.durationMin * 60000).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  )}
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
