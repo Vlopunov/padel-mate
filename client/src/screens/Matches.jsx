@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { COLORS, getLevel, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -11,6 +11,104 @@ import { Select } from '../components/ui/Select';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 import { useTelegram } from '../hooks/useTelegram';
+
+// Countdown timer component
+function CountdownTimer({ targetDate, compact = false }) {
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  useEffect(() => {
+    function update() {
+      const now = Date.now();
+      const target = new Date(targetDate).getTime();
+      const diff = target - now;
+      if (diff <= 0) {
+        setTimeLeft(null);
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      setTimeLeft({ days, hours, minutes, seconds, total: diff });
+    }
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate]);
+
+  if (!timeLeft) return null;
+
+  // Compact version for list cards
+  if (compact) {
+    let text;
+    if (timeLeft.days > 0) {
+      text = `${timeLeft.days}д ${timeLeft.hours}ч`;
+    } else if (timeLeft.hours > 0) {
+      text = `${timeLeft.hours}ч ${timeLeft.minutes}м`;
+    } else {
+      text = `${timeLeft.minutes}м ${timeLeft.seconds}с`;
+    }
+    const isUrgent = timeLeft.total < 60 * 60 * 1000; // less than 1 hour
+    return (
+      <span style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: isUrgent ? COLORS.warning : COLORS.accent,
+      }}>
+        {'\u23F0'} {text}
+      </span>
+    );
+  }
+
+  // Full version for detail view
+  const isUrgent = timeLeft.total < 60 * 60 * 1000;
+  const bgColor = isUrgent ? `${COLORS.warning}15` : `${COLORS.accent}10`;
+  const borderColor = isUrgent ? `${COLORS.warning}40` : `${COLORS.accent}30`;
+  const textColor = isUrgent ? COLORS.warning : COLORS.accent;
+
+  const TimeBlock = ({ value, label }) => (
+    <div style={{ textAlign: 'center', minWidth: 48 }}>
+      <div style={{
+        fontSize: 24, fontWeight: 800, color: textColor,
+        lineHeight: 1,
+      }}>
+        {String(value).padStart(2, '0')}
+      </div>
+      <div style={{ fontSize: 10, color: COLORS.textDim, marginTop: 2 }}>{label}</div>
+    </div>
+  );
+
+  const Separator = () => (
+    <span style={{ fontSize: 20, fontWeight: 800, color: textColor, opacity: 0.5, alignSelf: 'flex-start', marginTop: 1 }}>:</span>
+  );
+
+  return (
+    <div style={{
+      background: bgColor,
+      border: `1px solid ${borderColor}`,
+      borderRadius: 14,
+      padding: '12px 16px',
+      marginBottom: 12,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: textColor, marginBottom: 8, textAlign: 'center' }}>
+        {'\u23F0'} {isUrgent ? 'Скоро начало!' : 'До начала матча'}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 6 }}>
+        {timeLeft.days > 0 && (
+          <>
+            <TimeBlock value={timeLeft.days} label="дн" />
+            <Separator />
+          </>
+        )}
+        <TimeBlock value={timeLeft.hours} label="час" />
+        <Separator />
+        <TimeBlock value={timeLeft.minutes} label="мин" />
+        <Separator />
+        <TimeBlock value={timeLeft.seconds} label="сек" />
+      </div>
+    </div>
+  );
+}
 
 export function Matches({ user, onNavigate, highlightMatchId }) {
   const { openTelegramLink } = useTelegram();
@@ -303,6 +401,11 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             )}
           </div>
         </Card>
+
+        {/* Countdown timer — show if user is in match and match is in the future */}
+        {isInMatch && !isPending && !isInvited && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
+          <CountdownTimer targetDate={match.date} />
+        )}
 
         {/* Players card */}
         <Card style={{ marginBottom: 12 }}>
@@ -852,7 +955,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               )}
             </div>
 
-            {/* Bottom row: level + type + indicator */}
+            {/* Bottom row: level + type + indicator + countdown */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
               {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
@@ -862,7 +965,12 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               {match.status === 'COMPLETED' && (
                 <Badge variant="success" style={{ marginLeft: match.status === 'PENDING_CONFIRMATION' ? 4 : 'auto' }}>{'\u2705'} Завершён</Badge>
               )}
-              {myPlayer && !['PENDING_CONFIRMATION', 'COMPLETED'].includes(match.status) && (
+              {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
+                <span style={{ marginLeft: 'auto' }}>
+                  <CountdownTimer targetDate={match.date} compact />
+                </span>
+              )}
+              {myPlayer && !['PENDING_CONFIRMATION', 'COMPLETED'].includes(match.status) && !(myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date()) && (
                 <span style={{ fontSize: 11, color: myPlayer.status === 'INVITED' ? COLORS.purple : COLORS.accent, marginLeft: 'auto', fontWeight: 600 }}>
                   {myPlayer.status === 'PENDING' ? '\u23F3 Заявка' : myPlayer.status === 'INVITED' ? '\uD83D\uDCE9 Приглашение' : '\u2705 Вы в матче'}
                 </span>
