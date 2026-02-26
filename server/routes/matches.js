@@ -101,29 +101,38 @@ router.post("/past", authMiddleware, async (req, res) => {
         players: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, telegramId: true },
+              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true },
             },
           },
         },
       },
     });
 
-    // Notify other players about the recorded match
-    const dateStr = new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-    const creator = players.find((p) => p.id === req.userId);
-    for (const mp of match.players) {
-      if (mp.userId !== req.userId && mp.user.telegramId) {
-        try {
-          const text =
-            `📝 <b>${creator.firstName}</b> записал сыгранный матч.\n` +
-            `📅 ${dateStr}\n` +
-            `📍 ${match.venue?.name || "—"}\n\n` +
-            `Ожидайте записи счёта и подтвердите результат.`;
-          await sendTelegramMessage(mp.user.telegramId.toString(), text);
-        } catch (notifErr) {
-          console.error("Past match notification error:", notifErr);
+    // Notify other players about the recorded match (fetch telegramIds separately to avoid BigInt serialization)
+    try {
+      const dateStr = new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+      const creator = players.find((p) => p.id === req.userId);
+      const otherPlayerIds = allPlayerIds.filter((id) => id !== req.userId);
+      const otherUsers = await prisma.user.findMany({
+        where: { id: { in: otherPlayerIds } },
+        select: { id: true, telegramId: true },
+      });
+      for (const u of otherUsers) {
+        if (u.telegramId) {
+          try {
+            const text =
+              `📝 <b>${creator.firstName}</b> записал сыгранный матч.\n` +
+              `📅 ${dateStr}\n` +
+              `📍 ${match.venue?.name || "—"}\n\n` +
+              `Ожидайте записи счёта и подтвердите результат.`;
+            await sendTelegramMessage(u.telegramId.toString(), text);
+          } catch (notifErr) {
+            console.error("Past match notification error:", notifErr);
+          }
         }
       }
+    } catch (notifErr) {
+      console.error("Past match notifications error:", notifErr);
     }
 
     res.json(match);
