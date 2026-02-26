@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum City {
+  MINSK
+  BREST
+  GRODNO
+}
+
+enum Hand {
+  RIGHT
+  LEFT
+}
+
+enum Position {
+  DERECHA
+  REVES
+  BOTH
+}
+
+enum TimeSlot {
+  MORNING
+  AFTERNOON
+  EVENING
+  ANY
+}
+
+enum MatchType {
+  RATED
+  FRIENDLY
+}
+
+enum MatchStatus {
+  RECRUITING
+  FULL
+  IN_PROGRESS
+  PENDING_SCORE
+  PENDING_CONFIRMATION
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentStatus {
+  UPCOMING
+  REGISTRATION
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  telegramId      BigInt    @unique
+  username        String?
+  firstName       String
+  lastName        String?
+  photoUrl        String?
+  city            City
+  hand            Hand?
+  position        Position?
+  preferredTime   TimeSlot  @default(ANY)
+  rating          Int       @default(1200)
+  ratingSource    String?
+  matchesPlayed   Int       @default(0)
+  wins            Int       @default(0)
+  losses          Int       @default(0)
+  winStreak       Int       @default(0)
+  maxWinStreak    Int       @default(0)
+  isVisible       Boolean   @default(true)
+  reminderMinutes Int       @default(120)
+  xp              Int       @default(0)
+  onboarded       Boolean   @default(false)
+  isAdmin         Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  matchPlayers    MatchPlayer[]
+  ratingHistory   RatingHistory[]
+  createdMatches  Match[]              @relation("MatchCreator")
+  scoreConfirms   ScoreConfirmation[]
+  achievements    UserAchievement[]
+  tournamentRegs1 TournamentRegistration[] @relation("TournamentPlayer1")
+  tournamentRegs2 TournamentRegistration[] @relation("TournamentPlayer2")
+}
+
+model Venue {
+  id          Int     @id @default(autoincrement())
+  name        String
+  address     String
+  city        City
+  courts      Int     @default(1)
+  phone       String?
+  website     String?
+  matches     Match[]
+  tournaments Tournament[]
+}
+
+model Match {
+  id            Int         @id @default(autoincrement())
+  creatorId     Int
+  creator       User        @relation("MatchCreator", fields: [creatorId], references: [id])
+  venueId       Int
+  venue         Venue       @relation(fields: [venueId], references: [id])
+  date          DateTime
+  durationMin   Int
+  levelMin      Float
+  levelMax      Float
+  courtBooked   Boolean     @default(false)
+  matchType     MatchType   @default(RATED)
+  status        MatchStatus @default(RECRUITING)
+  notes         String?
+  tournamentId  Int?
+  createdAt     DateTime    @default(now())
+
+  players       MatchPlayer[]
+  sets          MatchSet[]
+  confirmations ScoreConfirmation[]
+}
+
+model MatchPlayer {
+  id      Int    @id @default(autoincrement())
+  matchId Int
+  match   Match  @relation(fields: [matchId], references: [id])
+  userId  Int
+  user    User   @relation(fields: [userId], references: [id])
+  team    Int
+  status  String @default("APPROVED")
+
+  @@unique([matchId, userId])
+}
+
+model MatchSet {
+  id         Int   @id @default(autoincrement())
+  matchId    Int
+  match      Match @relation(fields: [matchId], references: [id])
+  setNumber  Int
+  team1Score Int
+  team2Score Int
+
+  @@unique([matchId, setNumber])
+}
+
+model ScoreConfirmation {
+  id        Int      @id @default(autoincrement())
+  matchId   Int
+  match     Match    @relation(fields: [matchId], references: [id])
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  confirmed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([matchId, userId])
+}
+
+model RatingHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  oldRating Int
+  newRating Int
+  change    Int
+  reason    String
+  matchId   Int?
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Achievement {
+  id          String  @id
+  name        String
+  description String
+  icon        String
+  category    String
+  xp          Int
+  condition   Json
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  user          User        @relation(fields: [userId], references: [id])
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+model Tournament {
+  id               Int              @id @default(autoincrement())
+  name             String
+  description      String
+  date             DateTime
+  endDate          DateTime?
+  city             City
+  venueId          Int
+  venue            Venue            @relation(fields: [venueId], references: [id])
+  format           String
+  levelMin         Float
+  levelMax         Float
+  maxTeams         Int
+  price            String?
+  ratingMultiplier Float            @default(1.0)
+  status           TournamentStatus @default(REGISTRATION)
+  prizes           Json?
+  createdAt        DateTime         @default(now())
+
+  registrations TournamentRegistration[]
+}
+
+model TournamentRegistration {
+  id           Int        @id @default(autoincrement())
+  tournamentId Int
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  player1Id    Int
+  player1      User       @relation("TournamentPlayer1", fields: [player1Id], references: [id])
+  player2Id    Int
+  player2      User       @relation("TournamentPlayer2", fields: [player2Id], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([tournamentId, player1Id])
+}
