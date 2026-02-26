@@ -51,9 +51,12 @@ export const api = {
     updateRating: (data) => api.fetch('/users/me/rating', { method: 'PATCH', body: JSON.stringify(data) }),
     getById: (id) => api.fetch(`/users/${id}`),
     getStats: (id) => api.fetch(`/users/${id}/stats`),
-    search: (q, city) => {
-      const params = new URLSearchParams({ q });
+    search: (q, { city, ratingMin, ratingMax } = {}) => {
+      const params = new URLSearchParams();
+      if (q) params.set('q', q);
       if (city) params.set('city', city);
+      if (ratingMin) params.set('ratingMin', ratingMin);
+      if (ratingMax) params.set('ratingMax', ratingMax);
       return api.fetch(`/users/search?${params.toString()}`);
     },
   },

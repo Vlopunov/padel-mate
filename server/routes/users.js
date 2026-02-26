@@ -155,22 +155,33 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
   }
 });
 
-// Search users (for inviting to matches)
+// Search / list users (for inviting to matches)
 router.get("/search", authMiddleware, async (req, res) => {
   try {
-    const { q, city } = req.query;
-    if (!q || q.length < 1) return res.json([]);
+    const { q, city, ratingMin, ratingMax } = req.query;
 
     const where = {
       onboarded: true,
       isVisible: true,
-      OR: [
+    };
+
+    // Text search (optional — if empty, returns all)
+    if (q && q.trim().length > 0) {
+      where.OR = [
         { firstName: { contains: q, mode: "insensitive" } },
         { lastName: { contains: q, mode: "insensitive" } },
         { username: { contains: q, mode: "insensitive" } },
-      ],
-    };
+      ];
+    }
+
     if (city) where.city = city;
+
+    // Rating range filter
+    if (ratingMin || ratingMax) {
+      where.rating = {};
+      if (ratingMin) where.rating.gte = parseInt(ratingMin);
+      if (ratingMax) where.rating.lte = parseInt(ratingMax);
+    }
 
     const users = await prisma.user.findMany({
       where,
@@ -179,7 +190,7 @@ router.get("/search", authMiddleware, async (req, res) => {
         photoUrl: true, rating: true, city: true,
       },
       orderBy: { rating: "desc" },
-      take: 20,
+      take: 50,
     });
 
     res.json(users);

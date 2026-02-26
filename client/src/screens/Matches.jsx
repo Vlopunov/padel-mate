@@ -26,6 +26,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState('all'); // 'all' | '0-1200' | '1200-1500' | '1500-1800' | '1800+'
   const searchTimer = useRef(null);
 
   // Comments
@@ -166,24 +167,43 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     }
   }
 
-  // Invite player search
+  // Invite player search — loads all users, supports text + rating filter
+  async function loadInviteUsers(q = '', rating = 'all') {
+    setSearchLoading(true);
+    try {
+      const opts = {};
+      if (rating && rating !== 'all') {
+        const [min, max] = rating.split('-');
+        if (min) opts.ratingMin = min;
+        if (max) opts.ratingMax = max;
+      }
+      const results = await api.users.search(q.trim() || '', opts);
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+    setSearchLoading(false);
+  }
+
   function handleSearchInput(q) {
     setSearchQuery(q);
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (!q.trim()) {
-      setSearchResults([]);
-      return;
-    }
-    searchTimer.current = setTimeout(async () => {
-      setSearchLoading(true);
-      try {
-        const results = await api.users.search(q.trim());
-        setSearchResults(results);
-      } catch (err) {
-        console.error('Search error:', err);
-      }
-      setSearchLoading(false);
+    searchTimer.current = setTimeout(() => {
+      loadInviteUsers(q, ratingFilter);
     }, 300);
+  }
+
+  function handleRatingFilter(value) {
+    setRatingFilter(value);
+    loadInviteUsers(searchQuery, value);
+  }
+
+  function openInviteModal() {
+    setShowInviteModal(true);
+    setSearchQuery('');
+    setRatingFilter('all');
+    setSearchResults([]);
+    loadInviteUsers('', 'all');
   }
 
   async function handleAddPlayer(matchId, userId) {
@@ -292,7 +312,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             </div>
             {canInvite && (
               <button
-                onClick={() => { setShowInviteModal(true); setSearchQuery(''); setSearchResults([]); }}
+                onClick={openInviteModal}
                 style={{
                   padding: '5px 12px', borderRadius: 10, border: `1px solid ${COLORS.accent}40`,
                   background: `${COLORS.accent}15`, color: COLORS.accent,
@@ -629,29 +649,53 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               <h3 style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, marginBottom: 4, margin: 0 }}>
                 {'\uD83D\uDC65'} Добавить игрока
               </h3>
-              <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 14, marginTop: 4 }}>
-                Найдите игрока по имени или username
+              <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 12, marginTop: 4 }}>
+                Выберите игрока из списка или найдите по имени
               </p>
 
               <input
                 value={searchQuery}
                 onChange={(e) => handleSearchInput(e.target.value)}
-                placeholder="Поиск игрока..."
+                placeholder="Поиск по имени или username..."
                 autoFocus
                 style={{
                   width: '100%', padding: '10px 14px', borderRadius: 12,
                   border: `1px solid ${COLORS.border}`, background: COLORS.surface,
                   color: COLORS.text, fontSize: 14, fontFamily: 'inherit',
-                  outline: 'none', boxSizing: 'border-box', marginBottom: 12,
+                  outline: 'none', boxSizing: 'border-box', marginBottom: 8,
                 }}
               />
 
+              {/* Rating filter */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: 12, flexWrap: 'wrap' }}>
+                {[
+                  { value: 'all', label: 'Все' },
+                  { value: '0-1200', label: '< 1200' },
+                  { value: '1200-1500', label: '1200–1500' },
+                  { value: '1500-1800', label: '1500–1800' },
+                  { value: '1800-9999', label: '1800+' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleRatingFilter(opt.value)}
+                    style={{
+                      padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                      cursor: 'pointer', border: 'none',
+                      background: ratingFilter === opt.value ? COLORS.accent : COLORS.surface,
+                      color: ratingFilter === opt.value ? '#000' : COLORS.textDim,
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
               <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
                 {searchLoading && (
-                  <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Поиск...</p>
+                  <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Загрузка...</p>
                 )}
 
-                {!searchLoading && searchQuery && filteredResults.length === 0 && (
+                {!searchLoading && filteredResults.length === 0 && (
                   <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>
                     Никого не найдено
                   </p>
