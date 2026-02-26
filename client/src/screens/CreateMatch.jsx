@@ -10,7 +10,7 @@ import { ToggleGroup } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
 // Multi-court venues (show court number picker)
-const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club'];
+const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk'];
 
 // Generate time slots every 30 min from 06:00 to 23:30
 const TIME_SLOTS = [];

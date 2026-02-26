@@ -70,12 +70,12 @@ app.post("/api/seed-venues", async (req, res) => {
       return res.status(403).json({ error: "Forbidden" });
     }
     const venues = [
-      { name: "360 Padel Arena", address: "Минск", city: "MINSK", courts: 4 },
-      { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 1 },
+      { name: "360 Padel Arena", address: "Минск", city: "MINSK", courts: 7 },
+      { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 2 },
       { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", city: "MINSK", courts: 1 },
       { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", city: "MINSK", courts: 1 },
       { name: "Ilo Club", address: "Минск", city: "MINSK", courts: 1 },
-      { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 3 },
+      { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 8 },
     ];
     const results = [];
     for (const v of venues) {
