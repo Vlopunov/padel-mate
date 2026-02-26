@@ -108,5 +108,10 @@ export const api = {
     deleteUser: (id) => api.fetch(`/admin/users/${id}`, { method: 'DELETE' }),
     matches: () => api.fetch('/admin/matches'),
     deleteMatch: (id) => api.fetch(`/admin/matches/${id}`, { method: 'DELETE' }),
+    tournaments: () => api.fetch('/admin/tournaments'),
+    createTournament: (data) => api.fetch('/admin/tournaments', { method: 'POST', body: JSON.stringify(data) }),
+    updateTournament: (id, data) => api.fetch(`/admin/tournaments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteTournament: (id) => api.fetch(`/admin/tournaments/${id}`, { method: 'DELETE' }),
+    deleteRegistration: (tournamentId, regId) => api.fetch(`/admin/tournaments/${tournamentId}/registration/${regId}`, { method: 'DELETE' }),
   },
 };

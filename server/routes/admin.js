@@ -129,4 +129,121 @@ router.delete("/matches/:id", authMiddleware, adminMiddleware, async (req, res) 
   }
 });
 
+// ─── Tournaments ───
+
+// List all tournaments
+router.get("/tournaments", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const tournaments = await prisma.tournament.findMany({
+      include: {
+        venue: true,
+        registrations: {
+          include: {
+            player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
+            player2: { select: { id: true, firstName: true, lastName: true, rating: true } },
+          },
+        },
+      },
+      orderBy: { date: "desc" },
+    });
+    res.json(tournaments.map((t) => ({ ...t, teamsRegistered: t.registrations.length })));
+  } catch (err) {
+    console.error("Admin tournaments error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// Create tournament
+router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status } = req.body;
+
+    if (!name || !date || !city || !venueId || !format || levelMin === undefined || levelMax === undefined || !maxTeams) {
+      return res.status(400).json({ error: "Заполните обязательные поля" });
+    }
+
+    const tournament = await prisma.tournament.create({
+      data: {
+        name,
+        description: description || "",
+        date: new Date(date),
+        endDate: endDate ? new Date(endDate) : null,
+        city,
+        venueId: parseInt(venueId),
+        format,
+        levelMin: parseFloat(levelMin),
+        levelMax: parseFloat(levelMax),
+        maxTeams: parseInt(maxTeams),
+        price: price || null,
+        ratingMultiplier: ratingMultiplier ? parseFloat(ratingMultiplier) : 1.0,
+        status: status || "REGISTRATION",
+      },
+      include: { venue: true },
+    });
+
+    res.json(tournament);
+  } catch (err) {
+    console.error("Admin create tournament error:", err);
+    res.status(500).json({ error: "Ошибка создания турнира" });
+  }
+});
+
+// Update tournament
+router.patch("/tournaments/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status } = req.body;
+
+    const data = {};
+    if (name !== undefined) data.name = name;
+    if (description !== undefined) data.description = description;
+    if (date !== undefined) data.date = new Date(date);
+    if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
+    if (city !== undefined) data.city = city;
+    if (venueId !== undefined) data.venueId = parseInt(venueId);
+    if (format !== undefined) data.format = format;
+    if (levelMin !== undefined) data.levelMin = parseFloat(levelMin);
+    if (levelMax !== undefined) data.levelMax = parseFloat(levelMax);
+    if (maxTeams !== undefined) data.maxTeams = parseInt(maxTeams);
+    if (price !== undefined) data.price = price || null;
+    if (ratingMultiplier !== undefined) data.ratingMultiplier = parseFloat(ratingMultiplier);
+    if (status !== undefined) data.status = status;
+
+    const tournament = await prisma.tournament.update({
+      where: { id },
+      data,
+      include: { venue: true },
+    });
+
+    res.json(tournament);
+  } catch (err) {
+    console.error("Admin update tournament error:", err);
+    res.status(500).json({ error: "Ошибка обновления турнира" });
+  }
+});
+
+// Delete tournament
+router.delete("/tournaments/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await prisma.tournamentRegistration.deleteMany({ where: { tournamentId: id } });
+    await prisma.tournament.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Admin delete tournament error:", err);
+    res.status(500).json({ error: "Ошибка удаления турнира" });
+  }
+});
+
+// Remove registration from tournament
+router.delete("/tournaments/:id/registration/:regId", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    await prisma.tournamentRegistration.delete({ where: { id: parseInt(req.params.regId) } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Admin delete registration error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 module.exports = router;
