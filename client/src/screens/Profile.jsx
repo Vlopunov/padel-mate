@@ -230,8 +230,15 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           value={newRating}
           onChange={setNewRating}
           type="number"
-          placeholder="800 — 2500"
+          placeholder="500 — 5000"
+          min={500}
+          max={5000}
         />
+        {newRating && (parseInt(newRating) < 500 || parseInt(newRating) > 5000) && (
+          <p style={{ color: COLORS.danger, fontSize: 13, marginTop: -8, marginBottom: 8 }}>
+            Допустимый диапазон: 500 — 5000
+          </p>
+        )}
         <Select
           label="Причина"
           value={ratingReason}
@@ -239,6 +246,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           placeholder="Выберите причину"
           options={[
             { value: 'Обновление по Raceto', label: 'Обновление по Raceto' },
+            { value: 'Обновление по Playtomic', label: 'Обновление по Playtomic' },
             { value: 'Коррекция после турнира', label: 'Коррекция после турнира' },
             { value: 'Другое', label: 'Другое' },
           ]}
@@ -246,7 +254,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         <Button
           fullWidth
           onClick={handleRatingEdit}
-          disabled={!newRating || parseInt(newRating) < 800 || parseInt(newRating) > 2500}
+          disabled={!newRating || parseInt(newRating) < 500 || parseInt(newRating) > 5000}
           style={{ marginTop: 8 }}
         >
           Сохранить

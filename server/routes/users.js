@@ -125,8 +125,8 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
   try {
     const { newRating, reason } = req.body;
 
-    if (!newRating || newRating < 800 || newRating > 2500) {
-      return res.status(400).json({ error: "Рейтинг должен быть от 800 до 2500" });
+    if (!newRating || newRating < 500 || newRating > 5000) {
+      return res.status(400).json({ error: "Рейтинг должен быть от 500 до 5000" });
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
