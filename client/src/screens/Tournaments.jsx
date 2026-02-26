@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { COLORS, CITIES } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { Avatar } from '../components/ui/Avatar';
 import { Header } from '../components/ui/Header';
 import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
@@ -14,6 +16,15 @@ export function Tournaments({ user }) {
   const [loading, setLoading] = useState(true);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [showDetail, setShowDetail] = useState(false);
+
+  // Partner selection
+  const [showPartnerModal, setShowPartnerModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [ratingFilter, setRatingFilter] = useState('all');
+  const [registering, setRegistering] = useState(false);
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     loadTournaments();
@@ -40,16 +51,106 @@ export function Tournaments({ user }) {
     }
   };
 
-  const handleRegister = async () => {
-    // In a real app, we'd show a partner selection UI
-    alert('Для записи выберите партнёра. Эта функция будет доступна в следующей версии.');
-  };
+  // Refresh detail after registration change
+  async function refreshDetail(tournamentId) {
+    try {
+      const detail = await api.tournaments.getById(tournamentId);
+      setSelectedTournament(detail);
+    } catch (err) {
+      console.error('Refresh detail error:', err);
+    }
+    loadTournaments();
+  }
+
+  // Partner search
+  async function loadPartnerUsers(q = '', rating = 'all') {
+    setSearchLoading(true);
+    try {
+      const opts = {};
+      if (rating && rating !== 'all') {
+        const [min, max] = rating.split('-');
+        if (min) opts.ratingMin = min;
+        if (max) opts.ratingMax = max;
+      }
+      const results = await api.users.search(q.trim() || '', opts);
+      setSearchResults(results);
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+    setSearchLoading(false);
+  }
+
+  function handleSearchInput(q) {
+    setSearchQuery(q);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      loadPartnerUsers(q, ratingFilter);
+    }, 300);
+  }
+
+  function handleRatingFilter(value) {
+    setRatingFilter(value);
+    loadPartnerUsers(searchQuery, value);
+  }
+
+  function openPartnerModal() {
+    setShowPartnerModal(true);
+    setSearchQuery('');
+    setRatingFilter('all');
+    setSearchResults([]);
+    loadPartnerUsers('', 'all');
+  }
+
+  async function handleRegister(partnerId) {
+    if (!selectedTournament) return;
+    setRegistering(true);
+    try {
+      await api.tournaments.register(selectedTournament.id, partnerId);
+      setShowPartnerModal(false);
+      await refreshDetail(selectedTournament.id);
+    } catch (err) {
+      alert(err.message);
+    }
+    setRegistering(false);
+  }
+
+  async function handleUnregister() {
+    if (!selectedTournament) return;
+    if (!confirm('Отменить запись на турнир?')) return;
+    try {
+      await api.tournaments.unregister(selectedTournament.id);
+      await refreshDetail(selectedTournament.id);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // Check if user is registered in the selected tournament
+  const myRegistration = selectedTournament?.registrations?.find(
+    (r) => r.player1?.id === user?.id || r.player2?.id === user?.id
+  );
+
+  // Filter out already-registered players from search results
+  const registeredPlayerIds = new Set();
+  selectedTournament?.registrations?.forEach((r) => {
+    if (r.player1Id) registeredPlayerIds.add(r.player1Id);
+    if (r.player2Id) registeredPlayerIds.add(r.player2Id);
+    if (r.player1?.id) registeredPlayerIds.add(r.player1.id);
+    if (r.player2?.id) registeredPlayerIds.add(r.player2.id);
+  });
+  const filteredResults = searchResults.filter(
+    (u) => u.id !== user?.id && !registeredPlayerIds.has(u.id)
+  );
 
   const formatMap = {
     americano: 'Americano',
     round_robin: 'Round Robin',
     round_robin_playoff: 'Round Robin + Playoff',
   };
+
+  const isFull = selectedTournament
+    ? (selectedTournament.teamsRegistered || selectedTournament.registrations?.length || 0) >= selectedTournament.maxTeams
+    : false;
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -121,9 +222,11 @@ export function Tournaments({ user }) {
       >
         {selectedTournament && (
           <div>
-            <p style={{ fontSize: 14, color: COLORS.text, marginBottom: 12, lineHeight: 1.5 }}>
-              {selectedTournament.description}
-            </p>
+            {selectedTournament.description && (
+              <p style={{ fontSize: 14, color: COLORS.text, marginBottom: 12, lineHeight: 1.5 }}>
+                {selectedTournament.description}
+              </p>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -131,27 +234,43 @@ export function Tournaments({ user }) {
                 <span style={{ color: COLORS.text, fontSize: 13 }}>{selectedTournament.venue?.name}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: COLORS.textDim, fontSize: 13 }}>Дата</span>
+                <span style={{ color: COLORS.text, fontSize: 13 }}>
+                  {new Date(selectedTournament.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: COLORS.textDim, fontSize: 13 }}>Формат</span>
                 <span style={{ color: COLORS.text, fontSize: 13 }}>{formatMap[selectedTournament.format] || selectedTournament.format}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: COLORS.textDim, fontSize: 13 }}>Команд</span>
-                <span style={{ color: COLORS.text, fontSize: 13 }}>{selectedTournament.teamsRegistered}/{selectedTournament.maxTeams}</span>
+                <span style={{ color: COLORS.text, fontSize: 13 }}>
+                  {selectedTournament.registrations?.length || 0}/{selectedTournament.maxTeams}
+                </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: COLORS.textDim, fontSize: 13 }}>Бонус рейтинга</span>
-                <span style={{ color: COLORS.purple, fontSize: 13, fontWeight: 600 }}>{'\u00D7'}{selectedTournament.ratingMultiplier}</span>
-              </div>
+              {selectedTournament.ratingMultiplier > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: COLORS.textDim, fontSize: 13 }}>Бонус рейтинга</span>
+                  <span style={{ color: COLORS.purple, fontSize: 13, fontWeight: 600 }}>{'\u00D7'}{selectedTournament.ratingMultiplier}</span>
+                </div>
+              )}
               {selectedTournament.price && (
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: COLORS.textDim, fontSize: 13 }}>Стоимость</span>
                   <span style={{ color: COLORS.warning, fontSize: 13, fontWeight: 600 }}>{selectedTournament.price}</span>
                 </div>
               )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: COLORS.textDim, fontSize: 13 }}>Уровень</span>
+                <span style={{ color: COLORS.accent, fontSize: 13, fontWeight: 600 }}>
+                  {selectedTournament.levelMin} — {selectedTournament.levelMax}
+                </span>
+              </div>
             </div>
 
             {/* Prizes */}
-            {selectedTournament.prizes && Array.isArray(selectedTournament.prizes) && (
+            {selectedTournament.prizes && Array.isArray(selectedTournament.prizes) && selectedTournament.prizes.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Призы</p>
                 {selectedTournament.prizes.map((prize, idx) => (
@@ -160,28 +279,215 @@ export function Tournaments({ user }) {
               </div>
             )}
 
+            {/* My registration status */}
+            {myRegistration && (
+              <Card style={{ marginBottom: 16, borderColor: `${COLORS.accent}44`, padding: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 18 }}>{'\u2705'}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Вы записаны!</span>
+                </div>
+                <p style={{ fontSize: 13, color: COLORS.textDim }}>
+                  Ваша пара: <span style={{ color: COLORS.text, fontWeight: 600 }}>
+                    {myRegistration.player1?.firstName} & {myRegistration.player2?.firstName}
+                  </span>
+                </p>
+                {selectedTournament.status === 'REGISTRATION' && (
+                  <button
+                    onClick={handleUnregister}
+                    style={{
+                      marginTop: 10,
+                      background: 'none',
+                      border: `1px solid ${COLORS.danger}44`,
+                      borderRadius: 10,
+                      padding: '6px 14px',
+                      color: COLORS.danger,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Отменить запись
+                  </button>
+                )}
+              </Card>
+            )}
+
             {/* Registered teams */}
             {selectedTournament.registrations?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Участники</p>
-                {selectedTournament.registrations.map((reg) => (
-                  <div key={reg.id} style={{ display: 'flex', gap: 8, marginBottom: 6, fontSize: 13, color: COLORS.textDim }}>
-                    <span>{reg.player1.firstName} ({reg.player1.rating})</span>
-                    <span>&</span>
-                    <span>{reg.player2.firstName} ({reg.player2.rating})</span>
+                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
+                  Участники ({selectedTournament.registrations.length}/{selectedTournament.maxTeams})
+                </p>
+                {selectedTournament.registrations.map((reg, idx) => (
+                  <div
+                    key={reg.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      marginBottom: 8,
+                      padding: '8px 10px',
+                      background: COLORS.surface,
+                      borderRadius: 10,
+                      border: `1px solid ${COLORS.border}`,
+                    }}
+                  >
+                    <span style={{ fontSize: 13, color: COLORS.textDim, fontWeight: 600, minWidth: 20 }}>
+                      {idx + 1}.
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>
+                          {reg.player1?.firstName}
+                        </span>
+                        <Badge style={{ fontSize: 10 }}>{reg.player1?.rating}</Badge>
+                        <span style={{ color: COLORS.textDim, fontSize: 12 }}>&</span>
+                        <span style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>
+                          {reg.player2?.firstName}
+                        </span>
+                        <Badge style={{ fontSize: 10 }}>{reg.player2?.rating}</Badge>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
-            {selectedTournament.status === 'REGISTRATION' && (
-              <Button variant="purple" fullWidth onClick={handleRegister} size="lg">
-                {'\u{1F3C6}'} Записаться на турнир
-              </Button>
+            {/* Registration button */}
+            {selectedTournament.status === 'REGISTRATION' && !myRegistration && (
+              <div>
+                {isFull ? (
+                  <Button variant="default" fullWidth size="lg" disabled>
+                    Все места заняты
+                  </Button>
+                ) : (
+                  <Button variant="purple" fullWidth onClick={openPartnerModal} size="lg">
+                    {'\u{1F3C6}'} Записаться на турнир
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}
       </Modal>
+
+      {/* Partner selection modal */}
+      {showPartnerModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1100,
+            background: COLORS.bg,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Header */}
+          <div style={{ padding: '16px 16px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <button
+                onClick={() => setShowPartnerModal(false)}
+                style={{
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: 10,
+                  width: 32,
+                  height: 32,
+                  cursor: 'pointer',
+                  color: COLORS.textDim,
+                  fontSize: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {'\u2190'}
+              </button>
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: 0 }}>
+                Выберите партнёра
+              </h3>
+            </div>
+
+            <Input
+              placeholder="Поиск по имени..."
+              value={searchQuery}
+              onChange={handleSearchInput}
+              style={{ marginBottom: 0 }}
+            />
+
+            <div style={{ marginTop: 10, marginBottom: 10 }}>
+              <FilterTabs
+                options={[
+                  { value: 'all', label: 'Все' },
+                  { value: '0-1200', label: '<1200' },
+                  { value: '1200-1500', label: '1200-1500' },
+                  { value: '1500-1800', label: '1500-1800' },
+                  { value: '1800-', label: '1800+' },
+                ]}
+                value={ratingFilter}
+                onChange={handleRatingFilter}
+              />
+            </div>
+          </div>
+
+          {/* Results */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+            {searchLoading && (
+              <p style={{ textAlign: 'center', color: COLORS.textDim, padding: 20 }}>Поиск...</p>
+            )}
+
+            {!searchLoading && filteredResults.length === 0 && (
+              <p style={{ textAlign: 'center', color: COLORS.textDim, padding: 20 }}>
+                Игроки не найдены
+              </p>
+            )}
+
+            {filteredResults.map((u) => (
+              <div
+                key={u.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 12px',
+                  marginBottom: 6,
+                  background: COLORS.card,
+                  borderRadius: 12,
+                  border: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Avatar name={u.firstName} src={u.photoUrl} size={36} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+                    {u.firstName} {u.lastName || ''}
+                  </p>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                    <Badge style={{ fontSize: 10 }}>{u.rating}</Badge>
+                    {u.city && (
+                      <span style={{ fontSize: 11, color: COLORS.textDim }}>
+                        {CITIES.find((c) => c.value === u.city)?.label}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="purple"
+                  size="sm"
+                  onClick={() => handleRegister(u.id)}
+                  disabled={registering}
+                >
+                  Выбрать
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
+const { sendTelegramMessage } = require("../services/notifications");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -13,6 +14,8 @@ router.get("/", authMiddleware, async (req, res) => {
 
     if (status === "registration") where.status = "REGISTRATION";
     else if (status === "completed") where.status = "COMPLETED";
+    else if (status === "upcoming") where.status = "UPCOMING";
+    else if (status === "in_progress") where.status = "IN_PROGRESS";
 
     if (city) where.city = city;
 
@@ -102,15 +105,79 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
         player2Id: parseInt(partnerId),
       },
       include: {
-        player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
-        player2: { select: { id: true, firstName: true, lastName: true, rating: true } },
+        player1: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
+        player2: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
       },
     });
+
+    // Notify partner via Telegram
+    try {
+      const dateStr = new Date(tournament.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+      const text =
+        `🏆 <b>${reg.player1.firstName}</b> записал вас на турнир!\n\n` +
+        `<b>${tournament.name}</b>\n` +
+        `📅 ${dateStr}\n` +
+        `Ваша пара: ${reg.player1.firstName} & ${reg.player2.firstName}`;
+      await sendTelegramMessage(reg.player2.telegramId.toString(), text);
+    } catch (notifErr) {
+      console.error("Tournament registration notification error:", notifErr);
+    }
 
     res.json(reg);
   } catch (err) {
     console.error("Tournament register error:", err);
     res.status(500).json({ error: "Ошибка регистрации на турнир" });
+  }
+});
+
+// Unregister from tournament
+router.delete("/:id/unregister", authMiddleware, async (req, res) => {
+  try {
+    const tournamentId = parseInt(req.params.id);
+
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+    });
+
+    if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
+    if (tournament.status !== "REGISTRATION") {
+      return res.status(400).json({ error: "Регистрация закрыта, отмена невозможна" });
+    }
+
+    // Find registration where user is player1 or player2
+    const reg = await prisma.tournamentRegistration.findFirst({
+      where: {
+        tournamentId,
+        OR: [{ player1Id: req.userId }, { player2Id: req.userId }],
+      },
+      include: {
+        player1: { select: { id: true, firstName: true, telegramId: true } },
+        player2: { select: { id: true, firstName: true, telegramId: true } },
+      },
+    });
+
+    if (!reg) {
+      return res.status(400).json({ error: "Вы не зарегистрированы на этот турнир" });
+    }
+
+    await prisma.tournamentRegistration.delete({ where: { id: reg.id } });
+
+    // Notify partner
+    try {
+      const partnerId = reg.player1Id === req.userId ? reg.player2 : reg.player1;
+      const canceller = reg.player1Id === req.userId ? reg.player1 : reg.player2;
+      const text =
+        `❌ <b>${canceller.firstName}</b> отменил запись на турнир <b>${tournament.name}</b>.\n` +
+        `Вы можете записаться снова с другим партнёром.`;
+      await sendTelegramMessage(partnerId.telegramId.toString(), text);
+    } catch (notifErr) {
+      console.error("Tournament unregister notification error:", notifErr);
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Tournament unregister error:", err);
+    res.status(500).json({ error: "Ошибка отмены регистрации" });
   }
 });
 

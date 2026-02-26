@@ -105,6 +105,7 @@ export const api = {
     },
     getById: (id) => api.fetch(`/tournaments/${id}`),
     register: (id, partnerId) => api.fetch(`/tournaments/${id}/register`, { method: 'POST', body: JSON.stringify({ partnerId }) }),
+    unregister: (id) => api.fetch(`/tournaments/${id}/unregister`, { method: 'DELETE' }),
   },
 
   // Achievements
