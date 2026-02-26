@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const fs = require("fs");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -32,16 +33,26 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: require("./config/app").APP_NAME });
 });
 
-// Production: serve built client
-if (process.env.NODE_ENV === "production") {
-  const clientDist = path.join(__dirname, "../client/dist");
+// Serve built client (if dist exists)
+const clientDist = path.join(__dirname, "../client/dist");
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("Client dist path:", clientDist);
+console.log("Client dist exists:", fs.existsSync(clientDist));
+
+if (fs.existsSync(clientDist)) {
+  const indexPath = path.join(clientDist, "index.html");
+  console.log("index.html exists:", fs.existsSync(indexPath));
+
   app.use(express.static(clientDist));
   app.get("*", (req, res) => {
     if (req.path.startsWith("/api/")) {
       return res.status(404).json({ error: "Not found" });
     }
-    res.sendFile(path.join(clientDist, "index.html"));
+    res.sendFile(indexPath);
   });
+  console.log("Static file serving enabled");
+} else {
+  console.log("No client dist found — static serving disabled");
 }
 
 // Error handler
