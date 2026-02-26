@@ -60,6 +60,39 @@ app.post("/api/setup-admin", async (req, res) => {
   }
 });
 
+// Seed venues (protected by BOT_TOKEN)
+app.post("/api/seed-venues", async (req, res) => {
+  const { PrismaClient } = require("@prisma/client");
+  const prisma = new PrismaClient();
+  try {
+    const { secret } = req.body;
+    if (!secret || secret !== process.env.BOT_TOKEN) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const venues = [
+      { name: "360 Padel Arena", address: "Минск", city: "MINSK", courts: 4 },
+      { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 1 },
+      { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", city: "MINSK", courts: 1 },
+      { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", city: "MINSK", courts: 1 },
+      { name: "Ilo Club", address: "Минск", city: "MINSK", courts: 1 },
+      { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 3 },
+    ];
+    const results = [];
+    for (const v of venues) {
+      const venue = await prisma.venue.upsert({
+        where: { id: (await prisma.venue.findFirst({ where: { name: v.name } }))?.id || 0 },
+        update: { courts: v.courts },
+        create: v,
+      });
+      results.push({ id: venue.id, name: venue.name, courts: venue.courts });
+    }
+    res.json({ ok: true, venues: results });
+  } catch (err) {
+    console.error("Seed venues error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve built client (if dist exists)
 const clientDist = path.join(__dirname, "../client/dist");
 console.log("NODE_ENV:", process.env.NODE_ENV);

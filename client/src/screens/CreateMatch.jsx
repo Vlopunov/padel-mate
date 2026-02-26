@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { COLORS, CITIES } from '../config';
+import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -9,6 +9,18 @@ import { Header } from '../components/ui/Header';
 import { ToggleGroup } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
+// Multi-court venues (show court number picker)
+const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club'];
+
+// Generate time slots every 30 min from 06:00 to 23:30
+const TIME_SLOTS = [];
+for (let h = 6; h <= 23; h++) {
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:00`, label: `${String(h).padStart(2, '0')}:00` });
+  if (h < 23 || true) {
+    TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${String(h).padStart(2, '0')}:30` });
+  }
+}
+
 export function CreateMatch({ user, onBack, onCreated }) {
   const [venues, setVenues] = useState([]);
   const [date, setDate] = useState('');
@@ -16,6 +28,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
   const [durationMin, setDurationMin] = useState('90');
   const [venueId, setVenueId] = useState('');
   const [courtBooked, setCourtBooked] = useState(false);
+  const [courtNumber, setCourtNumber] = useState('');
   const [levelMin, setLevelMin] = useState('1.0');
   const [levelMax, setLevelMax] = useState('4.0');
   const [matchType, setMatchType] = useState('RATED');
@@ -28,10 +41,34 @@ export function CreateMatch({ user, onBack, onCreated }) {
     }
   }, [user?.city]);
 
+  // Get selected venue info
+  const selectedVenue = venues.find((v) => String(v.id) === venueId);
+  const isMultiCourt = selectedVenue && MULTI_COURT_VENUES.includes(selectedVenue.name);
+  const showCourtNumber = courtBooked && isMultiCourt;
+
+  // Court options for the selected venue
+  const courtOptions = selectedVenue
+    ? Array.from({ length: selectedVenue.courts || 1 }, (_, i) => ({
+        value: String(i + 1),
+        label: `Корт ${i + 1}`,
+      }))
+    : [];
+
   const levelOptions = [];
   for (let l = 1.0; l <= 4.0; l += 0.5) {
     levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
   }
+
+  // Set default date to today
+  useEffect(() => {
+    if (!date) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      setDate(`${yyyy}-${mm}-${dd}`);
+    }
+  }, []);
 
   const handleCreate = async () => {
     if (!date || !time || !venueId) {
@@ -49,6 +86,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
         levelMin: parseFloat(levelMin),
         levelMax: parseFloat(levelMax),
         courtBooked,
+        courtNumber: showCourtNumber && courtNumber ? parseInt(courtNumber) : null,
         matchType,
         notes: notes || undefined,
       });
@@ -85,23 +123,25 @@ export function CreateMatch({ user, onBack, onCreated }) {
         }
       />
 
+      {/* Date & Time */}
       <Card style={{ marginBottom: 12 }}>
         <Input
-          label="Дата"
+          label={'\uD83D\uDCC5 Дата'}
           type="date"
           value={date}
           onChange={setDate}
         />
 
-        <Input
-          label="Время начала"
-          type="time"
+        <Select
+          label={'\u{1F552} Время начала'}
           value={time}
           onChange={setTime}
+          placeholder="Выберите время"
+          options={TIME_SLOTS}
         />
 
         <Select
-          label="Длительность"
+          label={'\u23F1\uFE0F Длительность'}
           value={durationMin}
           onChange={setDurationMin}
           options={[
@@ -112,22 +152,36 @@ export function CreateMatch({ user, onBack, onCreated }) {
             { value: '180', label: '3 часа' },
           ]}
         />
+      </Card>
 
+      {/* Venue & Court */}
+      <Card style={{ marginBottom: 12 }}>
         <Select
-          label="Площадка"
+          label={'\uD83D\uDCCD Площадка'}
           value={venueId}
-          onChange={setVenueId}
+          onChange={(v) => { setVenueId(v); setCourtNumber(''); }}
           placeholder="Выберите площадку"
           options={venues.map((v) => ({ value: String(v.id), label: v.name }))}
         />
 
         <Checkbox
           checked={courtBooked}
-          onChange={setCourtBooked}
+          onChange={(v) => { setCourtBooked(v); if (!v) setCourtNumber(''); }}
           label="Корт забронирован"
         />
+
+        {showCourtNumber && (
+          <Select
+            label="Номер корта"
+            value={courtNumber}
+            onChange={setCourtNumber}
+            placeholder="Выберите корт"
+            options={courtOptions}
+          />
+        )}
       </Card>
 
+      {/* Level & Type */}
       <Card style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 10 }}>
           <Select
@@ -157,6 +211,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
         />
       </Card>
 
+      {/* Notes */}
       <Card style={{ marginBottom: 20 }}>
         <Textarea
           label="Комментарий (необязательно)"
@@ -167,7 +222,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
         />
       </Card>
 
-      <Button fullWidth onClick={handleCreate} disabled={loading} size="lg">
+      <Button fullWidth onClick={handleCreate} disabled={loading || !date || !time || !venueId} size="lg">
         {loading ? 'Создание...' : '\u{1F3BE} Создать матч'}
       </Button>
     </div>

@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 // Create match
 router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { venueId, date, durationMin, levelMin, levelMax, courtBooked, matchType, notes } = req.body;
+    const { venueId, date, durationMin, levelMin, levelMax, courtBooked, courtNumber, matchType, notes } = req.body;
 
     if (!venueId || !date || !durationMin) {
       return res.status(400).json({ error: "Заполните обязательные поля" });
@@ -26,6 +26,7 @@ router.post("/", authMiddleware, async (req, res) => {
         levelMin: parseFloat(levelMin) || 1.0,
         levelMax: parseFloat(levelMax) || 4.0,
         courtBooked: courtBooked || false,
+        courtNumber: courtNumber ? parseInt(courtNumber) : null,
         matchType: matchType || "RATED",
         notes: notes || null,
         players: {
@@ -346,7 +347,7 @@ router.patch("/:id", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Нельзя редактировать матч в текущем статусе" });
     }
 
-    const { venueId, date, durationMin, levelMin, levelMax, courtBooked, matchType, notes } = req.body;
+    const { venueId, date, durationMin, levelMin, levelMax, courtBooked, courtNumber, matchType, notes } = req.body;
     const data = {};
     if (venueId !== undefined) data.venueId = parseInt(venueId);
     if (date !== undefined) data.date = new Date(date);
@@ -354,6 +355,7 @@ router.patch("/:id", authMiddleware, async (req, res) => {
     if (levelMin !== undefined) data.levelMin = parseFloat(levelMin);
     if (levelMax !== undefined) data.levelMax = parseFloat(levelMax);
     if (courtBooked !== undefined) data.courtBooked = courtBooked;
+    if (courtNumber !== undefined) data.courtNumber = courtNumber ? parseInt(courtNumber) : null;
     if (matchType !== undefined) data.matchType = matchType;
     if (notes !== undefined) data.notes = notes || null;
 

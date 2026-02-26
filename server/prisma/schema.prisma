@@ -111,6 +111,7 @@ model Match {
   levelMin      Float
   levelMax      Float
   courtBooked   Boolean     @default(false)
+  courtNumber   Int?
   matchType     MatchType   @default(RATED)
   status        MatchStatus @default(RECRUITING)
   notes         String?
