@@ -8,18 +8,25 @@ import { ProgressBar } from '../components/ui/ProgressBar';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
-function RatingChart({ data }) {
+function RatingChart({ data, currentRating }) {
   if (!data || data.length < 2) return null;
 
-  const width = 360;
-  const height = 140;
-  const padding = { top: 10, right: 10, bottom: 20, left: 40 };
+  const ratings = data.map((d) => d.newRating).reverse();
+  const lastChange = data[0]?.change || 0;
+
+  // Nice rounded axis bounds
+  const rawMin = Math.min(...ratings);
+  const rawMax = Math.max(...ratings);
+  const range = rawMax - rawMin || 40;
+  const step = range <= 30 ? 10 : range <= 80 ? 20 : range <= 200 ? 50 : 100;
+  const minR = Math.floor((rawMin - 10) / step) * step;
+  const maxR = Math.ceil((rawMax + 10) / step) * step;
+
+  const width = 400;
+  const height = 180;
+  const padding = { top: 16, right: 16, bottom: 24, left: 52 };
   const chartW = width - padding.left - padding.right;
   const chartH = height - padding.top - padding.bottom;
-
-  const ratings = data.map((d) => d.newRating).reverse();
-  const minR = Math.min(...ratings) - 20;
-  const maxR = Math.max(...ratings) + 20;
 
   const points = ratings.map((r, i) => {
     const x = padding.left + (i / (ratings.length - 1)) * chartW;
@@ -27,41 +34,87 @@ function RatingChart({ data }) {
     return { x, y, r };
   });
 
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+  // Smooth curve using cardinal spline
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    const cpx = (prev.x + curr.x) / 2;
+    pathD += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`;
+  }
   const areaD = pathD + ` L ${points[points.length - 1].x} ${height - padding.bottom} L ${points[0].x} ${height - padding.bottom} Z`;
 
+  // Y-axis ticks (3–5 nice values)
+  const ticks = [];
+  for (let v = minR; v <= maxR; v += step) {
+    ticks.push(v);
+  }
+
   return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
-      <defs>
-        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={COLORS.accent} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={COLORS.accent} stopOpacity="0" />
-        </linearGradient>
-      </defs>
+    <div>
+      {/* Current rating header */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 32, fontWeight: 800, color: COLORS.text }}>{currentRating || ratings[ratings.length - 1]}</span>
+        {lastChange !== 0 && (
+          <span style={{
+            fontSize: 15, fontWeight: 700,
+            color: lastChange > 0 ? COLORS.accent : COLORS.danger,
+          }}>
+            {lastChange > 0 ? '+' : ''}{lastChange}
+          </span>
+        )}
+      </div>
 
-      {/* Grid lines */}
-      {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-        const y = padding.top + chartH * (1 - pct);
-        const val = Math.round(minR + (maxR - minR) * pct);
-        return (
-          <g key={pct}>
-            <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke={COLORS.border} strokeWidth="0.5" />
-            <text x={padding.left - 4} y={y + 3} fill={COLORS.textMuted} fontSize="9" textAnchor="end">{val}</text>
+      <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="ratingGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={COLORS.accent} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={COLORS.accent} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* Horizontal grid lines + Y-axis labels */}
+        {ticks.map((val) => {
+          const y = padding.top + chartH - ((val - minR) / (maxR - minR)) * chartH;
+          return (
+            <g key={val}>
+              <line x1={padding.left} y1={y} x2={width - padding.right} y2={y}
+                stroke={COLORS.border} strokeWidth="0.5" strokeDasharray="4 3" />
+              <text x={padding.left - 8} y={y + 4} fill={COLORS.textMuted}
+                fontSize="10" textAnchor="end" fontFamily="system-ui">{val}</text>
+            </g>
+          );
+        })}
+
+        {/* Area fill */}
+        <path d={areaD} fill="url(#ratingGrad)" />
+
+        {/* Line */}
+        <path d={pathD} fill="none" stroke={COLORS.accent} strokeWidth="2.5"
+          strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Data points */}
+        {points.map((p, i) => (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="4" fill={COLORS.bg} stroke={COLORS.accent} strokeWidth="2" />
           </g>
-        );
-      })}
+        ))}
 
-      {/* Area */}
-      <path d={areaD} fill="url(#chartGrad)" />
-
-      {/* Line */}
-      <path d={pathD} fill="none" stroke={COLORS.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* Points */}
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="3" fill={COLORS.accent} />
-      ))}
-    </svg>
+        {/* Last point highlight */}
+        {points.length > 0 && (() => {
+          const last = points[points.length - 1];
+          return (
+            <g>
+              <circle cx={last.x} cy={last.y} r="5" fill={COLORS.accent} />
+              <text x={last.x} y={last.y - 10} fill={COLORS.accent}
+                fontSize="11" fontWeight="700" textAnchor="middle" fontFamily="system-ui">
+                {last.r}
+              </text>
+            </g>
+          );
+        })()}
+      </svg>
+    </div>
   );
 }
 
@@ -149,7 +202,7 @@ export function Stats({ user, onBack }) {
       <Card style={{ marginBottom: 12 }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Динамика рейтинга</p>
         {stats?.ratingHistory?.length >= 2 ? (
-          <RatingChart data={stats.ratingHistory} />
+          <RatingChart data={stats.ratingHistory} currentRating={user.rating} />
         ) : (
           <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>
             Недостаточно данных для графика
@@ -243,7 +296,11 @@ export function Stats({ user, onBack }) {
           {stats.matchHistory.map((match) => {
             const team1 = match.players?.filter((p) => p.team === 1) || [];
             const team2 = match.players?.filter((p) => p.team === 2) || [];
-            const setsStr = match.sets?.map((s) => `${s.team1Score}:${s.team2Score}`).join(', ') || '';
+            const setsStr = match.sets?.map((s) => {
+              let str = `${s.team1Score}:${s.team2Score}`;
+              if (s.team1Tiebreak != null && s.team2Tiebreak != null) str += `(${s.team1Tiebreak}:${s.team2Tiebreak})`;
+              return str;
+            }).join(', ') || '';
 
             // Find rating change for this match
             const ratingChange = stats.ratingHistory?.find((r) => r.matchId === match.id);
