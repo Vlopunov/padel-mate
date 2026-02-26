@@ -581,14 +581,20 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
     await prisma.matchSet.deleteMany({ where: { matchId } });
     await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
 
-    // Create sets
+    // Create sets (with optional tiebreak scores)
     for (let i = 0; i < sets.length; i++) {
+      const s = sets[i];
+      const t1 = parseInt(s.team1Score);
+      const t2 = parseInt(s.team2Score);
+      const isTiebreak = (t1 === 7 && t2 === 6) || (t1 === 6 && t2 === 7);
       await prisma.matchSet.create({
         data: {
           matchId,
           setNumber: i + 1,
-          team1Score: parseInt(sets[i].team1Score),
-          team2Score: parseInt(sets[i].team2Score),
+          team1Score: t1,
+          team2Score: t2,
+          team1Tiebreak: isTiebreak && s.team1Tiebreak != null ? parseInt(s.team1Tiebreak) : null,
+          team2Tiebreak: isTiebreak && s.team2Tiebreak != null ? parseInt(s.team2Tiebreak) : null,
         },
       });
     }

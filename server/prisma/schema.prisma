@@ -140,12 +140,14 @@ model MatchPlayer {
 }
 
 model MatchSet {
-  id         Int   @id @default(autoincrement())
-  matchId    Int
-  match      Match @relation(fields: [matchId], references: [id])
-  setNumber  Int
-  team1Score Int
-  team2Score Int
+  id             Int   @id @default(autoincrement())
+  matchId        Int
+  match          Match @relation(fields: [matchId], references: [id])
+  setNumber      Int
+  team1Score     Int
+  team2Score     Int
+  team1Tiebreak  Int?
+  team2Tiebreak  Int?
 
   @@unique([matchId, setNumber])
 }

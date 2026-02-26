@@ -30,7 +30,13 @@ async function sendTelegramMessage(chatId, text, options = {}) {
 }
 
 async function notifyScoreConfirmation(user, match, sets) {
-  const setsStr = sets.map((s) => `${s.team1Score}:${s.team2Score}`).join(", ");
+  const setsStr = sets.map((s) => {
+    let str = `${s.team1Score}:${s.team2Score}`;
+    if (s.team1Tiebreak != null && s.team2Tiebreak != null) {
+      str += ` (${s.team1Tiebreak}:${s.team2Tiebreak})`;
+    }
+    return str;
+  }).join(", ");
   const text =
     `✅ <b>${user.firstName}</b> записал счёт матча.\n` +
     `📊 Счёт: ${setsStr}\n\n` +

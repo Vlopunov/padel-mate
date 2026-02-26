@@ -483,18 +483,26 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.warning, marginBottom: 12 }}>
                 {'\u23F3'} Счёт на проверке
               </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
-                {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
-                  <div key={s.setNumber} style={{
-                    padding: '8px 16px', borderRadius: 10, background: COLORS.surface,
-                    border: `1px solid ${COLORS.border}`, textAlign: 'center',
-                  }}>
-                    <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
-                      {s.team1Score} : {s.team2Score}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => {
+                  const hasTB = s.team1Tiebreak != null && s.team2Tiebreak != null;
+                  return (
+                    <div key={s.setNumber} style={{
+                      padding: '8px 14px', borderRadius: 10, background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`, textAlign: 'center',
+                    }}>
+                      <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
+                        {s.team1Score} : {s.team2Score}
+                      </div>
+                      {hasTB && (
+                        <div style={{ fontSize: 11, color: COLORS.purple, fontWeight: 600, marginTop: 2 }}>
+                          TB {s.team1Tiebreak}:{s.team2Tiebreak}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <p style={{ fontSize: 12, color: COLORS.textDim, textAlign: 'center', marginBottom: 8 }}>
                 Записал: {submitterPlayer?.user.firstName || 'Игрок'}
@@ -528,18 +536,26 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent, marginBottom: 12 }}>
               {'\u2705'} Итоговый счёт
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-              {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
-                <div key={s.setNumber} style={{
-                  padding: '8px 16px', borderRadius: 10, background: COLORS.surface,
-                  border: `1px solid ${COLORS.border}`, textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
-                    {s.team1Score} : {s.team2Score}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => {
+                const hasTB = s.team1Tiebreak != null && s.team2Tiebreak != null;
+                return (
+                  <div key={s.setNumber} style={{
+                    padding: '8px 14px', borderRadius: 10, background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`, textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
+                      {s.team1Score} : {s.team2Score}
+                    </div>
+                    {hasTB && (
+                      <div style={{ fontSize: 11, color: COLORS.purple, fontWeight: 600, marginTop: 2 }}>
+                        TB {s.team1Tiebreak}:{s.team2Tiebreak}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         )}

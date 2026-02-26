@@ -125,6 +125,13 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
   };
 
   const scoreOptions = Array.from({ length: 8 }, (_, i) => ({ value: String(i), label: String(i) }));
+  const tiebreakOptions = Array.from({ length: 20 }, (_, i) => ({ value: String(i), label: String(i) }));
+
+  const isTiebreak = (set) => {
+    const t1 = parseInt(set.team1Score);
+    const t2 = parseInt(set.team2Score);
+    return (t1 === 7 && t2 === 6) || (t1 === 6 && t2 === 7);
+  };
 
   // Player card for team selection
   const PlayerDragItem = ({ player, currentTeam }) => (
@@ -383,36 +390,63 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
             <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>Счёт по сетам</p>
 
             {sets.map((set, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                <span style={{ fontSize: 13, color: COLORS.textDim, width: 50 }}>Сет {idx + 1}</span>
-                <Select
-                  value={set.team1Score}
-                  onChange={(v) => updateSet(idx, 'team1Score', v)}
-                  options={scoreOptions}
-                  placeholder="-"
-                  style={{ flex: 1, marginBottom: 0 }}
-                />
-                <span style={{ color: COLORS.textMuted, fontWeight: 700 }}>:</span>
-                <Select
-                  value={set.team2Score}
-                  onChange={(v) => updateSet(idx, 'team2Score', v)}
-                  options={scoreOptions}
-                  placeholder="-"
-                  style={{ flex: 1, marginBottom: 0 }}
-                />
-                {sets.length > 1 && (
-                  <button
-                    onClick={() => removeSet(idx)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: COLORS.danger,
-                      cursor: 'pointer',
-                      fontSize: 16,
-                    }}
-                  >
-                    {'\u2715'}
-                  </button>
+              <div key={idx} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, color: COLORS.textDim, width: 50 }}>Сет {idx + 1}</span>
+                  <Select
+                    value={set.team1Score}
+                    onChange={(v) => updateSet(idx, 'team1Score', v)}
+                    options={scoreOptions}
+                    placeholder="-"
+                    style={{ flex: 1, marginBottom: 0 }}
+                  />
+                  <span style={{ color: COLORS.textMuted, fontWeight: 700 }}>:</span>
+                  <Select
+                    value={set.team2Score}
+                    onChange={(v) => updateSet(idx, 'team2Score', v)}
+                    options={scoreOptions}
+                    placeholder="-"
+                    style={{ flex: 1, marginBottom: 0 }}
+                  />
+                  {sets.length > 1 && (
+                    <button
+                      onClick={() => removeSet(idx)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: COLORS.danger,
+                        cursor: 'pointer',
+                        fontSize: 16,
+                      }}
+                    >
+                      {'\u2715'}
+                    </button>
+                  )}
+                </div>
+                {/* Tiebreak input — appears when set is 7:6 or 6:7 */}
+                {isTiebreak(set) && (
+                  <div style={{
+                    display: 'flex', gap: 8, alignItems: 'center',
+                    marginTop: 6, marginLeft: 50, paddingLeft: 0,
+                  }}>
+                    <span style={{ fontSize: 11, color: COLORS.purple, width: 58, fontWeight: 600 }}>Тай-брейк</span>
+                    <Select
+                      value={set.team1Tiebreak || ''}
+                      onChange={(v) => updateSet(idx, 'team1Tiebreak', v)}
+                      options={tiebreakOptions}
+                      placeholder="-"
+                      style={{ flex: 1, marginBottom: 0 }}
+                    />
+                    <span style={{ color: COLORS.textMuted, fontWeight: 700 }}>:</span>
+                    <Select
+                      value={set.team2Tiebreak || ''}
+                      onChange={(v) => updateSet(idx, 'team2Tiebreak', v)}
+                      options={tiebreakOptions}
+                      placeholder="-"
+                      style={{ flex: 1, marginBottom: 0 }}
+                    />
+                    <div style={{ width: 24 }} />
+                  </div>
                 )}
               </div>
             ))}
