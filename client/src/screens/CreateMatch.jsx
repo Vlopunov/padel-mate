@@ -76,9 +76,14 @@ export function CreateMatch({ user, onBack, onCreated }) {
       return;
     }
 
+    const dateTime = new Date(`${date}T${time}`);
+    if (dateTime <= new Date()) {
+      alert('Нельзя создать матч задним числом. Для записи прошедшего матча используйте "Записать счёт" → "Записать сыгранный матч".');
+      return;
+    }
+
     setLoading(true);
     try {
-      const dateTime = new Date(`${date}T${time}`);
       await api.matches.create({
         venueId: parseInt(venueId),
         date: dateTime.toISOString(),
@@ -130,6 +135,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
           type="date"
           value={date}
           onChange={setDate}
+          min={(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })()}
         />
 
         <Select

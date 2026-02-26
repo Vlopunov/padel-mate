@@ -17,6 +17,11 @@ router.post("/", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Заполните обязательные поля" });
     }
 
+    // Prevent creating matches in the past
+    if (new Date(date) <= new Date()) {
+      return res.status(400).json({ error: "Нельзя создать матч задним числом" });
+    }
+
     const match = await prisma.match.create({
       data: {
         creatorId: req.userId,
