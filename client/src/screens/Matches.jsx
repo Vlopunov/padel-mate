@@ -204,12 +204,14 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     const myPlayer = match.players?.find((p) => p.user.id === user?.id);
     const isInMatch = !!myPlayer;
     const isPending = myPlayer?.status === 'PENDING';
+    const isInvited = myPlayer?.status === 'INVITED';
     const isCreator = match.creatorId === user?.id;
     const approvedPlayers = match.players?.filter((p) => p.status === 'APPROVED') || [];
     const pendingPlayers = match.players?.filter((p) => p.status === 'PENDING') || [];
+    const invitedPlayers = match.players?.filter((p) => p.status === 'INVITED') || [];
     const isFull = approvedPlayers.length >= 4;
     const canJoin = !isInMatch && !isFull && match.status === 'RECRUITING';
-    const canScore = ['FULL', 'PENDING_SCORE'].includes(match.status) && isInMatch && !isPending;
+    const canScore = ['FULL', 'PENDING_SCORE'].includes(match.status) && isInMatch && !isPending && !isInvited;
     const canInvite = isCreator && !isFull && match.status === 'RECRUITING';
     const date = new Date(match.date);
 
@@ -313,6 +315,67 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 </Button>
               </div>
             ))}
+          </Card>
+        )}
+
+        {/* Invited players (visible to creator) */}
+        {isCreator && invitedPlayers.length > 0 && (
+          <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}40` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.purple, marginBottom: 12 }}>
+              {'\uD83D\uDCE9'} Приглашённые ({invitedPlayers.length})
+            </div>
+            {invitedPlayers.map((p) => (
+              <div key={p.user.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6,
+                padding: '6px 10px', borderRadius: 10, background: `${COLORS.bg}80`,
+              }}>
+                <Avatar src={p.user.photoUrl} name={p.user.firstName} size={32} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>{p.user.firstName} {p.user.lastName || ''}</div>
+                  <div style={{ fontSize: 11, color: COLORS.textDim }}>Рейтинг: {p.user.rating}</div>
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 8,
+                  background: `${COLORS.purple}20`, color: COLORS.purple,
+                }}>
+                  Ожидает
+                </span>
+              </div>
+            ))}
+          </Card>
+        )}
+
+        {/* Invitation for current user (not creator) */}
+        {isInvited && !isCreator && (
+          <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}40` }}>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: 24 }}>{'\uD83C\uDFBE'}</span>
+              <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginTop: 4 }}>
+                Вас пригласили в этот матч!
+              </div>
+              <div style={{ fontSize: 13, color: COLORS.textDim, marginTop: 2 }}>
+                Примите приглашение чтобы присоединиться
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Button fullWidth onClick={async () => {
+                try {
+                  await api.matches.acceptInvite(match.id);
+                  loadMatches();
+                } catch (err) { alert(err.message); }
+              }}>
+                {'\u2705'} Принять
+              </Button>
+              <Button fullWidth variant="danger" onClick={async () => {
+                try {
+                  await api.matches.declineInvite(match.id);
+                  setSelectedMatch(null);
+                  loadMatches();
+                } catch (err) { alert(err.message); }
+              }}>
+                {'\u274C'} Отклонить
+              </Button>
+            </div>
           </Card>
         )}
 
@@ -637,8 +700,8 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
               {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
               {myPlayer && (
-                <span style={{ fontSize: 11, color: COLORS.accent, marginLeft: 'auto', fontWeight: 600 }}>
-                  {myPlayer.status === 'PENDING' ? '\u23F3 Заявка' : '\u2705 Вы в матче'}
+                <span style={{ fontSize: 11, color: myPlayer.status === 'INVITED' ? COLORS.purple : COLORS.accent, marginLeft: 'auto', fontWeight: 600 }}>
+                  {myPlayer.status === 'PENDING' ? '\u23F3 Заявка' : myPlayer.status === 'INVITED' ? '\uD83D\uDCE9 Приглашение' : '\u2705 Вы в матче'}
                 </span>
               )}
               <span style={{ fontSize: 14, color: COLORS.textDim, marginLeft: myPlayer ? 0 : 'auto' }}>{'\u203A'}</span>

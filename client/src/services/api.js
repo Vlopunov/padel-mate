@@ -75,6 +75,8 @@ export const api = {
     approvePlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/approve/${userId}`, { method: 'POST' }),
     rejectPlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/reject/${userId}`, { method: 'POST' }),
     addPlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/add-player/${userId}`, { method: 'POST' }),
+    acceptInvite: (matchId) => api.fetch(`/matches/${matchId}/accept-invite`, { method: 'POST' }),
+    declineInvite: (matchId) => api.fetch(`/matches/${matchId}/decline-invite`, { method: 'POST' }),
     getComments: (matchId) => api.fetch(`/matches/${matchId}/comments`),
     addComment: (matchId, text) => api.fetch(`/matches/${matchId}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
   },

@@ -700,7 +700,7 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
   }
 });
 
-// ─── Add player (creator invites directly, auto-approved) ───
+// ─── Invite player (creator sends invitation, player must accept) ───
 
 router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
   try {
@@ -713,12 +713,12 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
     });
 
     if (!match) return res.status(404).json({ error: "Матч не найден" });
-    if (match.creatorId !== req.userId) return res.status(403).json({ error: "Только создатель может добавлять игроков" });
+    if (match.creatorId !== req.userId) return res.status(403).json({ error: "Только создатель может приглашать игроков" });
     if (match.status !== "RECRUITING") return res.status(400).json({ error: "Набор закрыт" });
 
-    // Check if player already in match
+    // Check if player already in match (any status)
     if (match.players.some((p) => p.userId === targetUserId)) {
-      return res.status(400).json({ error: "Игрок уже в матче" });
+      return res.status(400).json({ error: "Игрок уже в матче или приглашён" });
     }
 
     const approved = approvedPlayers(match.players);
@@ -729,22 +729,20 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
     const team2Count = approved.filter((p) => p.team === 2).length;
     const team = team1Count <= team2Count ? 1 : 2;
 
+    // Create with INVITED status — player must accept
     await prisma.matchPlayer.create({
-      data: { matchId, userId: targetUserId, team, status: "APPROVED" },
+      data: { matchId, userId: targetUserId, team, status: "INVITED" },
     });
 
-    // Check if match is now full
-    if (approved.length + 1 >= 4) {
-      await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
-    }
-
-    // Notify the added player
+    // Notify the invited player via Telegram
     const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    const creator = await prisma.user.findUnique({ where: { id: req.userId } });
     if (targetUser && targetUser.telegramId) {
+      const creatorName = creator.firstName + (creator.lastName ? ` ${creator.lastName}` : '');
       const venueName = match.venue?.name || '';
       const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
       const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-      const text = `🎾 <b>Вас добавили в матч!</b>\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
+      const text = `🎾 <b>Вас пригласили в матч!</b>\n👤 От: ${creatorName}\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}\n\nОткройте приложение чтобы принять или отклонить.`;
       await sendTelegramMessage(targetUser.telegramId.toString(), text);
     }
 
@@ -758,8 +756,87 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.error("Add player error:", err);
-    res.status(500).json({ error: "Ошибка добавления игрока" });
+    console.error("Invite player error:", err);
+    res.status(500).json({ error: "Ошибка приглашения игрока" });
+  }
+});
+
+// Accept invitation (invited player accepts)
+router.post("/:id/accept-invite", authMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { players: true, venue: true },
+    });
+
+    if (!match) return res.status(404).json({ error: "Матч не найден" });
+
+    const player = match.players.find((p) => p.userId === req.userId && p.status === "INVITED");
+    if (!player) return res.status(400).json({ error: "Приглашение не найдено" });
+
+    const approved = approvedPlayers(match.players);
+    if (approved.length >= 4) {
+      // Match already full — remove the invitation
+      await prisma.matchPlayer.delete({ where: { id: player.id } });
+      return res.status(400).json({ error: "Матч уже полный" });
+    }
+
+    await prisma.matchPlayer.update({
+      where: { id: player.id },
+      data: { status: "APPROVED" },
+    });
+
+    // Check if match is now full
+    if (approved.length + 1 >= 4) {
+      await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
+    }
+
+    // Notify creator
+    const creator = await prisma.user.findUnique({ where: { id: match.creatorId } });
+    const acceptedUser = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (creator && creator.telegramId && creator.id !== req.userId) {
+      const userName = acceptedUser.firstName + (acceptedUser.lastName ? ` ${acceptedUser.lastName}` : '');
+      const text = `✅ <b>${userName}</b> принял(а) приглашение в матч!`;
+      await sendTelegramMessage(creator.telegramId.toString(), text);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Accept invite error:", err);
+    res.status(500).json({ error: "Ошибка принятия приглашения" });
+  }
+});
+
+// Decline invitation (invited player declines)
+router.post("/:id/decline-invite", authMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { players: true },
+    });
+
+    if (!match) return res.status(404).json({ error: "Матч не найден" });
+
+    const player = match.players.find((p) => p.userId === req.userId && p.status === "INVITED");
+    if (!player) return res.status(400).json({ error: "Приглашение не найдено" });
+
+    await prisma.matchPlayer.delete({ where: { id: player.id } });
+
+    // Notify creator
+    const creator = await prisma.user.findUnique({ where: { id: match.creatorId } });
+    const declinedUser = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (creator && creator.telegramId && creator.id !== req.userId) {
+      const userName = declinedUser.firstName + (declinedUser.lastName ? ` ${declinedUser.lastName}` : '');
+      const text = `❌ <b>${userName}</b> отклонил(а) приглашение в матч.`;
+      await sendTelegramMessage(creator.telegramId.toString(), text);
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Decline invite error:", err);
+    res.status(500).json({ error: "Ошибка отклонения приглашения" });
   }
 });
 
