@@ -15,6 +15,15 @@ if (!BOT_TOKEN) {
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
+// Prevent unhandled polling errors from crashing the process
+bot.on("polling_error", (err) => {
+  console.error("Bot polling error:", err.message);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled rejection (bot):", err.message);
+});
+
 console.log("PadelMate bot started!");
 
 // Commands
