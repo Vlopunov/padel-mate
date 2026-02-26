@@ -651,6 +651,118 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
   }
 });
 
+// ─── Comments ───
+
+// Get comments for a match
+router.get("/:id/comments", authMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const comments = await prisma.matchComment.findMany({
+      where: { matchId },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true },
+        },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(comments);
+  } catch (err) {
+    console.error("Get comments error:", err);
+    res.status(500).json({ error: "Ошибка получения комментариев" });
+  }
+});
+
+// Add comment
+router.post("/:id/comments", authMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const { text } = req.body;
+
+    if (!text || !text.trim()) return res.status(400).json({ error: "Напишите комментарий" });
+
+    const match = await prisma.match.findUnique({ where: { id: matchId } });
+    if (!match) return res.status(404).json({ error: "Матч не найден" });
+
+    const comment = await prisma.matchComment.create({
+      data: { matchId, userId: req.userId, text: text.trim() },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true },
+        },
+      },
+    });
+
+    res.json(comment);
+  } catch (err) {
+    console.error("Add comment error:", err);
+    res.status(500).json({ error: "Ошибка добавления комментария" });
+  }
+});
+
+// ─── Add player (creator invites directly, auto-approved) ───
+
+router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
+  try {
+    const matchId = parseInt(req.params.id);
+    const targetUserId = parseInt(req.params.userId);
+
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { players: true, venue: true },
+    });
+
+    if (!match) return res.status(404).json({ error: "Матч не найден" });
+    if (match.creatorId !== req.userId) return res.status(403).json({ error: "Только создатель может добавлять игроков" });
+    if (match.status !== "RECRUITING") return res.status(400).json({ error: "Набор закрыт" });
+
+    // Check if player already in match
+    if (match.players.some((p) => p.userId === targetUserId)) {
+      return res.status(400).json({ error: "Игрок уже в матче" });
+    }
+
+    const approved = approvedPlayers(match.players);
+    if (approved.length >= 4) return res.status(400).json({ error: "Матч уже полный" });
+
+    // Balance teams
+    const team1Count = approved.filter((p) => p.team === 1).length;
+    const team2Count = approved.filter((p) => p.team === 2).length;
+    const team = team1Count <= team2Count ? 1 : 2;
+
+    await prisma.matchPlayer.create({
+      data: { matchId, userId: targetUserId, team, status: "APPROVED" },
+    });
+
+    // Check if match is now full
+    if (approved.length + 1 >= 4) {
+      await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
+    }
+
+    // Notify the added player
+    const targetUser = await prisma.user.findUnique({ where: { id: targetUserId } });
+    if (targetUser && targetUser.telegramId) {
+      const venueName = match.venue?.name || '';
+      const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+      const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const text = `🎾 <b>Вас добавили в матч!</b>\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
+      await sendTelegramMessage(targetUser.telegramId.toString(), text);
+    }
+
+    const updated = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        venue: true,
+        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true } } } },
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Add player error:", err);
+    res.status(500).json({ error: "Ошибка добавления игрока" });
+  }
+});
+
 // Public match info (for bot deep links, no auth)
 router.get("/:id/info", async (req, res) => {
   try {

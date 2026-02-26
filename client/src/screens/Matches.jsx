@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { COLORS, getLevel, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -21,6 +21,19 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   const [editForm, setEditForm] = useState({});
   const [selectedMatch, setSelectedMatch] = useState(null);
 
+  // Invite player modal
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimer = useRef(null);
+
+  // Comments
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState('');
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
+
   useEffect(() => {
     loadMatches();
   }, [filter]);
@@ -33,6 +46,13 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     }
   }, [highlightMatchId, matches]);
 
+  // Load comments when match is selected
+  useEffect(() => {
+    if (selectedMatch) {
+      loadComments(selectedMatch.id);
+    }
+  }, [selectedMatch?.id]);
+
   async function loadMatches() {
     setLoading(true);
     try {
@@ -42,6 +62,30 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
       console.error('Load matches error:', err);
     }
     setLoading(false);
+  }
+
+  async function loadComments(matchId) {
+    setCommentsLoading(true);
+    try {
+      const data = await api.matches.getComments(matchId);
+      setComments(data);
+    } catch (err) {
+      console.error('Load comments error:', err);
+    }
+    setCommentsLoading(false);
+  }
+
+  async function handleSendComment(matchId) {
+    if (!commentText.trim()) return;
+    setSendingComment(true);
+    try {
+      const comment = await api.matches.addComment(matchId, commentText.trim());
+      setComments((prev) => [...prev, comment]);
+      setCommentText('');
+    } catch (err) {
+      alert(err.message);
+    }
+    setSendingComment(false);
   }
 
   async function handleJoin(matchId) {
@@ -122,6 +166,38 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     }
   }
 
+  // Invite player search
+  function handleSearchInput(q) {
+    setSearchQuery(q);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!q.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    searchTimer.current = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const results = await api.users.search(q.trim());
+        setSearchResults(results);
+      } catch (err) {
+        console.error('Search error:', err);
+      }
+      setSearchLoading(false);
+    }, 300);
+  }
+
+  async function handleAddPlayer(matchId, userId) {
+    try {
+      await api.matches.addPlayer(matchId, userId);
+      setShowInviteModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      loadMatches();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   // Detail view for a selected match
   if (selectedMatch) {
     const match = matches.find((m) => m.id === selectedMatch.id) || selectedMatch;
@@ -134,14 +210,19 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     const isFull = approvedPlayers.length >= 4;
     const canJoin = !isInMatch && !isFull && match.status === 'RECRUITING';
     const canScore = ['FULL', 'PENDING_SCORE'].includes(match.status) && isInMatch && !isPending;
+    const canInvite = isCreator && !isFull && match.status === 'RECRUITING';
     const date = new Date(match.date);
+
+    // Filter out players already in match from search results
+    const existingPlayerIds = new Set(match.players?.map((p) => p.user.id) || []);
+    const filteredResults = searchResults.filter((u) => !existingPlayerIds.has(u.id));
 
     return (
       <div style={{ paddingBottom: 80 }}>
         {/* Back button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button
-            onClick={() => setSelectedMatch(null)}
+            onClick={() => { setSelectedMatch(null); setComments([]); setCommentText(''); }}
             style={{
               background: 'none', border: 'none', color: COLORS.accent,
               fontSize: 20, cursor: 'pointer', padding: '4px 8px',
@@ -186,8 +267,22 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
         {/* Players card */}
         <Card style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>
-            {'\uD83D\uDC65'} Игроки ({approvedPlayers.length}/4)
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>
+              {'\uD83D\uDC65'} Игроки ({approvedPlayers.length}/4)
+            </div>
+            {canInvite && (
+              <button
+                onClick={() => { setShowInviteModal(true); setSearchQuery(''); setSearchResults([]); }}
+                style={{
+                  padding: '5px 12px', borderRadius: 10, border: `1px solid ${COLORS.accent}40`,
+                  background: `${COLORS.accent}15`, color: COLORS.accent,
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                {'\u2795'} Пригласить
+              </button>
+            )}
           </div>
           {approvedPlayers.map((p) => (
             <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
@@ -230,6 +325,78 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           </Card>
         )}
 
+        {/* Comments */}
+        <Card style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>
+            {'\uD83D\uDCAC'} Комментарии {comments.length > 0 && `(${comments.length})`}
+          </div>
+
+          {commentsLoading && (
+            <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 10 }}>Загрузка...</p>
+          )}
+
+          {!commentsLoading && comments.length === 0 && (
+            <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 10 }}>
+              Пока нет комментариев
+            </p>
+          )}
+
+          {comments.map((c) => {
+            const cDate = new Date(c.createdAt);
+            const isMe = c.user.id === user?.id;
+            return (
+              <div key={c.id} style={{
+                padding: '8px 10px', borderRadius: 12, marginBottom: 6,
+                background: isMe ? `${COLORS.accent}10` : `${COLORS.bg}80`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Avatar src={c.user.photoUrl} name={c.user.firstName} size={22} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: isMe ? COLORS.accent : COLORS.text }}>
+                    {c.user.firstName}
+                  </span>
+                  <span style={{ fontSize: 10, color: COLORS.textDim, marginLeft: 'auto' }}>
+                    {cDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    {' '}
+                    {cDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                  </span>
+                </div>
+                <p style={{ fontSize: 13, color: COLORS.text, margin: 0, lineHeight: 1.4, paddingLeft: 28 }}>
+                  {c.text}
+                </p>
+              </div>
+            );
+          })}
+
+          {/* Comment input */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(match.id); } }}
+              placeholder="Написать комментарий..."
+              style={{
+                flex: 1, padding: '10px 14px', borderRadius: 12,
+                border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+                color: COLORS.text, fontSize: 13, fontFamily: 'inherit',
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={() => handleSendComment(match.id)}
+              disabled={!commentText.trim() || sendingComment}
+              style={{
+                padding: '0 16px', borderRadius: 12, border: 'none',
+                background: commentText.trim() ? COLORS.accent : COLORS.border,
+                color: commentText.trim() ? '#000' : COLORS.textDim,
+                fontSize: 16, cursor: commentText.trim() ? 'pointer' : 'default',
+                fontWeight: 700, flexShrink: 0,
+              }}
+            >
+              {'\u2191'}
+            </button>
+          </div>
+        </Card>
+
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {canJoin && (
@@ -268,6 +435,104 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         <Modal isOpen={!!editingMatch} title="Редактировать матч" onClose={() => setEditingMatch(null)}>
           <EditMatchForm editForm={editForm} setEditForm={setEditForm} onSave={handleEditSave} onClose={() => setEditingMatch(null)} />
         </Modal>
+
+        {/* Invite player modal */}
+        {showInviteModal && (
+          <div
+            style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start',
+              justifyContent: 'center', zIndex: 1000, padding: '60px 16px 16px',
+              overflowY: 'auto',
+            }}
+            onClick={() => setShowInviteModal(false)}
+          >
+            <div
+              style={{
+                background: COLORS.card, borderRadius: 20, padding: 20,
+                width: '100%', maxWidth: 380, maxHeight: '80vh', display: 'flex',
+                flexDirection: 'column',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, marginBottom: 4, margin: 0 }}>
+                {'\uD83D\uDC65'} Добавить игрока
+              </h3>
+              <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 14, marginTop: 4 }}>
+                Найдите игрока по имени или username
+              </p>
+
+              <input
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                placeholder="Поиск игрока..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 12,
+                  border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+                  color: COLORS.text, fontSize: 14, fontFamily: 'inherit',
+                  outline: 'none', boxSizing: 'border-box', marginBottom: 12,
+                }}
+              />
+
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0 }}>
+                {searchLoading && (
+                  <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Поиск...</p>
+                )}
+
+                {!searchLoading && searchQuery && filteredResults.length === 0 && (
+                  <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>
+                    Никого не найдено
+                  </p>
+                )}
+
+                {filteredResults.map((u) => {
+                  const level = getLevel(u.rating);
+                  return (
+                    <div
+                      key={u.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                        borderRadius: 12, marginBottom: 4, background: `${COLORS.bg}80`,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => handleAddPlayer(match.id, u.id)}
+                    >
+                      <Avatar src={u.photoUrl} name={u.firstName} size={36} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>
+                          {u.firstName} {u.lastName || ''}
+                        </div>
+                        <div style={{ fontSize: 11, color: COLORS.textDim }}>
+                          {level?.name || ''} {u.username ? `@${u.username}` : ''}
+                        </div>
+                      </div>
+                      <div style={{
+                        padding: '3px 8px', borderRadius: 8,
+                        background: `${COLORS.accent}15`,
+                      }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>{u.rating}</span>
+                      </div>
+                      <span style={{ fontSize: 18, color: COLORS.accent }}>{'\u2795'}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setShowInviteModal(false)}
+                style={{
+                  marginTop: 12, padding: '10px 0', borderRadius: 12,
+                  border: `1px solid ${COLORS.border}`, background: 'transparent',
+                  color: COLORS.textDim, fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', width: '100%',
+                }}
+              >
+                Закрыть
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

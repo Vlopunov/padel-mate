@@ -155,6 +155,40 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
   }
 });
 
+// Search users (for inviting to matches)
+router.get("/search", authMiddleware, async (req, res) => {
+  try {
+    const { q, city } = req.query;
+    if (!q || q.length < 1) return res.json([]);
+
+    const where = {
+      onboarded: true,
+      isVisible: true,
+      OR: [
+        { firstName: { contains: q, mode: "insensitive" } },
+        { lastName: { contains: q, mode: "insensitive" } },
+        { username: { contains: q, mode: "insensitive" } },
+      ],
+    };
+    if (city) where.city = city;
+
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true, firstName: true, lastName: true, username: true,
+        photoUrl: true, rating: true, city: true,
+      },
+      orderBy: { rating: "desc" },
+      take: 20,
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.error("Search users error:", err);
+    res.status(500).json({ error: "Ошибка поиска" });
+  }
+});
+
 // Get user by ID
 router.get("/:id", authMiddleware, async (req, res) => {
   try {

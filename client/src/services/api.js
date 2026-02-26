@@ -51,6 +51,11 @@ export const api = {
     updateRating: (data) => api.fetch('/users/me/rating', { method: 'PATCH', body: JSON.stringify(data) }),
     getById: (id) => api.fetch(`/users/${id}`),
     getStats: (id) => api.fetch(`/users/${id}/stats`),
+    search: (q, city) => {
+      const params = new URLSearchParams({ q });
+      if (city) params.set('city', city);
+      return api.fetch(`/users/search?${params.toString()}`);
+    },
   },
 
   // Matches
@@ -69,6 +74,9 @@ export const api = {
     confirmScore: (id) => api.fetch(`/matches/${id}/confirm`, { method: 'POST' }),
     approvePlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/approve/${userId}`, { method: 'POST' }),
     rejectPlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/reject/${userId}`, { method: 'POST' }),
+    addPlayer: (matchId, userId) => api.fetch(`/matches/${matchId}/add-player/${userId}`, { method: 'POST' }),
+    getComments: (matchId) => api.fetch(`/matches/${matchId}/comments`),
+    addComment: (matchId, text) => api.fetch(`/matches/${matchId}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
   },
 
   // Leaderboard
