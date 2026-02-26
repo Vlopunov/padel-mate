@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd client && npm install && npm run build && cd ../server && npm install && npx prisma generate && cd ../bot && npm install",
-    "start": "cd server && npx prisma db push --accept-data-loss && node index.js",
+    "build": "cd client && npm install && npm run build && cd ../server && npm install && cd ../bot && npm install",
+    "start": "cd server && npx prisma generate && npx prisma db push --accept-data-loss && node index.js",
     "dev": "cd server && node index.js"
   },
   "engines": {
