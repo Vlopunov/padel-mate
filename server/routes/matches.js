@@ -309,6 +309,128 @@ router.post("/:id/bot-reject/:userId", async (req, res) => {
   }
 });
 
+// Bot-internal score confirmation (by telegram ID, authenticated by X-Bot-Token)
+router.post("/:id/bot-confirm/:telegramId", async (req, res) => {
+  try {
+    const botToken = req.headers["x-bot-token"];
+    if (!botToken || botToken !== process.env.BOT_TOKEN) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const matchId = parseInt(req.params.id);
+    const telegramId = BigInt(req.params.telegramId);
+
+    // Find user by telegramId
+    const botUser = await prisma.user.findUnique({ where: { telegramId } });
+    if (!botUser) return res.status(404).json({ error: "Пользователь не найден" });
+
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        players: { include: { user: true } },
+        sets: { orderBy: { setNumber: "asc" } },
+        confirmations: true,
+      },
+    });
+
+    if (!match) return res.status(404).json({ error: "Матч не найден" });
+    if (match.status !== "PENDING_CONFIRMATION") {
+      return res.status(400).json({ error: "Матч не ожидает подтверждения" });
+    }
+
+    // Check 7-day expiry
+    if (match.scoreSubmittedAt) {
+      const daysSince = (Date.now() - new Date(match.scoreSubmittedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince > 7) {
+        await prisma.matchSet.deleteMany({ where: { matchId } });
+        await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
+        await prisma.match.update({
+          where: { id: matchId },
+          data: { status: "FULL", scoreSubmittedAt: null, scoreSubmitterId: null },
+        });
+        return res.status(400).json({ error: "Срок подтверждения истёк (7 дней). Счёт аннулирован." });
+      }
+    }
+
+    // Check this user is an opponent
+    const allApproved = match.players.filter((p) => p.status === "APPROVED");
+    const submitterPlayer = allApproved.find((p) => p.userId === match.scoreSubmitterId);
+    const confirmingPlayer = allApproved.find((p) => p.userId === botUser.id);
+
+    if (!confirmingPlayer) {
+      return res.status(403).json({ error: "Вы не участник этого матча" });
+    }
+    if (submitterPlayer && confirmingPlayer.team === submitterPlayer.team) {
+      return res.status(400).json({ error: "Подтвердить должен соперник (игрок другой команды)" });
+    }
+
+    // Upsert confirmation
+    await prisma.scoreConfirmation.upsert({
+      where: { matchId_userId: { matchId, userId: botUser.id } },
+      update: { confirmed: true },
+      create: { matchId, userId: botUser.id, confirmed: true },
+    });
+
+    // Apply ratings
+    const team1 = allApproved.filter((p) => p.team === 1).map((p) => p.user);
+    const team2 = allApproved.filter((p) => p.team === 2).map((p) => p.user);
+    const tournament = match.tournamentId
+      ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
+      : null;
+
+    const { changes, winningTeam } = calculateRatingChanges(
+      team1, team2, match.sets, tournament?.ratingMultiplier || 1.0
+    );
+
+    for (const change of changes) {
+      const player = allApproved.find((p) => p.userId === change.userId);
+      const u = player.user;
+      const newWinStreak = change.won ? u.winStreak + 1 : 0;
+      const newMaxWinStreak = Math.max(u.maxWinStreak, newWinStreak);
+
+      await prisma.user.update({
+        where: { id: change.userId },
+        data: {
+          rating: change.newRating,
+          matchesPlayed: { increment: 1 },
+          wins: change.won ? { increment: 1 } : undefined,
+          losses: !change.won ? { increment: 1 } : undefined,
+          winStreak: newWinStreak,
+          maxWinStreak: newMaxWinStreak,
+        },
+      });
+
+      await prisma.ratingHistory.create({
+        data: {
+          userId: change.userId,
+          oldRating: change.oldRating,
+          newRating: change.newRating,
+          change: change.change,
+          reason: change.won ? "match_win" : "match_loss",
+          matchId,
+        },
+      });
+
+      await notifyRatingChange(u.telegramId.toString(), change.oldRating, change.newRating, change.change);
+
+      const newAchievements = await checkAndAwardAchievements(change.userId);
+      for (const a of newAchievements) {
+        await notifyNewAchievement(u.telegramId.toString(), a);
+      }
+    }
+
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { status: "COMPLETED" },
+    });
+
+    res.json({ status: "COMPLETED", changes });
+  } catch (err) {
+    console.error("Bot confirm score error:", err);
+    res.status(500).json({ error: "Ошибка подтверждения" });
+  }
+});
+
 // Delete match (only creator)
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
@@ -417,10 +539,14 @@ router.post("/:id/leave", authMiddleware, async (req, res) => {
 router.post("/:id/score", authMiddleware, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
-    const { sets } = req.body;
+    const { sets, teams } = req.body;
 
     if (!sets || !Array.isArray(sets) || sets.length < 1 || sets.length > 3) {
       return res.status(400).json({ error: "Укажите от 1 до 3 сетов" });
+    }
+
+    if (!teams || !Array.isArray(teams) || teams.length !== 4) {
+      return res.status(400).json({ error: "Укажите распределение по командам (4 игрока)" });
     }
 
     const match = await prisma.match.findUnique({
@@ -438,8 +564,22 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "В матче должно быть 4 одобренных игрока" });
     }
 
-    // Delete existing sets if any
+    const isPlayer = approvedInMatch.some((p) => p.userId === req.userId);
+    if (!isPlayer) {
+      return res.status(403).json({ error: "Вы не участник этого матча" });
+    }
+
+    // Update team assignments from frontend
+    for (const t of teams) {
+      await prisma.matchPlayer.updateMany({
+        where: { matchId, userId: t.userId },
+        data: { team: t.team },
+      });
+    }
+
+    // Delete existing sets & confirmations if re-submitting
     await prisma.matchSet.deleteMany({ where: { matchId } });
+    await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
 
     // Create sets
     for (let i = 0; i < sets.length; i++) {
@@ -453,42 +593,51 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       });
     }
 
-    // Update match status
+    // Find submitter's team
+    const submitterTeam = teams.find((t) => t.userId === req.userId)?.team;
+
+    // Update match status + who submitted and when
     await prisma.match.update({
       where: { id: matchId },
-      data: { status: "PENDING_CONFIRMATION" },
+      data: {
+        status: "PENDING_CONFIRMATION",
+        scoreSubmittedAt: new Date(),
+        scoreSubmitterId: req.userId,
+      },
     });
 
-    // Create score confirmation for submitter
-    await prisma.scoreConfirmation.upsert({
-      where: { matchId_userId: { matchId, userId: req.userId } },
-      update: { confirmed: true },
-      create: { matchId, userId: req.userId, confirmed: true },
+    // Create score confirmation for submitter (auto-confirmed)
+    await prisma.scoreConfirmation.create({
+      data: { matchId, userId: req.userId, confirmed: true },
     });
 
-    // Notify other players
-    const submitter = match.players.find((p) => p.userId === req.userId);
-    const otherPlayers = match.players.filter((p) => p.userId !== req.userId);
+    // Notify only opponents (other team) for confirmation
+    const submitterUser = approvedInMatch.find((p) => p.userId === req.userId)?.user;
+    const opponents = teams
+      .filter((t) => t.team !== submitterTeam)
+      .map((t) => approvedInMatch.find((p) => p.userId === t.userId))
+      .filter(Boolean);
+
     const { text, reply_markup } = await notifyScoreConfirmation(
-      submitter.user,
+      submitterUser,
       match,
       sets.map((s, i) => ({ ...s, setNumber: i + 1 }))
     );
 
-    for (const p of otherPlayers) {
+    for (const p of opponents) {
       await sendTelegramMessage(p.user.telegramId.toString(), text, { reply_markup });
     }
 
-    // Calculate preview
-    const team1 = match.players.filter((p) => p.team === 1).map((p) => p.user);
-    const team2 = match.players.filter((p) => p.team === 2).map((p) => p.user);
+    // Calculate preview using updated teams
+    const team1Users = teams.filter((t) => t.team === 1).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user);
+    const team2Users = teams.filter((t) => t.team === 2).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user);
     const tournament = match.tournamentId
       ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
       : null;
 
     const { changes, winningTeam } = calculateRatingChanges(
-      team1,
-      team2,
+      team1Users,
+      team2Users,
       sets.map((s, i) => ({ team1Score: parseInt(s.team1Score), team2Score: parseInt(s.team2Score), setNumber: i + 1 })),
       tournament?.ratingMultiplier || 1.0
     );
@@ -505,7 +654,7 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
   }
 });
 
-// Confirm score
+// Confirm score — only 1 opponent from the other team needs to confirm, 7-day expiry
 router.post("/:id/confirm", authMiddleware, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
@@ -524,6 +673,34 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Матч не ожидает подтверждения" });
     }
 
+    // Check 7-day expiry
+    if (match.scoreSubmittedAt) {
+      const daysSince = (Date.now() - new Date(match.scoreSubmittedAt).getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince > 7) {
+        // Expired — revert to FULL, clear score data
+        await prisma.matchSet.deleteMany({ where: { matchId } });
+        await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
+        await prisma.match.update({
+          where: { id: matchId },
+          data: { status: "FULL", scoreSubmittedAt: null, scoreSubmitterId: null },
+        });
+        return res.status(400).json({ error: "Срок подтверждения истёк (7 дней). Счёт аннулирован." });
+      }
+    }
+
+    // Check that confirming user is from the OPPOSING team of the score submitter
+    const approvedPlayers = match.players.filter((p) => p.status === "APPROVED");
+    const submitterPlayer = approvedPlayers.find((p) => p.userId === match.scoreSubmitterId);
+    const confirmingPlayer = approvedPlayers.find((p) => p.userId === req.userId);
+
+    if (!confirmingPlayer) {
+      return res.status(403).json({ error: "Вы не участник этого матча" });
+    }
+
+    if (submitterPlayer && confirmingPlayer.team === submitterPlayer.team) {
+      return res.status(400).json({ error: "Подтвердить должен соперник (игрок другой команды)" });
+    }
+
     // Upsert confirmation
     await prisma.scoreConfirmation.upsert({
       where: { matchId_userId: { matchId, userId: req.userId } },
@@ -531,120 +708,111 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
       create: { matchId, userId: req.userId, confirmed: true },
     });
 
-    // Check if all players confirmed (at least losing team)
-    const allConfirms = await prisma.scoreConfirmation.findMany({ where: { matchId } });
-    const confirmedCount = allConfirms.filter((c) => c.confirmed).length;
+    // Only 1 opponent confirmation needed — apply ratings immediately
+    const team1 = approvedPlayers.filter((p) => p.team === 1).map((p) => p.user);
+    const team2 = approvedPlayers.filter((p) => p.team === 2).map((p) => p.user);
+    const tournament = match.tournamentId
+      ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
+      : null;
 
-    // Need at least 3 confirmations (or all players)
-    if (confirmedCount >= 3) {
-      // Apply rating changes
-      const team1 = match.players.filter((p) => p.team === 1).map((p) => p.user);
-      const team2 = match.players.filter((p) => p.team === 2).map((p) => p.user);
-      const tournament = match.tournamentId
-        ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
-        : null;
+    const { changes, winningTeam } = calculateRatingChanges(
+      team1,
+      team2,
+      match.sets,
+      tournament?.ratingMultiplier || 1.0
+    );
 
-      const { changes, winningTeam } = calculateRatingChanges(
-        team1,
-        team2,
-        match.sets,
-        tournament?.ratingMultiplier || 1.0
+    // Apply changes to each player
+    for (const change of changes) {
+      const player = approvedPlayers.find((p) => p.userId === change.userId);
+      const user = player.user;
+
+      const newWinStreak = change.won ? user.winStreak + 1 : 0;
+      const newMaxWinStreak = Math.max(user.maxWinStreak, newWinStreak);
+
+      await prisma.user.update({
+        where: { id: change.userId },
+        data: {
+          rating: change.newRating,
+          matchesPlayed: { increment: 1 },
+          wins: change.won ? { increment: 1 } : undefined,
+          losses: !change.won ? { increment: 1 } : undefined,
+          winStreak: newWinStreak,
+          maxWinStreak: newMaxWinStreak,
+        },
+      });
+
+      await prisma.ratingHistory.create({
+        data: {
+          userId: change.userId,
+          oldRating: change.oldRating,
+          newRating: change.newRating,
+          change: change.change,
+          reason: change.won ? "match_win" : "match_loss",
+          matchId,
+        },
+      });
+
+      // Notify about rating change
+      await notifyRatingChange(
+        user.telegramId.toString(),
+        change.oldRating,
+        change.newRating,
+        change.change
       );
 
-      // Apply changes to each player
-      for (const change of changes) {
-        const player = match.players.find((p) => p.userId === change.userId);
-        const user = player.user;
+      // Check achievements
+      const newAchievements = await checkAndAwardAchievements(change.userId);
+      for (const a of newAchievements) {
+        await notifyNewAchievement(user.telegramId.toString(), a);
+      }
 
-        const newWinStreak = change.won ? user.winStreak + 1 : 0;
-        const newMaxWinStreak = Math.max(user.maxWinStreak, newWinStreak);
-
-        await prisma.user.update({
-          where: { id: change.userId },
-          data: {
-            rating: change.newRating,
-            matchesPlayed: { increment: 1 },
-            wins: change.won ? { increment: 1 } : undefined,
-            losses: !change.won ? { increment: 1 } : undefined,
-            winStreak: newWinStreak,
-            maxWinStreak: newMaxWinStreak,
-          },
-        });
-
-        await prisma.ratingHistory.create({
-          data: {
-            userId: change.userId,
-            oldRating: change.oldRating,
-            newRating: change.newRating,
-            change: change.change,
-            reason: change.won ? "match_win" : "match_loss",
-            matchId,
-          },
-        });
-
-        // Notify about rating change
-        await notifyRatingChange(
-          user.telegramId.toString(),
-          change.oldRating,
-          change.newRating,
-          change.change
-        );
-
-        // Check achievements
-        const newAchievements = await checkAndAwardAchievements(change.userId);
-        for (const a of newAchievements) {
-          await notifyNewAchievement(user.telegramId.toString(), a);
-        }
-
-        // Check event-based achievements
-        // Comeback: won after losing first set
-        if (change.won && match.sets.length >= 2) {
-          const firstSet = match.sets[0];
-          const lostFirstSet =
-            (player.team === 1 && firstSet.team1Score < firstSet.team2Score) ||
-            (player.team === 2 && firstSet.team2Score < firstSet.team1Score);
-          if (lostFirstSet) {
-            const a = await checkEventAchievement(change.userId, "comeback");
-            if (a) await notifyNewAchievement(user.telegramId.toString(), a);
-          }
-        }
-
-        // Clean sheet
-        const hasCleanSheet = match.sets.some(
-          (s) =>
-            (player.team === 1 && s.team1Score === 6 && s.team2Score === 0) ||
-            (player.team === 2 && s.team2Score === 6 && s.team1Score === 0)
-        );
-        if (hasCleanSheet) {
-          const a = await checkEventAchievement(change.userId, "clean_sheet");
+      // Check event-based achievements
+      // Comeback: won after losing first set
+      if (change.won && match.sets.length >= 2) {
+        const firstSet = match.sets[0];
+        const lostFirstSet =
+          (player.team === 1 && firstSet.team1Score < firstSet.team2Score) ||
+          (player.team === 2 && firstSet.team2Score < firstSet.team1Score);
+        if (lostFirstSet) {
+          const a = await checkEventAchievement(change.userId, "comeback");
           if (a) await notifyNewAchievement(user.telegramId.toString(), a);
-        }
-
-        // Giant slayer
-        if (change.won) {
-          const myTeamAvg = player.team === 1
-            ? (team1[0].rating + team1[1].rating) / 2
-            : (team2[0].rating + team2[1].rating) / 2;
-          const oppTeamAvg = player.team === 1
-            ? (team2[0].rating + team2[1].rating) / 2
-            : (team1[0].rating + team1[1].rating) / 2;
-          if (oppTeamAvg - myTeamAvg >= 200) {
-            const a = await checkEventAchievement(change.userId, "giant_slayer");
-            if (a) await notifyNewAchievement(user.telegramId.toString(), a);
-          }
         }
       }
 
-      // Mark match as completed
-      await prisma.match.update({
-        where: { id: matchId },
-        data: { status: "COMPLETED" },
-      });
+      // Clean sheet
+      const hasCleanSheet = match.sets.some(
+        (s) =>
+          (player.team === 1 && s.team1Score === 6 && s.team2Score === 0) ||
+          (player.team === 2 && s.team2Score === 6 && s.team1Score === 0)
+      );
+      if (hasCleanSheet) {
+        const a = await checkEventAchievement(change.userId, "clean_sheet");
+        if (a) await notifyNewAchievement(user.telegramId.toString(), a);
+      }
 
-      res.json({ status: "COMPLETED", changes });
-    } else {
-      res.json({ status: "PENDING_CONFIRMATION", confirmedCount, needed: 3 });
+      // Giant slayer
+      if (change.won) {
+        const myTeamAvg = player.team === 1
+          ? (team1[0].rating + team1[1].rating) / 2
+          : (team2[0].rating + team2[1].rating) / 2;
+        const oppTeamAvg = player.team === 1
+          ? (team2[0].rating + team2[1].rating) / 2
+          : (team1[0].rating + team1[1].rating) / 2;
+        if (oppTeamAvg - myTeamAvg >= 200) {
+          const a = await checkEventAchievement(change.userId, "giant_slayer");
+          if (a) await notifyNewAchievement(user.telegramId.toString(), a);
+        }
+      }
     }
+
+    // Mark match as completed
+    await prisma.match.update({
+      where: { id: matchId },
+      data: { status: "COMPLETED" },
+    });
+
+    res.json({ status: "COMPLETED", changes });
   } catch (err) {
     console.error("Confirm error:", err);
     res.status(500).json({ error: "Ошибка подтверждения счёта" });

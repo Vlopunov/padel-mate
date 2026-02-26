@@ -198,6 +198,15 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     }
   }
 
+  async function handleConfirmScore(matchId) {
+    try {
+      await api.matches.confirmScore(matchId);
+      loadMatches();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   // Detail view for a selected match
   if (selectedMatch) {
     const match = matches.find((m) => m.id === selectedMatch.id) || selectedMatch;
@@ -460,6 +469,81 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           </div>
         </Card>
 
+        {/* Pending confirmation — show score and confirm button for opponents */}
+        {match.status === 'PENDING_CONFIRMATION' && match.sets?.length > 0 && (() => {
+          const submitterId = match.scoreSubmitterId;
+          const submitterPlayer = approvedPlayers.find((p) => p.user.id === submitterId);
+          const submitterTeam = submitterPlayer?.team;
+          const isOpponent = myPlayer && myPlayer.status === 'APPROVED' && myPlayer.team !== submitterTeam;
+          const submittedAt = match.scoreSubmittedAt ? new Date(match.scoreSubmittedAt) : null;
+          const daysLeft = submittedAt ? Math.max(0, 7 - Math.floor((Date.now() - submittedAt.getTime()) / (1000 * 60 * 60 * 24))) : 7;
+
+          return (
+            <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.warning}40` }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.warning, marginBottom: 12 }}>
+                {'\u23F3'} Счёт на проверке
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+                {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
+                  <div key={s.setNumber} style={{
+                    padding: '8px 16px', borderRadius: 10, background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`, textAlign: 'center',
+                  }}>
+                    <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
+                      {s.team1Score} : {s.team2Score}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 12, color: COLORS.textDim, textAlign: 'center', marginBottom: 8 }}>
+                Записал: {submitterPlayer?.user.firstName || 'Игрок'}
+                {submittedAt && ` — ${submittedAt.toLocaleDateString('ru-RU')}`}
+              </p>
+              <p style={{ fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginBottom: 12 }}>
+                Осталось {daysLeft} дн. для подтверждения
+              </p>
+              {isOpponent && (
+                <Button fullWidth onClick={() => handleConfirmScore(match.id)} size="lg">
+                  {'\u2705'} Подтвердить счёт
+                </Button>
+              )}
+              {myPlayer && myPlayer.team === submitterTeam && myPlayer.user.id !== submitterId && (
+                <p style={{ fontSize: 12, color: COLORS.textDim, textAlign: 'center' }}>
+                  Ожидается подтверждение от соперников
+                </p>
+              )}
+              {myPlayer && myPlayer.user.id === submitterId && (
+                <p style={{ fontSize: 12, color: COLORS.textDim, textAlign: 'center' }}>
+                  Вы записали счёт. Ожидаем подтверждение соперника.
+                </p>
+              )}
+            </Card>
+          );
+        })()}
+
+        {/* Completed match score display */}
+        {match.status === 'COMPLETED' && match.sets?.length > 0 && (
+          <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.accent}40` }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent, marginBottom: 12 }}>
+              {'\u2705'} Итоговый счёт
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+              {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
+                <div key={s.setNumber} style={{
+                  padding: '8px 16px', borderRadius: 10, background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Сет {s.setNumber}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: COLORS.text }}>
+                    {s.team1Score} : {s.team2Score}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {canJoin && (
@@ -699,7 +783,13 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
               {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
-              {myPlayer && (
+              {match.status === 'PENDING_CONFIRMATION' && (
+                <Badge variant="warning" style={{ marginLeft: 'auto' }}>{'\u23F3'} Проверка</Badge>
+              )}
+              {match.status === 'COMPLETED' && (
+                <Badge variant="success" style={{ marginLeft: match.status === 'PENDING_CONFIRMATION' ? 4 : 'auto' }}>{'\u2705'} Завершён</Badge>
+              )}
+              {myPlayer && !['PENDING_CONFIRMATION', 'COMPLETED'].includes(match.status) && (
                 <span style={{ fontSize: 11, color: myPlayer.status === 'INVITED' ? COLORS.purple : COLORS.accent, marginLeft: 'auto', fontWeight: 600 }}>
                   {myPlayer.status === 'PENDING' ? '\u23F3 Заявка' : myPlayer.status === 'INVITED' ? '\uD83D\uDCE9 Приглашение' : '\u2705 Вы в матче'}
                 </span>

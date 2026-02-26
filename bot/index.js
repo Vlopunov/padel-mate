@@ -36,21 +36,38 @@ bot.onText(/\/help/, (msg) => helpCommand(bot, msg, MINI_APP_URL));
 bot.on("callback_query", async (query) => {
   const data = query.data;
 
-  // Score confirmation
+  // Score confirmation via bot callback — calls backend bot-confirm endpoint
   if (data.startsWith("confirm_score_")) {
     const matchId = data.replace("confirm_score_", "");
-    await bot.answerCallbackQuery(query.id, { text: "Счёт подтверждён! Откройте приложение для деталей." });
-    await bot.sendMessage(
-      query.message.chat.id,
-      `✅ Вы подтвердили счёт матча #${matchId}. Откройте приложение для просмотра обновлённого рейтинга.`,
-      {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "📱 Открыть PadelMate", web_app: { url: MINI_APP_URL } }],
-          ],
-        },
+    const telegramId = query.from.id;
+    try {
+      const res = await fetch(`${API_URL}/api/matches/${matchId}/bot-confirm/${telegramId}`, {
+        method: "POST",
+        headers: { "X-Bot-Token": BOT_TOKEN, "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        const result = await res.json();
+        await bot.answerCallbackQuery(query.id, { text: "Счёт подтверждён!" });
+        await bot.sendMessage(
+          query.message.chat.id,
+          `✅ Вы подтвердили счёт матча #${matchId}. Рейтинг обновлён!`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "📱 Открыть PadelMate", web_app: { url: MINI_APP_URL } }],
+              ],
+            },
+          }
+        );
+      } else {
+        const err = await res.json().catch(() => ({}));
+        await bot.answerCallbackQuery(query.id, { text: err.error || "Ошибка" });
+        await bot.sendMessage(query.message.chat.id, `❌ ${err.error || "Ошибка подтверждения счёта"}`);
       }
-    );
+    } catch (err) {
+      console.error("Bot confirm score error:", err);
+      await bot.answerCallbackQuery(query.id, { text: "Ошибка соединения с сервером" });
+    }
   }
 
   if (data.startsWith("dispute_score_")) {

@@ -10,6 +10,8 @@ import { api } from '../services/api';
 
 export function ScoreEntry({ user, matchId, onBack, onDone }) {
   const [match, setMatch] = useState(null);
+  const [step, setStep] = useState('teams'); // 'teams' | 'score' | 'preview'
+  const [teams, setTeams] = useState({}); // { [userId]: 1 | 2 }
   const [sets, setSets] = useState([{ team1Score: '', team2Score: '' }]);
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
       const eligible = data.filter(
         (m) =>
           ['FULL', 'PENDING_SCORE'].includes(m.status) &&
-          m.players.some((p) => p.user.id === user?.id)
+          m.players.some((p) => p.user.id === user?.id && p.status === 'APPROVED')
       );
       setAllMatches(eligible);
       if (eligible.length === 1) {
@@ -46,6 +48,13 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
     try {
       const data = await api.matches.getById(id);
       setMatch(data);
+      // Initialize team assignments from existing data
+      const initialTeams = {};
+      const approved = (data.players || []).filter((p) => p.status === 'APPROVED');
+      approved.forEach((p) => {
+        initialTeams[p.user.id] = p.team || 0;
+      });
+      setTeams(initialTeams);
     } catch (err) {
       console.error('Load match error:', err);
     }
@@ -55,6 +64,20 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
     setSelectedMatchId(id);
     if (id) loadMatch(parseInt(id));
   };
+
+  const approvedPlayers = (match?.players || []).filter((p) => p.status === 'APPROVED');
+  const team1Players = approvedPlayers.filter((p) => teams[p.user.id] === 1);
+  const team2Players = approvedPlayers.filter((p) => teams[p.user.id] === 2);
+  const unassigned = approvedPlayers.filter((p) => !teams[p.user.id] || teams[p.user.id] === 0);
+
+  const toggleTeam = (userId, team) => {
+    setTeams((prev) => ({
+      ...prev,
+      [userId]: prev[userId] === team ? 0 : team,
+    }));
+  };
+
+  const teamsReady = team1Players.length === 2 && team2Players.length === 2;
 
   const updateSet = (idx, field, value) => {
     const newSets = [...sets];
@@ -84,10 +107,17 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
       return;
     }
 
+    // Build teams array for backend
+    const teamsArray = approvedPlayers.map((p) => ({
+      userId: p.user.id,
+      team: teams[p.user.id],
+    }));
+
     setLoading(true);
     try {
-      const result = await api.matches.submitScore(id, validSets);
+      const result = await api.matches.submitScore(id, validSets, teamsArray);
       setPreview(result);
+      setStep('preview');
     } catch (err) {
       alert(err.message || 'Ошибка записи счёта');
     }
@@ -96,8 +126,63 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
 
   const scoreOptions = Array.from({ length: 8 }, (_, i) => ({ value: String(i), label: String(i) }));
 
-  const team1 = match?.players?.filter((p) => p.team === 1) || [];
-  const team2 = match?.players?.filter((p) => p.team === 2) || [];
+  // Player card for team selection
+  const PlayerDragItem = ({ player, currentTeam }) => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '10px 12px',
+        background: COLORS.surface,
+        borderRadius: 10,
+        marginBottom: 6,
+        border: `1px solid ${COLORS.border}`,
+      }}
+    >
+      <Avatar src={player.user.photoUrl} name={player.user.firstName} size={32} />
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>
+          {player.user.firstName} {player.user.lastName || ''}
+        </p>
+        <p style={{ fontSize: 12, color: COLORS.textDim }}>{player.user.rating}</p>
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <button
+          onClick={() => toggleTeam(player.user.id, 1)}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: currentTeam === 1 ? `2px solid ${COLORS.accent}` : `1px solid ${COLORS.border}`,
+            background: currentTeam === 1 ? `${COLORS.accent}22` : 'transparent',
+            color: currentTeam === 1 ? COLORS.accent : COLORS.textDim,
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          1
+        </button>
+        <button
+          onClick={() => toggleTeam(player.user.id, 2)}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            border: currentTeam === 2 ? `2px solid ${COLORS.warning}` : `1px solid ${COLORS.border}`,
+            background: currentTeam === 2 ? `${COLORS.warning}22` : 'transparent',
+            color: currentTeam === 2 ? COLORS.warning : COLORS.textDim,
+            cursor: 'pointer',
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          2
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -105,7 +190,13 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
         title="Записать счёт"
         leftAction={
           <button
-            onClick={onBack}
+            onClick={() => {
+              if (step === 'score') {
+                setStep('teams');
+              } else {
+                onBack();
+              }
+            }}
             style={{
               background: COLORS.surface,
               border: `1px solid ${COLORS.border}`,
@@ -126,7 +217,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
       />
 
       {/* Match selector (if no matchId provided) */}
-      {!matchId && allMatches.length > 0 && (
+      {!matchId && allMatches.length > 0 && !match && (
         <Select
           label="Выберите матч"
           value={selectedMatchId}
@@ -149,14 +240,120 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
         </div>
       )}
 
-      {match && !preview && (
+      {/* Step 1: Team Selection */}
+      {match && step === 'teams' && (
         <>
-          {/* Teams */}
+          {/* Step indicator */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: COLORS.accent, color: '#000',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13,
+            }}>1</div>
+            <div style={{ width: 40, height: 2, background: COLORS.border, alignSelf: 'center' }} />
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: COLORS.border, color: COLORS.textDim,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13,
+            }}>2</div>
+          </div>
+
+          <Card style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>
+              Кто играл?
+            </p>
+            <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 16 }}>
+              Распределите игроков по командам. Нажмите 1 или 2 рядом с каждым игроком.
+            </p>
+
+            {approvedPlayers.map((p) => (
+              <PlayerDragItem
+                key={p.user.id}
+                player={p}
+                currentTeam={teams[p.user.id] || 0}
+              />
+            ))}
+          </Card>
+
+          {/* Team preview */}
           <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-            {/* Team 1 */}
+            <Card style={{
+              flex: 1,
+              borderLeft: `3px solid ${COLORS.accent}`,
+              padding: 12,
+              opacity: team1Players.length > 0 ? 1 : 0.5,
+            }}>
+              <p style={{ fontSize: 12, color: COLORS.accent, fontWeight: 600, marginBottom: 8 }}>
+                Команда 1 ({team1Players.length}/2)
+              </p>
+              {team1Players.map((p) => (
+                <p key={p.user.id} style={{ fontSize: 13, color: COLORS.text, marginBottom: 2 }}>
+                  {p.user.firstName} {p.user.lastName || ''}
+                </p>
+              ))}
+              {team1Players.length === 0 && (
+                <p style={{ fontSize: 12, color: COLORS.textMuted }}>Выберите 2 игроков</p>
+              )}
+            </Card>
+
+            <Card style={{
+              flex: 1,
+              borderLeft: `3px solid ${COLORS.warning}`,
+              padding: 12,
+              opacity: team2Players.length > 0 ? 1 : 0.5,
+            }}>
+              <p style={{ fontSize: 12, color: COLORS.warning, fontWeight: 600, marginBottom: 8 }}>
+                Команда 2 ({team2Players.length}/2)
+              </p>
+              {team2Players.map((p) => (
+                <p key={p.user.id} style={{ fontSize: 13, color: COLORS.text, marginBottom: 2 }}>
+                  {p.user.firstName} {p.user.lastName || ''}
+                </p>
+              ))}
+              {team2Players.length === 0 && (
+                <p style={{ fontSize: 12, color: COLORS.textMuted }}>Выберите 2 игроков</p>
+              )}
+            </Card>
+          </div>
+
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => setStep('score')}
+            disabled={!teamsReady}
+          >
+            {teamsReady ? 'Далее — Ввести счёт' : 'Выберите по 2 игрока в каждую команду'}
+          </Button>
+        </>
+      )}
+
+      {/* Step 2: Score Input */}
+      {match && step === 'score' && (
+        <>
+          {/* Step indicator */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, justifyContent: 'center' }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: COLORS.accent, color: '#000',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13,
+            }}>{'\u2713'}</div>
+            <div style={{ width: 40, height: 2, background: COLORS.accent, alignSelf: 'center' }} />
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: COLORS.accent, color: '#000',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 13,
+            }}>2</div>
+          </div>
+
+          {/* Teams summary */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <Card style={{ flex: 1, borderLeft: `3px solid ${COLORS.accent}`, padding: 12 }}>
               <p style={{ fontSize: 12, color: COLORS.accent, fontWeight: 600, marginBottom: 8 }}>Команда 1</p>
-              {team1.map((p) => (
+              {team1Players.map((p) => (
                 <div key={p.user.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <Avatar src={p.user.photoUrl} name={p.user.firstName} size={24} />
                   <div>
@@ -167,10 +364,9 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
               ))}
             </Card>
 
-            {/* Team 2 */}
             <Card style={{ flex: 1, borderLeft: `3px solid ${COLORS.warning}`, padding: 12 }}>
               <p style={{ fontSize: 12, color: COLORS.warning, fontWeight: 600, marginBottom: 8 }}>Команда 2</p>
-              {team2.map((p) => (
+              {team2Players.map((p) => (
                 <div key={p.user.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <Avatar src={p.user.photoUrl} name={p.user.firstName} size={24} />
                   <div>
@@ -229,20 +425,23 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
           </Card>
 
           <Button fullWidth onClick={handleSubmit} disabled={loading} size="lg">
-            {loading ? 'Сохранение...' : '\u2705 Записать результат'}
+            {loading ? 'Сохранение...' : 'Записать результат'}
           </Button>
         </>
       )}
 
-      {/* Preview result */}
-      {preview && (
+      {/* Step 3: Preview result */}
+      {step === 'preview' && preview && (
         <Card variant="accent" style={{ textAlign: 'center' }}>
           <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u2705'}</span>
           <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
             Счёт записан!
           </h3>
-          <p style={{ fontSize: 14, color: COLORS.textDim, marginBottom: 16 }}>
-            Ожидается подтверждение от других игроков
+          <p style={{ fontSize: 14, color: COLORS.textDim, marginBottom: 6 }}>
+            Ожидается подтверждение от соперника
+          </p>
+          <p style={{ fontSize: 12, color: COLORS.textMuted, marginBottom: 16 }}>
+            Один из соперников должен подтвердить в течение 7 дней
           </p>
 
           {preview.ratingPreview && (

@@ -115,9 +115,11 @@ model Match {
   courtNumber   Int?
   matchType     MatchType   @default(RATED)
   status        MatchStatus @default(RECRUITING)
-  notes         String?
-  tournamentId  Int?
-  createdAt     DateTime    @default(now())
+  notes            String?
+  tournamentId     Int?
+  scoreSubmittedAt DateTime?
+  scoreSubmitterId Int?
+  createdAt        DateTime    @default(now())
 
   players       MatchPlayer[]
   sets          MatchSet[]
