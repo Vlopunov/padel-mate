@@ -73,9 +73,23 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
 
     if (!partnerId) return res.status(400).json({ error: "Укажите партнёра" });
 
+    const partnerIdInt = parseInt(partnerId);
+    const userIdInt = req.userId;
+
+    if (partnerIdInt === userIdInt) {
+      return res.status(400).json({ error: "Нельзя зарегистрироваться с самим собой" });
+    }
+
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { registrations: true },
+      include: {
+        registrations: {
+          include: {
+            player1: { select: { id: true, firstName: true } },
+            player2: { select: { id: true, firstName: true } },
+          },
+        },
+      },
     });
 
     if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
@@ -86,16 +100,22 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Все места заняты" });
     }
 
-    // Check if either player already registered
-    const existing = tournament.registrations.find(
-      (r) =>
-        r.player1Id === req.userId ||
-        r.player2Id === req.userId ||
-        r.player1Id === partnerId ||
-        r.player2Id === partnerId
+    // Check if either player already registered (use parseInt for safe comparison)
+    const myExisting = tournament.registrations.find(
+      (r) => r.player1Id === userIdInt || r.player2Id === userIdInt
     );
-    if (existing) {
-      return res.status(400).json({ error: "Один из игроков уже зарегистрирован" });
+    if (myExisting) {
+      return res.status(400).json({ error: "Вы уже зарегистрированы на этот турнир" });
+    }
+
+    const partnerExisting = tournament.registrations.find(
+      (r) => r.player1Id === partnerIdInt || r.player2Id === partnerIdInt
+    );
+    if (partnerExisting) {
+      const partnerName = partnerExisting.player1Id === partnerIdInt
+        ? partnerExisting.player1?.firstName
+        : partnerExisting.player2?.firstName;
+      return res.status(400).json({ error: `${partnerName || 'Партнёр'} уже зарегистрирован на этот турнир` });
     }
 
     const reg = await prisma.tournamentRegistration.create({

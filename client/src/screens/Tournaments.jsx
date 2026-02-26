@@ -110,6 +110,19 @@ export function Tournaments({ user }) {
       await refreshDetail(selectedTournament.id);
     } catch (err) {
       alert(err.message);
+      // Refresh data after error to get up-to-date registrations
+      try {
+        const detail = await api.tournaments.getById(selectedTournament.id);
+        setSelectedTournament(detail);
+        // Check if user is now registered (maybe was already registered)
+        const isNowRegistered = detail.registrations?.some(
+          (r) => r.player1?.id === user?.id || r.player2?.id === user?.id
+        );
+        if (isNowRegistered) {
+          setShowPartnerModal(false);
+        }
+      } catch (_) {}
+      loadTournaments();
     }
     setRegistering(false);
   }
