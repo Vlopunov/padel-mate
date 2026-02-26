@@ -8,18 +8,15 @@ WORKDIR /app/client
 RUN npm install
 RUN npm run build
 
-# Install server deps + generate Prisma
+# Install server deps + generate Prisma client
 WORKDIR /app/server
 RUN npm install
-ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
-RUN npx prisma generate
-ENV DATABASE_URL=
+RUN DATABASE_URL="postgresql://x:x@x:5432/x" npx prisma generate
 
 # Install bot deps
 WORKDIR /app/bot
 RUN npm install
 
-# Runtime
+# Start server (prisma push + node)
 WORKDIR /app/server
-EXPOSE ${PORT:-3000}
-CMD npx prisma db push --accept-data-loss && node index.js
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node index.js"]
