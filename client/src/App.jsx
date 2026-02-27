@@ -14,6 +14,7 @@ import { Leaderboard } from './screens/Leaderboard';
 import { Stats } from './screens/Stats';
 import { Profile } from './screens/Profile';
 import { Admin } from './screens/Admin';
+import { PlayerProfile } from './screens/PlayerProfile';
 
 export default function App() {
   const { user: tgUser, initData, hapticFeedback } = useTelegram();
@@ -112,7 +113,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -189,6 +190,7 @@ export default function App() {
               user={user}
               matchId={subScreen.params?.matchId}
               onBack={() => setSubScreen(null)}
+              onNavigate={handleNavigate}
               onDone={() => {
                 setSubScreen(null);
                 setActiveTab('home');
@@ -204,6 +206,7 @@ export default function App() {
             <Stats
               user={user}
               onBack={() => setSubScreen(null)}
+              onNavigate={handleNavigate}
             />
           </div>
         );
@@ -211,6 +214,17 @@ export default function App() {
         return (
           <div style={containerStyle}>
             <Admin onBack={() => setSubScreen(null)} />
+          </div>
+        );
+      case 'playerProfile':
+        return (
+          <div style={containerStyle}>
+            <PlayerProfile
+              userId={subScreen.params?.userId}
+              currentUser={user}
+              onBack={() => setSubScreen(null)}
+              onNavigate={handleNavigate}
+            />
           </div>
         );
     }
@@ -221,8 +235,8 @@ export default function App() {
     <div style={containerStyle}>
       {activeTab === 'home' && <Home user={user} onNavigate={handleNavigate} />}
       {activeTab === 'matches' && <Matches user={user} onNavigate={handleNavigate} highlightMatchId={deepLinkMatchId} />}
-      {activeTab === 'tournaments' && <Tournaments user={user} />}
-      {activeTab === 'leaderboard' && <Leaderboard user={user} />}
+      {activeTab === 'tournaments' && <Tournaments user={user} onNavigate={handleNavigate} />}
+      {activeTab === 'leaderboard' && <Leaderboard user={user} onNavigate={handleNavigate} />}
       {activeTab === 'profile' && (
         <Profile
           user={user}

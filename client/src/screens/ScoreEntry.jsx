@@ -10,7 +10,7 @@ import { Select } from '../components/ui/Select';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
-export function ScoreEntry({ user, matchId, onBack, onDone }) {
+export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
   const [match, setMatch] = useState(null);
   // Steps: 'select' (choose match) | 'pastForm' (create past match) | 'pastPlayers' (pick 3 players)
   //        | 'teams' | 'score' | 'preview'
@@ -298,13 +298,18 @@ export function ScoreEntry({ user, matchId, onBack, onDone }) {
         border: `1px solid ${COLORS.border}`,
       }}
     >
-      <Avatar src={player.user.photoUrl} name={player.user.firstName} size={32} />
-      <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>
-          {player.user.firstName} {player.user.lastName || ''}
-        </p>
-        <p style={{ fontSize: 12, color: COLORS.textDim }}>{player.user.rating}</p>
-      </div>
+      <span
+        onClick={() => onNavigate && onNavigate('playerProfile', { userId: player.user.id })}
+        style={{ cursor: onNavigate ? 'pointer' : 'default', display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}
+      >
+        <Avatar src={player.user.photoUrl} name={player.user.firstName} size={32} />
+        <div>
+          <p style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>
+            {player.user.firstName} {player.user.lastName || ''}
+          </p>
+          <p style={{ fontSize: 12, color: COLORS.textDim }}>{player.user.rating}</p>
+        </div>
+      </span>
       <div style={{ display: 'flex', gap: 4 }}>
         <button
           onClick={() => toggleTeam(player.user.id, 1)}

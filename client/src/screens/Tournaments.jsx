@@ -10,7 +10,7 @@ import { Input } from '../components/ui/Input';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
-export function Tournaments({ user }) {
+export function Tournaments({ user, onNavigate }) {
   const [filter, setFilter] = useState('registration');
   const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -350,12 +350,18 @@ export function Tournaments({ user }) {
                     </span>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player1?.id }); }}
+                          style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
+                        >
                           {reg.player1?.firstName}
                         </span>
                         <Badge style={{ fontSize: 10 }}>{reg.player1?.rating}</Badge>
                         <span style={{ color: COLORS.textDim, fontSize: 12 }}>&</span>
-                        <span style={{ fontSize: 13, color: COLORS.text, fontWeight: 600 }}>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player2?.id }); }}
+                          style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
+                        >
                           {reg.player2?.firstName}
                         </span>
                         <Badge style={{ fontSize: 10 }}>{reg.player2?.rating}</Badge>

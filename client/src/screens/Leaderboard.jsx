@@ -4,22 +4,16 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
 import { Header } from '../components/ui/Header';
-import { Modal } from '../components/ui/Modal';
-import { Button } from '../components/ui/Button';
 import { FilterTabs } from '../components/ui/ToggleGroup';
-import { useTelegram } from '../hooks/useTelegram';
 import { api } from '../services/api';
 
 const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
-const POSITION_LABELS = { DERECHA: 'Derecha', REVES: 'Revés', BOTH: 'Обе' };
 
-export function Leaderboard({ user }) {
-  const { openTelegramLink } = useTelegram();
+export function Leaderboard({ user, onNavigate }) {
   const [period, setPeriod] = useState('all');
   const [city, setCity] = useState('all');
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
 
   useEffect(() => {
     loadLeaderboard();
@@ -39,13 +33,8 @@ export function Leaderboard({ user }) {
     setLoading(false);
   }
 
-  const openProfile = async (player) => {
-    try {
-      const data = await api.users.getById(player.id);
-      setSelectedPlayer(data);
-    } catch (err) {
-      console.error('Profile error:', err);
-    }
+  const openProfile = (player) => {
+    onNavigate('playerProfile', { userId: player.id });
   };
 
   const medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
@@ -158,62 +147,6 @@ export function Leaderboard({ user }) {
             </Card>
           );
         })}
-
-      {/* Player profile modal */}
-      <Modal isOpen={!!selectedPlayer} onClose={() => setSelectedPlayer(null)} title="Профиль игрока">
-        {selectedPlayer && (
-          <div style={{ textAlign: 'center' }}>
-            <Avatar
-              src={selectedPlayer.photoUrl}
-              name={selectedPlayer.firstName}
-              size={72}
-              style={{ margin: '0 auto 12px' }}
-            />
-            <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>
-              {selectedPlayer.firstName} {selectedPlayer.lastName || ''}
-            </h3>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 6, marginBottom: 16, flexWrap: 'wrap' }}>
-              <Badge variant="accent">{selectedPlayer.rating} — {selectedPlayer.level} {selectedPlayer.levelName}</Badge>
-              {selectedPlayer.hand && <Badge>{HAND_LABELS[selectedPlayer.hand]}</Badge>}
-              {selectedPlayer.position && <Badge>{POSITION_LABELS[selectedPlayer.position]}</Badge>}
-              <Badge>{CITIES.find((c) => c.value === selectedPlayer.city)?.label}</Badge>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
-              <div>
-                <p style={{ fontSize: 20, fontWeight: 700, color: COLORS.text }}>{selectedPlayer.matchesPlayed}</p>
-                <p style={{ fontSize: 12, color: COLORS.textDim }}>Матчей</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 20, fontWeight: 700, color: COLORS.accent }}>
-                  {selectedPlayer.matchesPlayed > 0 ? Math.round((selectedPlayer.wins / selectedPlayer.matchesPlayed) * 100) : 0}%
-                </p>
-                <p style={{ fontSize: 12, color: COLORS.textDim }}>Побед</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 20, fontWeight: 700, color: COLORS.text }}>
-                  {selectedPlayer.wins}W/{selectedPlayer.losses}L
-                </p>
-                <p style={{ fontSize: 12, color: COLORS.textDim }}>Баланс</p>
-              </div>
-            </div>
-
-            {selectedPlayer.username ? (
-              <Button
-                fullWidth
-                variant="outline"
-                onClick={() => openTelegramLink(`https://t.me/${selectedPlayer.username}`)}
-              >
-                {'\u{1F4AC}'} Написать в ЛС
-              </Button>
-            ) : (
-              <Button fullWidth variant="secondary" disabled>
-                Username скрыт
-              </Button>
-            )}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

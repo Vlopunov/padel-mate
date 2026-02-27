@@ -441,7 +441,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           </div>
           {/* Team 1 */}
           {approvedPlayers.filter((p) => p.team === 1).map((p) => (
-            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
+            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
           ))}
           {approvedPlayers.filter((p) => p.team === 1).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 1).length }).map((_, i) => (
             <EmptySlotBig key={`e1-${i}`} />
@@ -453,7 +453,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           }}>VS</div>
           {/* Team 2 */}
           {approvedPlayers.filter((p) => p.team === 2).map((p) => (
-            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
+            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
           ))}
           {approvedPlayers.filter((p) => p.team === 2).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 2).length }).map((_, i) => (
             <EmptySlotBig key={`e2-${i}`} />
@@ -579,9 +579,14 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 background: isMe ? `${COLORS.accent}10` : `${COLORS.bg}80`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <Avatar src={c.user.photoUrl} name={c.user.firstName} size={22} />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: isMe ? COLORS.accent : COLORS.text }}>
-                    {c.user.firstName}
+                  <span
+                    onClick={() => onNavigate('playerProfile', { userId: c.user.id })}
+                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <Avatar src={c.user.photoUrl} name={c.user.firstName} size={22} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: isMe ? COLORS.accent : COLORS.text }}>
+                      {c.user.firstName}
+                    </span>
                   </span>
                   <span style={{ fontSize: 10, color: COLORS.textDim, marginLeft: 'auto' }}>
                     {cDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
@@ -1043,15 +1048,20 @@ function InfoRow({ icon, label, value }) {
   );
 }
 
-function PlayerRowBig({ player, isCreator }) {
+function PlayerRowBig({ player, isCreator, onPlayerClick }) {
   const level = getLevel(player.user.rating);
   const teamColor = player.team === 1 ? COLORS.accent : COLORS.purple;
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
-      padding: '8px 10px', borderRadius: 12, background: `${COLORS.bg}80`,
-      borderLeft: `3px solid ${teamColor}40`,
-    }}>
+    <div
+      onClick={() => onPlayerClick && onPlayerClick(player.user.id)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
+        padding: '8px 10px', borderRadius: 12, background: `${COLORS.bg}80`,
+        borderLeft: `3px solid ${teamColor}40`,
+        cursor: onPlayerClick ? 'pointer' : 'default',
+        transition: 'background 0.15s',
+      }}
+    >
       <Avatar src={player.user.photoUrl} name={player.user.firstName} size={38} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>
