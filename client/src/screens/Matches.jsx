@@ -133,6 +133,9 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
+  // Calendar
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
   useEffect(() => {
     loadMatches();
   }, [filter]);
@@ -257,6 +260,16 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     const text = lines.join('\n');
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
     openTelegramLink(shareUrl);
+  }
+
+  async function handleDownloadCalendar(matchId) {
+    setCalendarLoading(true);
+    try {
+      await api.matches.downloadCalendar(matchId);
+    } catch (err) {
+      alert(err.message);
+    }
+    setCalendarLoading(false);
   }
 
   function openEdit(match) {
@@ -533,6 +546,9 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 try {
                   await api.matches.acceptInvite(match.id);
                   loadMatches();
+                  if (new Date(match.date) > new Date() && confirm('Добавить матч в календарь?')) {
+                    handleDownloadCalendar(match.id);
+                  }
                 } catch (err) { alert(err.message); }
               }}>
                 {'\u2705'} Принять
@@ -742,6 +758,11 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           {canScore && (
             <Button fullWidth variant="outline" onClick={() => onNavigate('score', { matchId: match.id })} size="lg">
               {'\u270F\uFE0F'} Записать счёт
+            </Button>
+          )}
+          {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
+            <Button fullWidth variant="outline" onClick={() => handleDownloadCalendar(match.id)} disabled={calendarLoading}>
+              {'\uD83D\uDCC5'} {calendarLoading ? 'Загрузка...' : 'Добавить в календарь'}
             </Button>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
