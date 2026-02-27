@@ -38,11 +38,11 @@ async function collectDailyStats(dateOverride) {
     where: { createdAt: { gte: dayStart, lte: dayEnd } },
   });
 
-  // Matches completed today
+  // Matches completed today (scheduled for today and finished)
   const completedMatches = await prisma.match.count({
     where: {
       status: "COMPLETED",
-      updatedAt: { gte: dayStart, lte: dayEnd },
+      date: { gte: dayStart, lte: dayEnd },
     },
   });
 
