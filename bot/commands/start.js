@@ -30,7 +30,7 @@ module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
             parse_mode: "HTML",
             reply_markup: {
               inline_keyboard: [
-                [{ text: "🏸 Открыть матч", web_app: { url: `${miniAppUrl}?match=${matchId}` } }],
+                [{ text: "🎾 Открыть матч", web_app: { url: `${miniAppUrl}?match=${matchId}` } }],
               ],
             },
           }
@@ -49,7 +49,7 @@ module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
   await bot.sendMessage(
     chatId,
     `👋 Привет, ${name}!\n\n` +
-      `🏸 <b>Padel GO</b> — приложение для падел-сообщества Беларуси.\n\n` +
+      `🎾 <b>Padel GO</b> — приложение для падел-сообщества Беларуси.\n\n` +
       `Здесь вы сможете:\n` +
       `🎾 Находить матчи и партнёров\n` +
       `📊 Отслеживать рейтинг\n` +
@@ -60,7 +60,7 @@ module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🏸 Открыть Padel GO", web_app: { url: miniAppUrl } }],
+          [{ text: "🎾 Открыть Padel GO", web_app: { url: miniAppUrl } }],
         ],
       },
     }

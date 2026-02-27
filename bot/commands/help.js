@@ -20,7 +20,7 @@ module.exports = async function helpCommand(bot, msg, miniAppUrl) {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🏸 Открыть Padel GO", web_app: { url: miniAppUrl } }],
+          [{ text: "🎾 Открыть Padel GO", web_app: { url: miniAppUrl } }],
         ],
       },
     }

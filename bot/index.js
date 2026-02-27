@@ -128,7 +128,7 @@ bot.on("callback_query", async (query) => {
 
 // Set bot commands menu
 bot.setMyCommands([
-  { command: "start", description: "🏸 Запустить Padel GO" },
+  { command: "start", description: "🎾 Запустить Padel GO" },
   { command: "rating", description: "📊 Мой рейтинг" },
   { command: "matches", description: "🎾 Ближайшие матчи" },
   { command: "help", description: "❓ Помощь" },
