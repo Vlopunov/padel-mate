@@ -141,7 +141,14 @@ export default function App() {
     return (
       <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: 48, display: 'block', marginBottom: 16 }}>{'\u{1F3F8}'}</span>
+          <div style={{ marginBottom: 20 }}>
+            <span style={{ fontSize: 36, fontWeight: 900, color: COLORS.text, fontStyle: 'italic', letterSpacing: -1 }}>
+              Padel
+            </span>
+            <span style={{ fontSize: 36, fontWeight: 900, color: COLORS.accent, fontStyle: 'italic', letterSpacing: -1 }}>
+              Go
+            </span>
+          </div>
           <p style={{ color: COLORS.textDim, fontSize: 15 }}>Загрузка...</p>
         </div>
       </div>

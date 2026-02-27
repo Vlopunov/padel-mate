@@ -3,7 +3,7 @@ module.exports = async function helpCommand(bot, msg, miniAppUrl) {
 
   await bot.sendMessage(
     chatId,
-    `❓ <b>Помощь PadelMate</b>\n\n` +
+    `❓ <b>Помощь Padel GO</b>\n\n` +
       `<b>Команды:</b>\n` +
       `/start — Запустить приложение\n` +
       `/rating — Мой рейтинг\n` +
@@ -20,7 +20,7 @@ module.exports = async function helpCommand(bot, msg, miniAppUrl) {
       parse_mode: "HTML",
       reply_markup: {
         inline_keyboard: [
-          [{ text: "🏸 Открыть PadelMate", web_app: { url: miniAppUrl } }],
+          [{ text: "🏸 Открыть Padel GO", web_app: { url: miniAppUrl } }],
         ],
       },
     }

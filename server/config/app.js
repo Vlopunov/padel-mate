@@ -1,5 +1,5 @@
 module.exports = {
-  APP_NAME: "PadelMate",
+  APP_NAME: "Padel GO",
   TG_CHANNEL: "@PadelMateBY",
   TG_CHAT: "@PadelMateChat",
   CITIES: ["Минск", "Брест", "Гродно"],

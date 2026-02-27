@@ -24,7 +24,7 @@ process.on("unhandledRejection", (err) => {
   console.error("Unhandled rejection (bot):", err.message);
 });
 
-console.log("PadelMate bot started!");
+console.log("Padel GO bot started!");
 
 // Commands
 bot.onText(/\/start/, (msg) => startCommand(bot, msg, MINI_APP_URL, API_URL));
@@ -54,7 +54,7 @@ bot.on("callback_query", async (query) => {
           {
             reply_markup: {
               inline_keyboard: [
-                [{ text: "📱 Открыть PadelMate", web_app: { url: MINI_APP_URL } }],
+                [{ text: "📱 Открыть Padel GO", web_app: { url: MINI_APP_URL } }],
               ],
             },
           }
@@ -128,7 +128,7 @@ bot.on("callback_query", async (query) => {
 
 // Set bot commands menu
 bot.setMyCommands([
-  { command: "start", description: "🏸 Запустить PadelMate" },
+  { command: "start", description: "🏸 Запустить Padel GO" },
   { command: "rating", description: "📊 Мой рейтинг" },
   { command: "matches", description: "🎾 Ближайшие матчи" },
   { command: "help", description: "❓ Помощь" },
