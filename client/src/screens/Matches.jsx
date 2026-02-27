@@ -237,7 +237,22 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
   function handleShare(match) {
     const link = `https://t.me/${BOT_USERNAME}?start=match_${match.id}`;
-    const text = `\uD83C\uDFBE Матч в ${match.venue?.name || 'PadelMate'} — присоединяйся!`;
+    const matchDate = new Date(match.date);
+    const dateStr = matchDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const timeStr = matchDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const approvedCount = match.players?.filter((p) => p.status === 'APPROVED').length || 0;
+    const slotsLeft = 4 - approvedCount;
+    const slotsText = slotsLeft === 1 ? '1 место' : slotsLeft >= 2 && slotsLeft <= 4 ? `${slotsLeft} места` : `${slotsLeft} мест`;
+
+    const lines = [
+      `\uD83C\uDFBE Падел-матч — ищем игроков!`,
+      ``,
+      `\uD83D\uDCC5 ${dateStr}, ${timeStr}`,
+      `\uD83D\uDCCD ${match.venue?.name || 'Площадка TBD'}`,
+      `\uD83D\uDC65 Свободно ${slotsText} из 4`,
+      `\uD83D\uDCCA Уровень: ${match.levelMin} — ${match.levelMax}`,
+    ];
+    const text = lines.join('\n');
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
     openTelegramLink(shareUrl);
   }
