@@ -74,6 +74,7 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
     if (!partnerId) return res.status(400).json({ error: "Укажите партнёра" });
 
     const partnerIdInt = parseInt(partnerId);
+    if (isNaN(partnerIdInt)) return res.status(400).json({ error: "Некорректный ID партнёра" });
     const userIdInt = req.userId;
 
     if (partnerIdInt === userIdInt) {

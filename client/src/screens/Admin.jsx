@@ -907,8 +907,11 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
   const statusColor = MATCH_STATUS_COLORS[m.status] || COLORS.textDim;
   const statusLabel = MATCH_STATUS_LABELS[m.status] || m.status;
 
-  const team1 = m.players?.filter((p) => p.team === 1 && p.status === 'APPROVED') || [];
-  const team2 = m.players?.filter((p) => p.team === 2 && p.status === 'APPROVED') || [];
+  const approvedPlayers = m.players?.filter((p) => p.status === 'APPROVED') || [];
+  const hasTeams = approvedPlayers.some((p) => p.team != null);
+  const team1 = hasTeams ? approvedPlayers.filter((p) => p.team === 1) : [];
+  const team2 = hasTeams ? approvedPlayers.filter((p) => p.team === 2) : [];
+  const unassignedApproved = !hasTeams ? approvedPlayers : [];
   const pending = m.players?.filter((p) => p.status === 'PENDING') || [];
   const invited = m.players?.filter((p) => p.status === 'INVITED') || [];
 
@@ -990,6 +993,18 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
           {'\uD83D\uDC65'} Игроки ({m.players?.length || 0})
         </p>
+
+        {/* Approved players (with or without teams) */}
+        {unassignedApproved.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: COLORS.accent, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Игроки
+            </p>
+            {unassignedApproved.map((p) => (
+              <PlayerRow key={p.id} player={p} onRemove={() => onRemovePlayer(p.user.id)} isCreator={p.user.id === m.creatorId} />
+            ))}
+          </div>
+        )}
 
         {/* Team 1 */}
         {team1.length > 0 && (

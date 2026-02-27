@@ -136,6 +136,7 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!user) return res.status(404).json({ error: "Пользователь не найден" });
     const oldRating = user.rating;
 
     await prisma.user.update({
@@ -281,7 +282,7 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       take: 20,
     });
 
-    const winRate = user.matchesPlayed > 0 ? Math.round((user.wins / user.matchesPlayed) * 100) : 0;
+    const winRate = user.matchesPlayed > 0 ? Math.min(100, Math.round((user.wins / user.matchesPlayed) * 100)) : 0;
 
     res.json({
       rating: user.rating,

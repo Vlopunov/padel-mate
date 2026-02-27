@@ -547,7 +547,7 @@ router.post("/:id/bot-confirm/:telegramId", async (req, res) => {
       }
 
       // Giant slayer
-      if (change.won) {
+      if (change.won && team1.length === 2 && team2.length === 2) {
         const myTeamAvg = player.team === 1
           ? (team1[0].rating + team1[1].rating) / 2
           : (team2[0].rating + team2[1].rating) / 2;
@@ -717,7 +717,10 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Вы не участник этого матча" });
     }
 
-    // Validate team assignments: must have exactly 2 players per team
+    // Validate team assignments: must have exactly 2 players per team, values only 1 or 2
+    if (!teams.every((t) => t.team === 1 || t.team === 2)) {
+      return res.status(400).json({ error: "Команда может быть только 1 или 2" });
+    }
     const team1Count = teams.filter((t) => t.team === 1).length;
     const team2Count = teams.filter((t) => t.team === 2).length;
     if (team1Count !== 2 || team2Count !== 2) {
@@ -790,8 +793,8 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
     }
 
     // Calculate preview using updated teams
-    const team1Users = teams.filter((t) => t.team === 1).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user);
-    const team2Users = teams.filter((t) => t.team === 2).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user);
+    const team1Users = teams.filter((t) => t.team === 1).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user).filter(Boolean);
+    const team2Users = teams.filter((t) => t.team === 2).map((t) => approvedInMatch.find((p) => p.userId === t.userId)?.user).filter(Boolean);
     const tournament = match.tournamentId
       ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
       : null;
@@ -956,7 +959,7 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
       }
 
       // Giant slayer
-      if (change.won) {
+      if (change.won && team1.length === 2 && team2.length === 2) {
         const myTeamAvg = player.team === 1
           ? (team1[0].rating + team1[1].rating) / 2
           : (team2[0].rating + team2[1].rating) / 2;

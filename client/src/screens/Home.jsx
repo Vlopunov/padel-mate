@@ -43,7 +43,7 @@ export function Home({ user, onNavigate }) {
 
   const level = getLevel(user.rating);
   const xp = getXpLevel(user.xp || 0);
-  const winRate = user.matchesPlayed > 0 ? Math.round((user.wins / user.matchesPlayed) * 100) : 0;
+  const winRate = user.matchesPlayed > 0 ? Math.min(100, Math.round((user.wins / user.matchesPlayed) * 100)) : 0;
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -203,7 +203,7 @@ export function Home({ user, onNavigate }) {
                   {match.courtBooked && <Badge variant="success">{'\u2705'}</Badge>}
                 </div>
               </div>
-              <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 6 }}>{match.venue?.name}</p>
+              <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 6 }}>{match.venue?.name || '—'}</p>
               <div style={{ display: 'flex', gap: 4 }}>
                 {match.players?.filter((p) => p.status === 'APPROVED').map((p) => (
                   <Avatar key={p.user.id} src={p.user.photoUrl} name={p.user.firstName} size={28} />

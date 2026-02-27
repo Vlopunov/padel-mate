@@ -71,7 +71,8 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   }
 
   const level = getLevel(player.rating);
-  const xp = getXpLevel(player.xp || 0);
+  const freshXp = stats?.xp ?? player.xp ?? 0;
+  const xp = getXpLevel(freshXp);
   const winRate = stats?.winRate || 0;
   const unlockedIds = new Set((stats?.achievements || []).map((a) => a.id));
   const cityLabel = CITIES.find((c) => c.value === player.city)?.label;
@@ -172,13 +173,13 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
               </p>
             </div>
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{player.xp || 0} XP</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{freshXp} XP</span>
         </div>
         {xp.next && (
           <>
             <ProgressBar progress={xp.progress} />
             <p style={{ fontSize: 11, color: COLORS.textDim, marginTop: 4, textAlign: 'right' }}>
-              До {xp.next.icon} {xp.next.name}: {xp.next.min - (player.xp || 0)} XP
+              До {xp.next.icon} {xp.next.name}: {xp.next.min - freshXp} XP
             </p>
           </>
         )}
@@ -225,8 +226,10 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
             История матчей
           </h3>
           {stats.matchHistory.slice(0, 10).map((match) => {
-            const team1 = match.players?.filter((p) => p.team === 1) || [];
-            const team2 = match.players?.filter((p) => p.team === 2) || [];
+            const hasTeams = match.players?.some((p) => p.team != null);
+            const team1 = hasTeams ? (match.players?.filter((p) => p.team === 1) || []) : [];
+            const team2 = hasTeams ? (match.players?.filter((p) => p.team === 2) || []) : [];
+            const unassigned = !hasTeams ? (match.players || []) : [];
             const setsStr = match.sets?.map((s) => {
               let str = `${s.team1Score}:${s.team2Score}`;
               if (s.team1Tiebreak != null && s.team2Tiebreak != null) str += `(${s.team1Tiebreak}:${s.team2Tiebreak})`;
@@ -244,7 +247,11 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
                       {new Date(match.date).toLocaleDateString('ru-RU')}
                     </p>
                     <p style={{ fontSize: 13, color: COLORS.text, marginTop: 2 }}>
-                      {renderTeamNames(team1, onNavigate, userId)}{' vs '}{renderTeamNames(team2, onNavigate, userId)}
+                      {hasTeams ? (
+                        <>{renderTeamNames(team1, onNavigate, userId)}{' vs '}{renderTeamNames(team2, onNavigate, userId)}</>
+                      ) : (
+                        renderTeamNames(unassigned, onNavigate, userId)
+                      )}
                     </p>
                     {setsStr && (
                       <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginTop: 2 }}>{setsStr}</p>
