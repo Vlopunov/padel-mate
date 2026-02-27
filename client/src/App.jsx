@@ -141,14 +141,7 @@ export default function App() {
     return (
       <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 20 }}>
-            <span style={{ fontSize: 36, fontWeight: 900, color: COLORS.text, fontStyle: 'italic', letterSpacing: -1 }}>
-              Padel
-            </span>
-            <span style={{ fontSize: 36, fontWeight: 900, color: COLORS.accent, fontStyle: 'italic', letterSpacing: -1 }}>
-              Go
-            </span>
-          </div>
+          <img src="/logo.png" alt="Padel GO" style={{ width: 200, marginBottom: 20 }} />
           <p style={{ color: COLORS.textDim, fontSize: 15 }}>Загрузка...</p>
         </div>
       </div>
