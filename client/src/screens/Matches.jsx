@@ -1098,6 +1098,12 @@ function PlayerRowBig({ player, isCreator, onPlayerClick }) {
               borderRadius: 4, background: `${COLORS.accent}20`, color: COLORS.accent,
             }}>ORG</span>
           )}
+          {player.user.isVip && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, marginLeft: 4, padding: '1px 5px',
+              borderRadius: 4, background: `${COLORS.gold}25`, color: COLORS.gold,
+            }}>⭐ VIP</span>
+          )}
         </div>
         <div style={{ fontSize: 12, color: COLORS.textDim }}>
           {level?.name || ''}

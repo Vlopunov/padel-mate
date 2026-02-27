@@ -168,6 +168,15 @@ export function Admin({ onBack }) {
     }
   }
 
+  async function handleToggleVip(userId, currentVip) {
+    try {
+      await api.admin.editUser(userId, { isVip: !currentVip });
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   async function handleDeleteUser(userId, name) {
     if (!confirm(`Удалить ${name}?`)) return;
     try {
@@ -426,6 +435,14 @@ export function Admin({ onBack }) {
                           ADMIN
                         </span>
                       )}
+                      {u.isVip && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                          background: `${COLORS.gold}25`, color: COLORS.gold,
+                        }}>
+                          ⭐ VIP
+                        </span>
+                      )}
                     </div>
                     {u.username && (
                       <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 2 }}>@{u.username}</div>
@@ -469,6 +486,16 @@ export function Admin({ onBack }) {
                     }}
                   >
                     {u.isAdmin ? '\uD83D\uDEAB Убрать' : '\uD83D\uDC51 Админ'}
+                  </button>
+                  <button
+                    onClick={() => handleToggleVip(u.id, u.isVip)}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 10, border: `1px solid ${COLORS.border}`,
+                      background: 'transparent', color: u.isVip ? COLORS.warning : COLORS.gold,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {u.isVip ? '🚫 Убрать VIP' : '⭐ VIP'}
                   </button>
                   <button
                     onClick={() => handleDeleteUser(u.id, u.firstName)}

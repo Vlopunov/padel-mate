@@ -40,7 +40,7 @@ router.post("/", authMiddleware, async (req, res) => {
       },
       include: {
         venue: true,
-        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true } } } },
+        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true } } } },
       },
     });
 
@@ -111,7 +111,7 @@ router.post("/past", authMiddleware, async (req, res) => {
         players: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true },
+              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true },
             },
           },
         },
@@ -176,7 +176,7 @@ router.get("/", authMiddleware, async (req, res) => {
         players: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true },
+              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true },
             },
           },
         },
@@ -202,7 +202,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         players: {
           include: {
             user: {
-              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true },
+              select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true },
             },
           },
         },
@@ -310,7 +310,7 @@ router.post("/:id/join", authMiddleware, async (req, res) => {
       where: { id: matchId },
       include: {
         venue: true,
-        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true } } } },
+        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true } } } },
       },
     });
 
@@ -631,7 +631,7 @@ router.patch("/:id", authMiddleware, async (req, res) => {
       data,
       include: {
         venue: true,
-        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true } } } },
+        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true } } } },
       },
     });
 
@@ -996,7 +996,7 @@ router.get("/:id/comments", authMiddleware, async (req, res) => {
       where: { matchId },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true },
+          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true, isVip: true },
         },
       },
       orderBy: { createdAt: "asc" },
@@ -1023,7 +1023,7 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
       data: { matchId, userId: req.userId, text: text.trim() },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true },
+          select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true, isVip: true },
         },
       },
     });
@@ -1063,7 +1063,7 @@ router.get("/:id/calendar", async (req, res) => {
         venue: true,
         players: {
           include: {
-            user: { select: { id: true, firstName: true, lastName: true, rating: true } },
+            user: { select: { id: true, firstName: true, lastName: true, rating: true, isVip: true } },
           },
         },
       },
@@ -1180,7 +1180,7 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
       where: { id: matchId },
       include: {
         venue: true,
-        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true } } } },
+        players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, username: true, isVip: true } } } },
       },
     });
 
@@ -1280,7 +1280,7 @@ router.get("/:id/info", async (req, res) => {
         venue: true,
         players: {
           where: { status: "APPROVED" },
-          include: { user: { select: { firstName: true, rating: true } } },
+          include: { user: { select: { firstName: true, rating: true, isVip: true } } },
         },
       },
     });

@@ -12,6 +12,7 @@ export const COLORS = {
   warning: "#FFB020",
   danger: "#FF4757",
   purple: "#A855F7",
+  gold: "#FFD700",
   text: "#E8ECF4",
   textDim: "#7A8299",
   textMuted: "#4A5068",

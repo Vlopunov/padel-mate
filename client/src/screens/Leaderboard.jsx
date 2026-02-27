@@ -127,6 +127,12 @@ export function Leaderboard({ user, onNavigate }) {
                     <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
                       {p.firstName} {p.lastName || ''}
                     </span>
+                    {p.isVip && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: '1px 5px',
+                        borderRadius: 4, background: `${COLORS.gold}25`, color: COLORS.gold,
+                      }}>⭐ VIP</span>
+                    )}
                     {p.hand && <Badge style={{ fontSize: 10, padding: '2px 6px' }}>{HAND_LABELS[p.hand]}</Badge>}
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>

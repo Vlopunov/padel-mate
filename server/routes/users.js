@@ -203,7 +203,7 @@ router.get("/search", authMiddleware, async (req, res) => {
       where,
       select: {
         id: true, firstName: true, lastName: true, username: true,
-        photoUrl: true, rating: true, city: true,
+        photoUrl: true, rating: true, city: true, isVip: true,
       },
       orderBy: { rating: "desc" },
       take: 50,
@@ -236,6 +236,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         wins: true,
         losses: true,
         xp: true,
+        isVip: true,
       },
     });
 
@@ -283,7 +284,7 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
           include: {
             venue: true,
             sets: { orderBy: { setNumber: "asc" } },
-            players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true } } } },
+            players: { include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, isVip: true } } } },
           },
         },
       },

@@ -99,6 +99,13 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
         />
         <h2 style={{ fontSize: 22, fontWeight: 800, color: COLORS.text, margin: 0 }}>
           {player.firstName} {player.lastName || ''}
+          {player.isVip && (
+            <span style={{
+              fontSize: 12, fontWeight: 700, marginLeft: 8, padding: '2px 8px',
+              borderRadius: 6, background: `${COLORS.gold}25`, color: COLORS.gold,
+              verticalAlign: 'middle',
+            }}>⭐ VIP</span>
+          )}
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
           <Badge variant="accent">{level.category} — {level.name}</Badge>
