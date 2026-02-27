@@ -1,4 +1,5 @@
 const BOT_TOKEN = process.env.BOT_TOKEN;
+const MINI_APP_URL = process.env.MINI_APP_URL || "https://your-domain.com";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 async function sendTelegramMessage(chatId, text, options = {}) {
@@ -86,15 +87,32 @@ async function notifyMatchReminder(telegramId, match, minutesBefore) {
     `📍 ${match.venue?.name || "—"}\n` +
     `📅 ${dateStr}, ${timeStr}\n` +
     `⏱ ${match.durationMin} мин`;
-  await sendTelegramMessage(telegramId, text);
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть матч", web_app: { url: `${MINI_APP_URL}?match=${match.id}` } }],
+      ],
+    },
+  });
 }
 
 async function notifyNewMatchInArea(telegramId, match) {
+  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const spots = 4 - (match.approvedCount || 0);
   const text =
     `🎾 Появился матч вашего уровня!\n` +
     `📍 ${match.venue.name}\n` +
-    `📅 ${new Date(match.date).toLocaleDateString("ru-RU")}`;
-  await sendTelegramMessage(telegramId, text);
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `🟢 Свободных мест: ${spots}`;
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "➕ Вступить", callback_data: `bot_join_${match.id}` }],
+        [{ text: "📱 Подробнее", web_app: { url: `${MINI_APP_URL}?match=${match.id}` } }],
+      ],
+    },
+  });
 }
 
 async function notifyTournamentOpen(telegramId, tournament) {
@@ -108,7 +126,13 @@ async function notifyMatchCancelled(telegramId, match) {
   const venue = match.venue?.name || "";
   const approvedCount = match.players?.filter((p) => p.status === "APPROVED").length || 0;
   const text = `❌ <b>Матч отменён</b>\n\n📅 ${dateStr}, ${timeStr}\n📍 ${venue}\n\nПричина: не набралось 4 игрока (было ${approvedCount}/4).`;
-  await sendTelegramMessage(telegramId, text);
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🔍 Найти другой матч", web_app: { url: MINI_APP_URL } }],
+      ],
+    },
+  });
 }
 
 async function notifyMatchFull(telegramId, match, playerNames) {
@@ -120,7 +144,13 @@ async function notifyMatchFull(telegramId, match, playerNames) {
     `📍 ${venue}\n` +
     `📅 ${dateStr}, ${timeStr}\n` +
     `👥 ${playerNames.join(", ")}`;
-  await sendTelegramMessage(telegramId, text);
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть матч", web_app: { url: `${MINI_APP_URL}?match=${match.id}` } }],
+      ],
+    },
+  });
 }
 
 async function notifyLeaderboardPosition(telegramId, position, prevPosition, rating) {
@@ -144,7 +174,13 @@ async function notifyInactivePlayer(telegramId, firstName, availableMatches) {
   } else {
     text += `Создай матч и позови друзей! 🎾`;
   }
-  await sendTelegramMessage(telegramId, text);
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "🎾 Открыть Padel GO", web_app: { url: MINI_APP_URL } }],
+      ],
+    },
+  });
 }
 
 async function notifyWeeklySummary(telegramId, data) {
@@ -167,7 +203,13 @@ async function notifyWeeklySummary(telegramId, data) {
     text += `🏅 Новых достижений: <b>${data.newAchievements}</b>\n`;
   }
   text += `\nУдачной недели! 💪`;
-  await sendTelegramMessage(telegramId, text);
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть профиль", web_app: { url: MINI_APP_URL } }],
+      ],
+    },
+  });
 }
 
 async function notifyMilestone(telegramId, milestone) {
