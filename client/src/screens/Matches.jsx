@@ -254,7 +254,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
       `\uD83D\uDCC5 ${dateStr}, ${timeStr} — ${endTimeStr}`,
       `\uD83D\uDCCD ${match.venue?.name || 'Площадка TBD'}`,
       `\uD83D\uDC65 Свободно ${slotsText} из 4`,
-      `\uD83D\uDCCA Уровень: ${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`,
+      `\uD83D\uDCCA Уровень: ${getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`}`,
     ];
     const text = lines.join('\n');
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
@@ -436,7 +436,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={match.venue?.name || '—'} />
             <InfoRow icon={'\u23F1\uFE0F'} label="Длительность" value={`${match.durationMin} мин`} />
-            <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`} />
+            <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`} />
             {match.courtBooked && (
               <InfoRow icon={'\u2705'} label="Корт" value={match.courtNumber ? `Забронирован (корт ${match.courtNumber})` : 'Забронирован'} />
             )}
@@ -1031,7 +1031,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
             {/* Bottom row: level + type + indicator + countdown */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <Badge variant="accent">{getLevelByValue(match.levelMin).category}-{getLevelByValue(match.levelMax).category}</Badge>
+              <Badge variant="accent">{getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category}-${getLevelByValue(match.levelMax).category}`}</Badge>
               {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
               {match.status === 'PENDING_CONFIRMATION' && (
                 <Badge variant="warning" style={{ marginLeft: 'auto' }}>{'\u23F3'} Проверка</Badge>
