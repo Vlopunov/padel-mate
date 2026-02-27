@@ -141,7 +141,7 @@ model MatchPlayer {
   match        Match    @relation(fields: [matchId], references: [id])
   userId       Int
   user         User     @relation(fields: [userId], references: [id])
-  team         Int
+  team         Int?
   status       String   @default("APPROVED")
   reminderSent Boolean  @default(false)
 

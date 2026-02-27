@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getXpLevel } from '../config';
+import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getLevelByValue, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -112,7 +112,7 @@ export function Home({ user, onNavigate }) {
               )}
             </div>
             <Badge variant="accent" style={{ marginTop: 4 }}>
-              {level.level} {level.name}
+              {level.category} — {level.name}
             </Badge>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -199,7 +199,7 @@ export function Home({ user, onNavigate }) {
                   <Badge>{match.durationMin} мин</Badge>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
+                  <Badge variant="accent">{getLevelByValue(match.levelMin).category}-{getLevelByValue(match.levelMax).category}</Badge>
                   {match.courtBooked && <Badge variant="success">{'\u2705'}</Badge>}
                 </div>
               </div>

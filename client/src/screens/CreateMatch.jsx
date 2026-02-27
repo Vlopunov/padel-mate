@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { COLORS } from '../config';
+import { COLORS, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -54,10 +54,10 @@ export function CreateMatch({ user, onBack, onCreated }) {
       }))
     : [];
 
-  const levelOptions = [];
-  for (let l = 1.0; l <= 4.0; l += 0.5) {
-    levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
-  }
+  const levelOptions = LEVELS.map((l) => ({
+    value: l.level.toFixed(1),
+    label: `${l.category} — ${l.name}`,
+  }));
 
   // Set default date to today
   useEffect(() => {

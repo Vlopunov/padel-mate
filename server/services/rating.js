@@ -108,17 +108,13 @@ function convertExternalRating(system, value) {
 
   let rating = 1200;
 
-  if (system === "raceto") {
+  if (system === "raceto" || system === "playtomic") {
+    // NTRP-based conversion: D(≤2.5)→0-1199, C(3.0-3.5)→1200-1599, B(4.0-4.5)→1600-1999, A(5.0+)→2000+
     const clamped = Math.max(1, Math.min(8, num));
-    if (clamped <= 2) rating = 1000;
-    else if (clamped <= 3) rating = 1000 + (clamped - 2) * 400;
-    else if (clamped <= 4) rating = 1400 + (clamped - 3) * 400;
-    else rating = 1800 + (clamped - 4) * 400;
-  } else if (system === "playtomic") {
-    const clamped = Math.max(1, Math.min(8, num));
-    if (clamped <= 2) rating = 1000;
-    else if (clamped <= 3) rating = 1000 + (clamped - 2) * 400;
-    else rating = 1400 + (clamped - 3) * 400;
+    if (clamped <= 2.5) rating = 600 + (clamped - 1) * 400;
+    else if (clamped <= 3.5) rating = 1200 + (clamped - 2.5) * 400;
+    else if (clamped <= 4.5) rating = 1600 + (clamped - 3.5) * 400;
+    else rating = 2000 + (clamped - 4.5) * 200;
   } else {
     rating = Math.round(num);
   }

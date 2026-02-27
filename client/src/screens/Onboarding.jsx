@@ -333,7 +333,7 @@ export function Onboarding({ onComplete }) {
             </div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>Ваш начальный рейтинг</h2>
             <p style={{ color: COLORS.accent, fontSize: 16, fontWeight: 600, marginTop: 4 }}>
-              {level.level} — {level.name}
+              {level.category} — {level.name}
             </p>
           </div>
 

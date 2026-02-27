@@ -70,11 +70,11 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
     try {
       const data = await api.matches.getById(id);
       setMatch(data);
-      // Initialize team assignments from existing data
+      // Initialize team assignments — all unassigned, user picks teams here
       const initialTeams = {};
       const approved = (data.players || []).filter((p) => p.status === 'APPROVED');
       approved.forEach((p) => {
-        initialTeams[p.user.id] = p.team || 0;
+        initialTeams[p.user.id] = 0;
       });
       setTeams(initialTeams);
       setStep('teams');

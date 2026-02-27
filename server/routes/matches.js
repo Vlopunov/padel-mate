@@ -35,7 +35,7 @@ router.post("/", authMiddleware, async (req, res) => {
         matchType: matchType || "RATED",
         notes: notes || null,
         players: {
-          create: { userId: req.userId, team: 1 },
+          create: { userId: req.userId, team: null },
         },
       },
       include: {
@@ -101,7 +101,7 @@ router.post("/past", authMiddleware, async (req, res) => {
         players: {
           create: allPlayerIds.map((id, idx) => ({
             userId: id,
-            team: idx < 2 ? 1 : 2, // temporary, will be reassigned during score entry
+            team: null, // will be assigned during score entry
             status: "APPROVED",
           })),
         },
@@ -302,13 +302,8 @@ router.post("/:id/join", authMiddleware, async (req, res) => {
     const approved = approvedPlayers(match.players);
     if (approved.length >= 4) return res.status(400).json({ error: "Матч уже полный" });
 
-    // Balance teams based on approved players
-    const team1Count = approved.filter((p) => p.team === 1).length;
-    const team2Count = approved.filter((p) => p.team === 2).length;
-    const team = team1Count <= team2Count ? 1 : 2;
-
     await prisma.matchPlayer.create({
-      data: { matchId, userId: req.userId, team, status: "PENDING" },
+      data: { matchId, userId: req.userId, team: null, status: "PENDING" },
     });
 
     const updated = await prisma.match.findUnique({
@@ -1048,14 +1043,9 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
     const approved = approvedPlayers(match.players);
     if (approved.length >= 4) return res.status(400).json({ error: "Матч уже полный" });
 
-    // Balance teams
-    const team1Count = approved.filter((p) => p.team === 1).length;
-    const team2Count = approved.filter((p) => p.team === 2).length;
-    const team = team1Count <= team2Count ? 1 : 2;
-
     // Create with INVITED status — player must accept
     await prisma.matchPlayer.create({
-      data: { matchId, userId: targetUserId, team, status: "INVITED" },
+      data: { matchId, userId: targetUserId, team: null, status: "INVITED" },
     });
 
     // Notify the invited player via Telegram

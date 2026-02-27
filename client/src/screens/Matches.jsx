@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { COLORS, getLevel, BOT_USERNAME } from '../config';
+import { COLORS, LEVELS, getLevel, getLevelByValue, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -252,7 +252,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
       `\uD83D\uDCC5 ${dateStr}, ${timeStr} — ${endTimeStr}`,
       `\uD83D\uDCCD ${match.venue?.name || 'Площадка TBD'}`,
       `\uD83D\uDC65 Свободно ${slotsText} из 4`,
-      `\uD83D\uDCCA Уровень: ${match.levelMin} — ${match.levelMax}`,
+      `\uD83D\uDCCA Уровень: ${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`,
     ];
     const text = lines.join('\n');
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`;
@@ -422,7 +422,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={match.venue?.name || '—'} />
             <InfoRow icon={'\u23F1\uFE0F'} label="Длительность" value={`${match.durationMin} мин`} />
-            <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${match.levelMin} — ${match.levelMax}`} />
+            <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`} />
             {match.courtBooked && (
               <InfoRow icon={'\u2705'} label="Корт" value={match.courtNumber ? `Забронирован (корт ${match.courtNumber})` : 'Забронирован'} />
             )}
@@ -456,24 +456,12 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </button>
             )}
           </div>
-          {/* Team 1 */}
-          {approvedPlayers.filter((p) => p.team === 1).map((p) => (
+          {/* Players (flat list) */}
+          {approvedPlayers.map((p) => (
             <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
           ))}
-          {approvedPlayers.filter((p) => p.team === 1).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 1).length }).map((_, i) => (
-            <EmptySlotBig key={`e1-${i}`} />
-          ))}
-          {/* VS divider */}
-          <div style={{
-            textAlign: 'center', padding: '4px 0', margin: '4px 0',
-            fontSize: 12, fontWeight: 800, color: COLORS.textDim, letterSpacing: 2,
-          }}>VS</div>
-          {/* Team 2 */}
-          {approvedPlayers.filter((p) => p.team === 2).map((p) => (
-            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
-          ))}
-          {approvedPlayers.filter((p) => p.team === 2).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 2).length }).map((_, i) => (
-            <EmptySlotBig key={`e2-${i}`} />
+          {approvedPlayers.length < 4 && Array.from({ length: 4 - approvedPlayers.length }).map((_, i) => (
+            <EmptySlotBig key={`e-${i}`} />
           ))}
         </Card>
 
@@ -1021,7 +1009,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
             {/* Bottom row: level + type + indicator + countdown */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
+              <Badge variant="accent">{getLevelByValue(match.levelMin).category}-{getLevelByValue(match.levelMax).category}</Badge>
               {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
               {match.status === 'PENDING_CONFIRMATION' && (
                 <Badge variant="warning" style={{ marginLeft: 'auto' }}>{'\u23F3'} Проверка</Badge>
@@ -1067,14 +1055,13 @@ function InfoRow({ icon, label, value }) {
 
 function PlayerRowBig({ player, isCreator, onPlayerClick }) {
   const level = getLevel(player.user.rating);
-  const teamColor = player.team === 1 ? COLORS.accent : COLORS.purple;
   return (
     <div
       onClick={() => onPlayerClick && onPlayerClick(player.user.id)}
       style={{
         display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
         padding: '8px 10px', borderRadius: 12, background: `${COLORS.bg}80`,
-        borderLeft: `3px solid ${teamColor}40`,
+        borderLeft: `3px solid ${COLORS.accent}40`,
         cursor: onPlayerClick ? 'pointer' : 'default',
         transition: 'background 0.15s',
       }}
@@ -1092,14 +1079,13 @@ function PlayerRowBig({ player, isCreator, onPlayerClick }) {
         </div>
         <div style={{ fontSize: 12, color: COLORS.textDim }}>
           {level?.name || ''}
-          <span style={{ color: teamColor, marginLeft: 6, fontWeight: 600 }}>Team {player.team}</span>
         </div>
       </div>
       <div style={{
         padding: '4px 8px', borderRadius: 8,
-        background: `${teamColor}15`, textAlign: 'center',
+        background: `${COLORS.accent}15`, textAlign: 'center',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: teamColor }}>{player.user.rating}</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.accent }}>{player.user.rating}</div>
       </div>
     </div>
   );
@@ -1148,13 +1134,13 @@ function EditMatchForm({ editForm, setEditForm, onSave, onClose }) {
           label="Мин. уровень"
           value={editForm.levelMin}
           onChange={(val) => setEditForm({ ...editForm, levelMin: parseFloat(val) })}
-          options={[1, 1.5, 2, 2.5, 3, 3.5, 4].map((v) => ({ value: v, label: String(v) }))}
+          options={LEVELS.map((l) => ({ value: l.level, label: `${l.category} — ${l.name}` }))}
         />
         <Select
           label="Макс. уровень"
           value={editForm.levelMax}
           onChange={(val) => setEditForm({ ...editForm, levelMax: parseFloat(val) })}
-          options={[1, 1.5, 2, 2.5, 3, 3.5, 4].map((v) => ({ value: v, label: String(v) }))}
+          options={LEVELS.map((l) => ({ value: l.level, label: `${l.category} — ${l.name}` }))}
         />
       </div>
       <Select

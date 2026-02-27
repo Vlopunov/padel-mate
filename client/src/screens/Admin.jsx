@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS, CITIES, getLevel } from '../config';
+import { COLORS, CITIES, LEVELS, getLevel, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -306,10 +306,10 @@ export function Admin({ onBack }) {
     }
   }
 
-  const levelOptions = [];
-  for (let l = 1.0; l <= 4.0; l += 0.5) {
-    levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
-  }
+  const levelOptions = LEVELS.map((l) => ({
+    value: l.level.toFixed(1),
+    label: `${l.category} — ${l.name}`,
+  }));
 
   const filteredVenues = venues.filter((v) => v.city === tForm.city);
 
@@ -560,7 +560,7 @@ export function Admin({ onBack }) {
                 <div style={{ display: 'flex', gap: 10, fontSize: 12, color: COLORS.textDim, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span>{'\uD83D\uDCCD'} {m.venue?.name || '\u2014'}</span>
                   <span>{m.matchType === 'RATED' ? '\uD83C\uDFC6' : '\uD83D\uDE0A'} {m.matchType === 'RATED' ? 'Рейтинг' : 'Друж.'}</span>
-                  <span>Ур. {m.levelMin}\u2014{m.levelMax}</span>
+                  <span>Ур. {getLevelByValue(m.levelMin).category}\u2014{getLevelByValue(m.levelMax).category}</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
@@ -659,7 +659,7 @@ export function Admin({ onBack }) {
                 <div style={{ display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim }}>
                   <span>{'\uD83D\uDC65'} {t.teamsRegistered}/{t.maxTeams} пар</span>
                   <span>{'\uD83C\uDFBE'} {FORMAT_LABELS[t.format] || t.format}</span>
-                  <span>Ур. {t.levelMin}\u2014{t.levelMax}</span>
+                  <span>Ур. {getLevelByValue(t.levelMin).category}\u2014{getLevelByValue(t.levelMax).category}</span>
                   {t.price && <span>{'\uD83D\uDCB0'} {t.price}</span>}
                 </div>
               </Card>
@@ -951,7 +951,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
           {m.courtBooked && (
             <InfoRow icon={'\u2705'} label="Корт" value={m.courtNumber ? `#${m.courtNumber} (забронирован)` : 'Забронирован'} />
           )}
-          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${m.levelMin} \u2014 ${m.levelMax}`} />
+          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(m.levelMin).category} \u2014 ${getLevelByValue(m.levelMax).category}`} />
           <InfoRow icon={'\uD83C\uDFC6'} label="Тип" value={m.matchType === 'RATED' ? 'Рейтинговый' : 'Дружеский'} />
           <InfoRow icon={'\uD83D\uDC64'} label="Создатель" value={m.creator ? `${m.creator.firstName} ${m.creator.lastName || ''} (${m.creator.rating})` : `ID: ${m.creatorId}`} />
           {m.notes && <InfoRow icon={'\uD83D\uDCDD'} label="Заметки" value={m.notes} />}
@@ -1286,10 +1286,10 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
       }))
     : [];
 
-  const levelOptions = [];
-  for (let l = 1.0; l <= 4.0; l += 0.5) {
-    levelOptions.push({ value: l.toFixed(1), label: l.toFixed(1) });
-  }
+  const levelOptions = LEVELS.map((l) => ({
+    value: l.level.toFixed(1),
+    label: `${l.category} — ${l.name}`,
+  }));
 
   async function handleSave() {
     if (!form.date || !form.time || !form.venueId) {
@@ -1498,7 +1498,7 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
           )}
           <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={t.venue?.name || '\u2014'} />
           <InfoRow icon={'\uD83C\uDFBE'} label="Формат" value={FORMAT_LABELS[t.format] || t.format} />
-          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${t.levelMin} \u2014 ${t.levelMax}`} />
+          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(t.levelMin).category} \u2014 ${getLevelByValue(t.levelMax).category}`} />
           <InfoRow icon={'\uD83D\uDC65'} label="Пар" value={`${t.teamsRegistered}/${t.maxTeams}`} />
           {t.price && <InfoRow icon={'\uD83D\uDCB0'} label="Цена" value={t.price} />}
           {t.ratingMultiplier !== 1.0 && <InfoRow icon={'\u2B50'} label="Множитель" value={`x${t.ratingMultiplier}`} />}

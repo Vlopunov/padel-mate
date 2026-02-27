@@ -56,7 +56,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           {user.firstName} {user.lastName || ''}
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
-          <Badge variant="accent">{user.rating} — {level.level} {level.name}</Badge>
+          <Badge variant="accent">{user.rating} — {level.category} {level.name}</Badge>
           <Badge>{xp.current.icon} {xp.current.name}</Badge>
         </div>
         <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 6 }}>

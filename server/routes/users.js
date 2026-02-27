@@ -33,6 +33,7 @@ router.get("/me", authMiddleware, async (req, res) => {
     res.json({
       ...serializeUser(user),
       level: level.level,
+      levelCategory: level.category,
       levelName: level.name,
       xpLevel: xpLevel.current,
       xpNext: xpLevel.next,
@@ -214,6 +215,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         city: true,
         hand: true,
         position: true,
+        experience: true,
         rating: true,
         matchesPlayed: true,
         wins: true,
@@ -225,7 +227,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
     if (!user) return res.status(404).json({ error: "Пользователь не найден" });
 
     const level = getLevel(user.rating);
-    res.json({ ...user, level: level.level, levelName: level.name });
+    res.json({ ...user, level: level.level, levelCategory: level.category, levelName: level.name });
   } catch (err) {
     console.error("Get user error:", err);
     res.status(500).json({ error: "Ошибка получения пользователя" });

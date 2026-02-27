@@ -26,13 +26,10 @@ export const CITIES = [
 ];
 
 export const LEVELS = [
-  { min: 0, max: 999, level: 1.0, name: "Новичок" },
-  { min: 1000, max: 1199, level: 1.5, name: "Начинающий" },
-  { min: 1200, max: 1399, level: 2.0, name: "Любитель" },
-  { min: 1400, max: 1599, level: 2.5, name: "Средний" },
-  { min: 1600, max: 1799, level: 3.0, name: "Продвинутый" },
-  { min: 1800, max: 1999, level: 3.5, name: "Сильный" },
-  { min: 2000, max: 9999, level: 4.0, name: "Эксперт" },
+  { min: 0, max: 1199, level: 1.0, category: "D", name: "Новичок", ntrp: "1.0–2.5" },
+  { min: 1200, max: 1599, level: 2.0, category: "C", name: "Любитель", ntrp: "3.0–3.5" },
+  { min: 1600, max: 1999, level: 3.0, category: "B", name: "Продвинутый", ntrp: "4.0–4.5" },
+  { min: 2000, max: 9999, level: 4.0, category: "A", name: "Сильный", ntrp: "5.0+" },
 ];
 
 export const XP_LEVELS = [
@@ -46,6 +43,15 @@ export const XP_LEVELS = [
 
 export function getLevel(rating) {
   return LEVELS.find((l) => rating >= l.min && rating <= l.max) || LEVELS[0];
+}
+
+export function getLevelByValue(levelFloat) {
+  const exact = LEVELS.find((l) => l.level === levelFloat);
+  if (exact) return exact;
+  if (levelFloat <= 1.5) return LEVELS[0];
+  if (levelFloat <= 2.5) return LEVELS[1];
+  if (levelFloat <= 3.5) return LEVELS[2];
+  return LEVELS[3];
 }
 
 export function getXpLevel(xp) {

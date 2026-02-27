@@ -100,7 +100,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
           {player.firstName} {player.lastName || ''}
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-          <Badge variant="accent">{level.level} — {level.name}</Badge>
+          <Badge variant="accent">{level.category} — {level.name}</Badge>
           {cityLabel && <Badge>{cityLabel}</Badge>}
           {player.hand && <Badge>{HAND_LABELS[player.hand]}</Badge>}
           {player.position && <Badge>{POSITION_LABELS[player.position]}</Badge>}
