@@ -97,11 +97,11 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           allowDeselect
         />
 
-        <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 6, marginTop: 14, fontWeight: 500 }}>Позиция</p>
+        <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 6, marginTop: 14, fontWeight: 500 }}>Позиция на корте</p>
         <ToggleGroup
           options={[
-            { value: 'DERECHA', label: 'Derecha' },
-            { value: 'REVES', label: 'Revés' },
+            { value: 'DERECHA', label: 'Справа' },
+            { value: 'REVES', label: 'Слева' },
             { value: 'BOTH', label: 'Обе' },
           ]}
           value={user.position}

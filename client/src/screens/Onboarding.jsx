@@ -24,8 +24,8 @@ const SURVEY_QUESTIONS = [
     options: ['Не понимаю', 'Начинающий', 'Средний', 'Продвинутый', 'Эксперт'],
   },
   {
-    question: 'Предпочитаемая позиция?',
-    options: ['Не знаю', 'Derecha (правая)', 'Revés (левая)', 'Обе стороны'],
+    question: 'Позиция на корте?',
+    options: ['Не знаю', 'Справа', 'Слева', 'Обе стороны'],
   },
   {
     question: 'Игровая рука?',
@@ -354,12 +354,12 @@ export function Onboarding({ onComplete }) {
             />
 
             <p style={{ fontSize: 14, color: COLORS.text, marginBottom: 8, marginTop: 16, fontWeight: 500 }}>
-              Позиция
+              Позиция на корте
             </p>
             <ToggleGroup
               options={[
-                { value: 'DERECHA', label: 'Derecha' },
-                { value: 'REVES', label: 'Revés' },
+                { value: 'DERECHA', label: 'Справа' },
+                { value: 'REVES', label: 'Слева' },
                 { value: 'BOTH', label: 'Обе' },
               ]}
               value={position}

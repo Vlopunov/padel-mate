@@ -11,7 +11,7 @@ import { api } from '../services/api';
 import { useTelegram } from '../hooks/useTelegram';
 
 const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
-const POSITION_LABELS = { DERECHA: 'Derecha', REVES: 'Revés', BOTH: 'Обе' };
+const POSITION_LABELS = { DERECHA: 'Справа', REVES: 'Слева', BOTH: 'Обе' };
 
 export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   const { openTelegramLink } = useTelegram();
