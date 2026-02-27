@@ -14,18 +14,36 @@ async function adminMiddleware(req, res, next) {
   next();
 }
 
-// Stats overview
+// Stats overview (enhanced with daily analytics)
 router.get("/stats", authMiddleware, adminMiddleware, async (req, res) => {
   try {
+    const { getTodaySummary } = require("../services/analytics");
+
     const totalUsers = await prisma.user.count();
     const totalMatches = await prisma.match.count();
     const activeMatches = await prisma.match.count({ where: { status: { in: ["RECRUITING", "FULL"] } } });
     const completedMatches = await prisma.match.count({ where: { status: "COMPLETED" } });
     const totalTournaments = await prisma.tournament.count();
 
-    res.json({ totalUsers, totalMatches, activeMatches, completedMatches, totalTournaments });
+    // Today + yesterday snapshot for comparison
+    const { today, yesterday } = await getTodaySummary();
+
+    res.json({ totalUsers, totalMatches, activeMatches, completedMatches, totalTournaments, today, yesterday });
   } catch (err) {
     console.error("Admin stats error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// Analytics timeline (for charts)
+router.get("/analytics", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { getDashboardData } = require("../services/analytics");
+    const days = parseInt(req.query.days) || 30;
+    const data = await getDashboardData(Math.min(days, 90));
+    res.json(data);
+  } catch (err) {
+    console.error("Admin analytics error:", err);
     res.status(500).json({ error: "Ошибка" });
   }
 });

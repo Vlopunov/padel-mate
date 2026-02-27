@@ -1,9 +1,12 @@
 const { PrismaClient } = require("@prisma/client");
-const { notifyMatchReminder, notifyMatchCancelled } = require("./notifications");
+const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage } = require("./notifications");
+const { collectDailyStats, getTodaySummary, formatDigestMessage } = require("./analytics");
 
 const prisma = new PrismaClient();
 
 let isRunning = false;
+let lastDigestDate = null;
+let lastStatsHour = null;
 
 async function checkAndSendReminders() {
   if (isRunning) return; // prevent overlapping runs
@@ -103,6 +106,12 @@ async function checkAndSendReminders() {
     // --- Auto-cancel expired RECRUITING matches ---
     await cancelExpiredMatches(now);
 
+    // --- Hourly stats collection ---
+    await checkHourlyStatsCollection(now);
+
+    // --- Daily digest at 21:00 Minsk time ---
+    await checkDailyDigest(now);
+
   } catch (err) {
     console.error("[Reminder] Scheduler error:", err.message);
   } finally {
@@ -149,6 +158,69 @@ async function cancelExpiredMatches(now) {
     }
   } catch (err) {
     console.error("[AutoCancel] Error:", err.message);
+  }
+}
+
+/**
+ * Collect stats once per hour (at minute 0-1) to keep DailyStats fresh
+ */
+async function checkHourlyStatsCollection(now) {
+  const currentHour = now.getUTCHours();
+  if (now.getMinutes() > 1) return;
+  if (lastStatsHour === currentHour) return;
+  lastStatsHour = currentHour;
+
+  try {
+    await collectDailyStats();
+    console.log("[Analytics] Hourly stats collected");
+  } catch (err) {
+    console.error("[Analytics] Collection error:", err.message);
+  }
+}
+
+/**
+ * Send daily digest to all admins at 21:00 Minsk time (UTC+3)
+ */
+async function checkDailyDigest(now) {
+  // Minsk is UTC+3 (no DST in Belarus)
+  const minskHour = (now.getUTCHours() + 3) % 24;
+  const minskMinute = now.getUTCMinutes();
+
+  // Only fire at 21:00-21:01
+  if (minskHour !== 21 || minskMinute > 1) return;
+
+  // Calculate today's date in Minsk
+  const minskOffset = 3 * 60 * 60 * 1000;
+  const minskNow = new Date(now.getTime() + minskOffset);
+  const todayStr = minskNow.toISOString().split("T")[0];
+
+  // Only send once per day
+  if (lastDigestDate === todayStr) return;
+  lastDigestDate = todayStr;
+
+  try {
+    console.log("[Digest] Collecting daily stats and sending digest...");
+
+    const { today, yesterday } = await getTodaySummary();
+    const message = formatDigestMessage(today, yesterday);
+
+    // Find all admin users
+    const admins = await prisma.user.findMany({
+      where: { isAdmin: true },
+      select: { telegramId: true },
+    });
+
+    for (const admin of admins) {
+      try {
+        await sendTelegramMessage(admin.telegramId.toString(), message);
+      } catch (err) {
+        console.error(`[Digest] Failed to send to admin ${admin.telegramId}:`, err.message);
+      }
+    }
+
+    console.log(`[Digest] Sent to ${admins.length} admin(s)`);
+  } catch (err) {
+    console.error("[Digest] Error:", err.message);
   }
 }
 

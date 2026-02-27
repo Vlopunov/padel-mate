@@ -6,6 +6,7 @@ import { Input, Textarea } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { Checkbox } from '../components/ui/Checkbox';
 import { api } from '../services/api';
+import { MiniChart } from '../components/ui/MiniChart';
 
 const TOURNAMENT_STATUSES = [
   { value: 'UPCOMING', label: 'Скоро' },
@@ -91,6 +92,7 @@ for (let h = 6; h <= 23; h++) {
 export function Admin({ onBack }) {
   const [tab, setTab] = useState('stats');
   const [stats, setStats] = useState(null);
+  const [analytics, setAnalytics] = useState([]);
   const [users, setUsers] = useState([]);
   const [matches, setMatches] = useState([]);
   const [tournaments, setTournaments] = useState([]);
@@ -127,8 +129,12 @@ export function Admin({ onBack }) {
     setLoading(true);
     try {
       if (tab === 'stats') {
-        const data = await api.admin.stats();
-        setStats(data);
+        const [statsData, analyticsData] = await Promise.all([
+          api.admin.stats(),
+          api.admin.analytics(30),
+        ]);
+        setStats(statsData);
+        setAnalytics(analyticsData);
       } else if (tab === 'users') {
         const data = await api.admin.users();
         setUsers(data);
@@ -393,17 +399,90 @@ export function Admin({ onBack }) {
         </div>
       )}
 
-      {/* Stats */}
+      {/* Stats — Analytics Dashboard */}
       {!loading && tab === 'stats' && stats && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Totals grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <StatCard icon={'\uD83D\uDC65'} label="Игроков" value={stats.totalUsers} color={COLORS.accent} />
             <StatCard icon={'\uD83C\uDFBE'} label="Матчей" value={stats.totalMatches} color={COLORS.purple} />
             <StatCard icon={'\u{1F7E2}'} label="Активных" value={stats.activeMatches} color="#4CAF50" />
             <StatCard icon={'\u2705'} label="Завершённых" value={stats.completedMatches} color={COLORS.accent} />
           </div>
+
           {stats.totalTournaments > 0 && (
             <StatCard icon={'\uD83C\uDFC6'} label="Турниров" value={stats.totalTournaments} color={COLORS.warning} />
+          )}
+
+          {/* Today summary with comparison */}
+          {stats.today && (
+            <Card style={{ padding: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>
+                {'\uD83D\uDCC5'} Сегодня
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                <TodayStat label="Новых" value={stats.today.newUsers} prev={stats.yesterday?.newUsers} />
+                <TodayStat label="Матчей" value={stats.today.newMatches} prev={stats.yesterday?.newMatches} />
+                <TodayStat label="Активных" value={stats.today.activeUsers} prev={stats.yesterday?.activeUsers} />
+              </div>
+              {stats.today.topRatingChange > 0 && (
+                <div style={{ marginTop: 10, fontSize: 12, color: COLORS.textDim }}>
+                  {'\uD83D\uDCC8'} Лучший рейтинг-скачок: <span style={{ color: COLORS.accent, fontWeight: 700 }}>+{stats.today.topRatingChange}</span>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Users growth chart */}
+          {analytics.length >= 2 && (
+            <Card style={{ padding: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
+                {'\uD83D\uDC65'} Рост игроков
+              </div>
+              <MiniChart
+                data={analytics.map((d) => ({
+                  label: new Date(d.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+                  value: d.totalUsers,
+                }))}
+                color={COLORS.accent}
+              />
+            </Card>
+          )}
+
+          {/* Matches per day chart */}
+          {analytics.length >= 2 && (
+            <Card style={{ padding: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
+                {'\uD83C\uDFBE'} Матчей в день
+              </div>
+              <MiniChart
+                data={analytics.map((d) => ({
+                  label: new Date(d.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+                  value: d.newMatches,
+                }))}
+                color={COLORS.purple}
+              />
+            </Card>
+          )}
+
+          {/* City breakdown */}
+          {stats.today?.cityCounts && Object.keys(stats.today.cityCounts).length > 0 && (
+            <Card style={{ padding: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+                {'\uD83C\uDFD9\uFE0F'} По городам
+              </div>
+              {Object.entries(stats.today.cityCounts).map(([city, count]) => (
+                <div key={city} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '8px 0', borderBottom: `1px solid ${COLORS.border}`,
+                }}>
+                  <span style={{ fontSize: 13, color: COLORS.textDim }}>
+                    {CITIES.find((c) => c.value === city)?.label || city}
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{count}</span>
+                </div>
+              ))}
+            </Card>
           )}
         </div>
       )}
@@ -1664,5 +1743,23 @@ function StatCard({ icon, label, value, color }) {
       <div style={{ fontSize: 28, fontWeight: 800, color: color || COLORS.accent }}>{value}</div>
       <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 2 }}>{label}</div>
     </Card>
+  );
+}
+
+function TodayStat({ label, value, prev }) {
+  const diff = prev != null ? value - prev : null;
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontSize: 24, fontWeight: 800, color: COLORS.text }}>{value}</div>
+      <div style={{ fontSize: 11, color: COLORS.textDim }}>{label}</div>
+      {diff != null && diff !== 0 && (
+        <div style={{
+          fontSize: 11, fontWeight: 700, marginTop: 2,
+          color: diff > 0 ? COLORS.accent : COLORS.danger,
+        }}>
+          {diff > 0 ? `↑${diff}` : `↓${Math.abs(diff)}`}
+        </div>
+      )}
+    </div>
   );
 }

@@ -141,5 +141,6 @@ export const api = {
     updateTournament: (id, data) => api.fetch(`/admin/tournaments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     deleteTournament: (id) => api.fetch(`/admin/tournaments/${id}`, { method: 'DELETE' }),
     deleteRegistration: (tournamentId, regId) => api.fetch(`/admin/tournaments/${tournamentId}/registration/${regId}`, { method: 'DELETE' }),
+    analytics: (days = 30) => api.fetch(`/admin/analytics?days=${days}`),
   },
 };

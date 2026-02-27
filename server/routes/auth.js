@@ -45,6 +45,26 @@ router.post("/telegram", async (req, res) => {
           city: "MINSK",
         },
       });
+
+      // Notify admins about new registration (fire-and-forget)
+      try {
+        const { sendTelegramMessage } = require("../services/notifications");
+        const { CITY_MAP } = require("../config/app");
+        const admins = await prisma.user.findMany({
+          where: { isAdmin: true },
+          select: { telegramId: true },
+        });
+        const cityName = CITY_MAP[user.city] || user.city;
+        const nameStr = `${user.firstName}${user.lastName ? " " + user.lastName : ""}`;
+        const usernameStr = user.username ? ` (@${user.username})` : "";
+        const total = await prisma.user.count();
+        const msg = `🆕 Новый игрок: <b>${nameStr}</b>${usernameStr}\n🏙️ ${cityName}\n👥 Всего игроков: <b>${total}</b>`;
+        for (const admin of admins) {
+          sendTelegramMessage(admin.telegramId.toString(), msg).catch(() => {});
+        }
+      } catch (notifyErr) {
+        console.error("New user notify error:", notifyErr.message);
+      }
     } else {
       user = await prisma.user.update({
         where: { telegramId },

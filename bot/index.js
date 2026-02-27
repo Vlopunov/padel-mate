@@ -3,6 +3,7 @@ const startCommand = require("./commands/start");
 const ratingCommand = require("./commands/rating");
 const matchesCommand = require("./commands/matches");
 const helpCommand = require("./commands/help");
+const statsCommand = require("./commands/stats");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || "https://your-domain.com";
@@ -31,6 +32,7 @@ bot.onText(/\/start/, (msg) => startCommand(bot, msg, MINI_APP_URL, API_URL));
 bot.onText(/\/rating/, (msg) => ratingCommand(bot, msg, API_URL));
 bot.onText(/\/matches/, (msg) => matchesCommand(bot, msg, API_URL));
 bot.onText(/\/help/, (msg) => helpCommand(bot, msg, MINI_APP_URL));
+bot.onText(/\/stats/, (msg) => statsCommand(bot, msg));
 
 // Callback queries
 bot.on("callback_query", async (query) => {
@@ -131,5 +133,6 @@ bot.setMyCommands([
   { command: "start", description: "🎾 Запустить Padel GO" },
   { command: "rating", description: "📊 Мой рейтинг" },
   { command: "matches", description: "🎾 Ближайшие матчи" },
+  { command: "stats", description: "📊 Статистика платформы (админ)" },
   { command: "help", description: "❓ Помощь" },
 ]);

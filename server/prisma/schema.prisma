@@ -254,3 +254,18 @@ model TournamentRegistration {
 
   @@unique([tournamentId, player1Id])
 }
+
+model DailyStats {
+  id               Int      @id @default(autoincrement())
+  date             DateTime @unique @db.Date
+  totalUsers       Int      @default(0)
+  newUsers         Int      @default(0)
+  totalMatches     Int      @default(0)
+  newMatches       Int      @default(0)
+  completedMatches Int      @default(0)
+  activeUsers      Int      @default(0)
+  topRatingChange  Int      @default(0)
+  topRatingUserId  Int?
+  cityCounts       Json     @default("{}")
+  createdAt        DateTime @default(now())
+}
