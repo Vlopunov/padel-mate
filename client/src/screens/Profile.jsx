@@ -109,6 +109,19 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           allowDeselect
         />
 
+        <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 6, marginTop: 14, fontWeight: 500 }}>Игровой опыт</p>
+        <ToggleGroup
+          options={[
+            { value: 'BEGINNER', label: 'Начинающий' },
+            { value: 'LESS_YEAR', label: 'До года' },
+            { value: 'ONE_THREE', label: '1-3 года' },
+            { value: 'THREE_PLUS', label: '3+ года' },
+          ]}
+          value={user.experience}
+          onChange={(v) => handleUpdate('experience', v)}
+          allowDeselect
+        />
+
         <div style={{ display: 'flex', gap: 16, marginTop: 16 }}>
           <div>
             <p style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>{user.matchesPlayed}</p>

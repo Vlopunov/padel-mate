@@ -100,7 +100,7 @@ router.post("/onboard", authMiddleware, async (req, res) => {
 // Update profile
 router.patch("/me", authMiddleware, async (req, res) => {
   try {
-    const allowed = ["city", "hand", "position", "preferredTime", "isVisible", "reminderMinutes"];
+    const allowed = ["city", "hand", "position", "experience", "preferredTime", "isVisible", "reminderMinutes"];
     const data = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) {

@@ -12,6 +12,7 @@ import { useTelegram } from '../hooks/useTelegram';
 
 const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
 const POSITION_LABELS = { DERECHA: 'Справа', REVES: 'Слева', BOTH: 'Обе' };
+const EXPERIENCE_LABELS = { BEGINNER: 'Начинающий', LESS_YEAR: 'До года', ONE_THREE: '1-3 года', THREE_PLUS: '3+ года' };
 
 export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   const { openTelegramLink } = useTelegram();
@@ -103,6 +104,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
           {cityLabel && <Badge>{cityLabel}</Badge>}
           {player.hand && <Badge>{HAND_LABELS[player.hand]}</Badge>}
           {player.position && <Badge>{POSITION_LABELS[player.position]}</Badge>}
+          {player.experience && <Badge>{EXPERIENCE_LABELS[player.experience]}</Badge>}
         </div>
       </div>
 

@@ -24,6 +24,13 @@ enum Position {
   BOTH
 }
 
+enum Experience {
+  BEGINNER
+  LESS_YEAR
+  ONE_THREE
+  THREE_PLUS
+}
+
 enum TimeSlot {
   MORNING
   AFTERNOON
@@ -63,6 +70,7 @@ model User {
   city            City
   hand            Hand?
   position        Position?
+  experience      Experience?
   preferredTime   TimeSlot  @default(ANY)
   rating          Int       @default(1200)
   ratingSource    String?
