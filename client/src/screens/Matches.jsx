@@ -348,20 +348,33 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
     return (
       <div style={{ paddingBottom: 80 }}>
-        {/* Back button */}
+        {/* Back button + status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <button
             onClick={() => { setSelectedMatch(null); setComments([]); setCommentText(''); }}
             style={{
-              background: 'none', border: 'none', color: COLORS.accent,
-              fontSize: 20, cursor: 'pointer', padding: '4px 8px',
+              background: COLORS.surface, border: `1px solid ${COLORS.border}`,
+              borderRadius: 10, width: 32, height: 32, color: COLORS.textDim,
+              fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
             {'\u2190'}
           </button>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: 0 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: 0, flex: 1 }}>
             Матч #{match.id}
           </h2>
+          <Badge variant={
+            match.status === 'COMPLETED' ? 'success' :
+            match.status === 'CANCELLED' ? 'danger' :
+            match.status === 'RECRUITING' ? 'accent' :
+            'warning'
+          }>
+            {match.status === 'RECRUITING' ? 'Набор' :
+             match.status === 'FULL' ? 'Собран' :
+             match.status === 'PENDING_CONFIRMATION' ? 'Подтверждение' :
+             match.status === 'COMPLETED' ? 'Завершён' :
+             match.status === 'CANCELLED' ? 'Отменён' : match.status}
+          </Badge>
         </div>
 
         {/* Main info card */}
@@ -426,11 +439,24 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </button>
             )}
           </div>
-          {approvedPlayers.map((p) => (
+          {/* Team 1 */}
+          {approvedPlayers.filter((p) => p.team === 1).map((p) => (
             <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
           ))}
-          {approvedPlayers.length < 4 && Array.from({ length: 4 - approvedPlayers.length }).map((_, i) => (
-            <EmptySlotBig key={`e-${i}`} />
+          {approvedPlayers.filter((p) => p.team === 1).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 1).length }).map((_, i) => (
+            <EmptySlotBig key={`e1-${i}`} />
+          ))}
+          {/* VS divider */}
+          <div style={{
+            textAlign: 'center', padding: '4px 0', margin: '4px 0',
+            fontSize: 12, fontWeight: 800, color: COLORS.textDim, letterSpacing: 2,
+          }}>VS</div>
+          {/* Team 2 */}
+          {approvedPlayers.filter((p) => p.team === 2).map((p) => (
+            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} />
+          ))}
+          {approvedPlayers.filter((p) => p.team === 2).length < 2 && Array.from({ length: 2 - approvedPlayers.filter((p) => p.team === 2).length }).map((_, i) => (
+            <EmptySlotBig key={`e2-${i}`} />
           ))}
         </Card>
 
@@ -955,6 +981,22 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               )}
             </div>
 
+            {/* Score display for completed matches */}
+            {match.status === 'COMPLETED' && match.sets?.length > 0 && (
+              <div style={{
+                display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8,
+                padding: '6px 10px', borderRadius: 10, background: `${COLORS.accent}08`,
+                border: `1px solid ${COLORS.accent}20`,
+              }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent }}>{'\u2705'} Счёт:</span>
+                {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
+                  <span key={s.setNumber} style={{ fontSize: 14, fontWeight: 800, color: COLORS.text }}>
+                    {s.team1Score}:{s.team2Score}
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Bottom row: level + type + indicator + countdown */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <Badge variant="accent">{match.levelMin}-{match.levelMax}</Badge>
@@ -963,7 +1005,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 <Badge variant="warning" style={{ marginLeft: 'auto' }}>{'\u23F3'} Проверка</Badge>
               )}
               {match.status === 'COMPLETED' && (
-                <Badge variant="success" style={{ marginLeft: match.status === 'PENDING_CONFIRMATION' ? 4 : 'auto' }}>{'\u2705'} Завершён</Badge>
+                <Badge variant="success" style={{ marginLeft: 'auto' }}>{'\u2705'} Завершён</Badge>
               )}
               {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
                 <span style={{ marginLeft: 'auto' }}>
@@ -1003,15 +1045,17 @@ function InfoRow({ icon, label, value }) {
 
 function PlayerRowBig({ player, isCreator }) {
   const level = getLevel(player.user.rating);
+  const teamColor = player.team === 1 ? COLORS.accent : COLORS.purple;
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
       padding: '8px 10px', borderRadius: 12, background: `${COLORS.bg}80`,
+      borderLeft: `3px solid ${teamColor}40`,
     }}>
       <Avatar src={player.user.photoUrl} name={player.user.firstName} size={38} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 600 }}>
-          {player.user.firstName}
+          {player.user.firstName} {player.user.lastName || ''}
           {isCreator && (
             <span style={{
               fontSize: 10, fontWeight: 700, marginLeft: 6, padding: '1px 5px',
@@ -1019,13 +1063,16 @@ function PlayerRowBig({ player, isCreator }) {
             }}>ORG</span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: COLORS.textDim }}>{level?.name || ''}</div>
+        <div style={{ fontSize: 12, color: COLORS.textDim }}>
+          {level?.name || ''}
+          <span style={{ color: teamColor, marginLeft: 6, fontWeight: 600 }}>Team {player.team}</span>
+        </div>
       </div>
       <div style={{
         padding: '4px 8px', borderRadius: 8,
-        background: `${COLORS.accent}15`, textAlign: 'center',
+        background: `${teamColor}15`, textAlign: 'center',
       }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.accent }}>{player.user.rating}</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: teamColor }}>{player.user.rating}</div>
       </div>
     </div>
   );

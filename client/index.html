@@ -14,8 +14,17 @@
         color: #E8ECF4;
         -webkit-font-smoothing: antialiased;
         overflow-x: hidden;
+        -webkit-text-size-adjust: 100%;
       }
+      html { scroll-behavior: smooth; }
       #root { min-height: 100vh; }
+      /* Hide scrollbars for horizontal scroll areas */
+      .hide-scrollbar::-webkit-scrollbar { display: none; }
+      .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+      /* Remove tap highlight on all interactive elements */
+      button, a, [role="button"] { -webkit-tap-highlight-color: transparent; }
+      /* Smooth input styling for iOS */
+      input, select, textarea { -webkit-appearance: none; }
     </style>
   </head>
   <body>

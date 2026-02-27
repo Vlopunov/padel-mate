@@ -523,6 +523,44 @@ router.post("/:id/bot-confirm/:telegramId", async (req, res) => {
       for (const a of newAchievements) {
         await notifyNewAchievement(u.telegramId.toString(), a);
       }
+
+      // Event-based achievements (same as regular confirm)
+      // Comeback: won after losing first set
+      if (change.won && match.sets.length >= 2) {
+        const firstSet = match.sets[0];
+        const lostFirstSet =
+          (player.team === 1 && firstSet.team1Score < firstSet.team2Score) ||
+          (player.team === 2 && firstSet.team2Score < firstSet.team1Score);
+        if (lostFirstSet) {
+          const a = await checkEventAchievement(change.userId, "comeback");
+          if (a) await notifyNewAchievement(u.telegramId.toString(), a);
+        }
+      }
+
+      // Clean sheet
+      const hasCleanSheet = match.sets.some(
+        (s) =>
+          (player.team === 1 && s.team1Score === 6 && s.team2Score === 0) ||
+          (player.team === 2 && s.team2Score === 6 && s.team1Score === 0)
+      );
+      if (hasCleanSheet) {
+        const a = await checkEventAchievement(change.userId, "clean_sheet");
+        if (a) await notifyNewAchievement(u.telegramId.toString(), a);
+      }
+
+      // Giant slayer
+      if (change.won) {
+        const myTeamAvg = player.team === 1
+          ? (team1[0].rating + team1[1].rating) / 2
+          : (team2[0].rating + team2[1].rating) / 2;
+        const oppTeamAvg = player.team === 1
+          ? (team2[0].rating + team2[1].rating) / 2
+          : (team1[0].rating + team1[1].rating) / 2;
+        if (oppTeamAvg - myTeamAvg >= 200) {
+          const a = await checkEventAchievement(change.userId, "giant_slayer");
+          if (a) await notifyNewAchievement(u.telegramId.toString(), a);
+        }
+      }
     }
 
     await prisma.match.update({
@@ -551,6 +589,9 @@ router.delete("/:id", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Нельзя удалить матч в текущем статусе" });
     }
 
+    await prisma.matchComment.deleteMany({ where: { matchId } });
+    await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
+    await prisma.matchSet.deleteMany({ where: { matchId } });
     await prisma.matchPlayer.deleteMany({ where: { matchId } });
     await prisma.match.delete({ where: { id: matchId } });
 
@@ -622,6 +663,9 @@ router.post("/:id/leave", authMiddleware, async (req, res) => {
 
     // If creator leaves — delete the entire match
     if (req.userId === match.creatorId) {
+      await prisma.matchComment.deleteMany({ where: { matchId } });
+      await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
+      await prisma.matchSet.deleteMany({ where: { matchId } });
       await prisma.matchPlayer.deleteMany({ where: { matchId } });
       await prisma.match.delete({ where: { id: matchId } });
       return res.json({ success: true, deleted: true });

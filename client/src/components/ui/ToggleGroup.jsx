@@ -37,7 +37,11 @@ export function ToggleGroup({ options, value, onChange, allowDeselect = false })
 
 export function FilterTabs({ options, value, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4 }}>
+    <div style={{
+      display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4,
+      scrollbarWidth: 'none', msOverflowStyle: 'none',
+      WebkitOverflowScrolling: 'touch',
+    }} className="hide-scrollbar">
       {options.map((opt) => {
         const active = value === opt.value;
         return (
@@ -55,7 +59,9 @@ export function FilterTabs({ options, value, onChange }) {
               cursor: 'pointer',
               fontFamily: 'inherit',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
               WebkitTapHighlightColor: 'transparent',
+              transition: 'all 0.15s',
             }}
           >
             {opt.label}

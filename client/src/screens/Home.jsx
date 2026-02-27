@@ -205,10 +205,10 @@ export function Home({ user, onNavigate }) {
               </div>
               <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 6 }}>{match.venue?.name}</p>
               <div style={{ display: 'flex', gap: 4 }}>
-                {match.players?.map((p) => (
+                {match.players?.filter((p) => p.status === 'APPROVED').map((p) => (
                   <Avatar key={p.user.id} src={p.user.photoUrl} name={p.user.firstName} size={28} />
                 ))}
-                {Array.from({ length: 4 - (match.players?.length || 0) }).map((_, i) => (
+                {Array.from({ length: Math.max(0, 4 - (match.players?.filter((p) => p.status === 'APPROVED').length || 0)) }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
                     style={{

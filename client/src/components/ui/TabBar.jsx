@@ -47,7 +47,11 @@ export function TabBar({ activeTab, onTabChange }) {
               minWidth: 56,
             }}
           >
-            <span style={{ fontSize: 20, filter: active ? 'none' : 'grayscale(100%)', opacity: active ? 1 : 0.5 }}>
+            <span style={{
+              fontSize: 20, filter: active ? 'none' : 'grayscale(100%)', opacity: active ? 1 : 0.5,
+              transition: 'all 0.2s',
+              transform: active ? 'scale(1.1)' : 'scale(1)',
+            }}>
               {tab.icon}
             </span>
             <span
@@ -60,6 +64,12 @@ export function TabBar({ activeTab, onTabChange }) {
             >
               {tab.label}
             </span>
+            {active && (
+              <div style={{
+                width: 4, height: 4, borderRadius: 2,
+                background: COLORS.accent, marginTop: 1,
+              }} />
+            )}
           </button>
         );
       })}

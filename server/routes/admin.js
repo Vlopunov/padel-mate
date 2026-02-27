@@ -58,15 +58,23 @@ router.patch("/users/:id", authMiddleware, adminMiddleware, async (req, res) => 
     if (isAdmin !== undefined) data.isAdmin = isAdmin;
     if (city !== undefined) data.city = city;
 
-    const user = await prisma.user.update({ where: { id: userId }, data });
-
+    // Get old rating BEFORE update for correct history
+    let oldRating = null;
     if (rating !== undefined) {
+      const existing = await prisma.user.findUnique({ where: { id: userId }, select: { rating: true } });
+      if (existing) oldRating = existing.rating;
+    }
+
+    await prisma.user.update({ where: { id: userId }, data });
+
+    if (rating !== undefined && oldRating !== null) {
+      const newRating = parseInt(rating);
       await prisma.ratingHistory.create({
         data: {
           userId,
-          oldRating: user.rating,
-          newRating: parseInt(rating),
-          change: parseInt(rating) - user.rating,
+          oldRating,
+          newRating,
+          change: newRating - oldRating,
           reason: "admin_edit",
           note: "Изменено админом",
         },
@@ -84,10 +92,28 @@ router.patch("/users/:id", authMiddleware, adminMiddleware, async (req, res) => 
 router.delete("/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
+
+    // Delete all related records to avoid FK constraint errors
+    await prisma.matchComment.deleteMany({ where: { userId } });
     await prisma.matchPlayer.deleteMany({ where: { userId } });
     await prisma.scoreConfirmation.deleteMany({ where: { userId } });
     await prisma.ratingHistory.deleteMany({ where: { userId } });
     await prisma.userAchievement.deleteMany({ where: { userId } });
+    await prisma.tournamentRegistration.deleteMany({
+      where: { OR: [{ player1Id: userId }, { player2Id: userId }] },
+    });
+
+    // Handle matches created by this user: delete all their data first, then the matches
+    const createdMatches = await prisma.match.findMany({ where: { creatorId: userId }, select: { id: true } });
+    const createdMatchIds = createdMatches.map((m) => m.id);
+    if (createdMatchIds.length > 0) {
+      await prisma.matchComment.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+      await prisma.scoreConfirmation.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+      await prisma.matchSet.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+      await prisma.matchPlayer.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+      await prisma.match.deleteMany({ where: { id: { in: createdMatchIds } } });
+    }
+
     await prisma.user.delete({ where: { id: userId } });
     res.json({ success: true });
   } catch (err) {
