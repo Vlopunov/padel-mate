@@ -53,7 +53,7 @@ router.post("/onboard", authMiddleware, async (req, res) => {
 
     if (!city) return res.status(400).json({ error: "Город обязателен" });
 
-    let rating = 1200;
+    let rating = 1500;
     let source = "survey";
 
     if (ratingSource === "external" && ratingSystem && ratingValue) {
@@ -65,7 +65,7 @@ router.post("/onboard", authMiddleware, async (req, res) => {
     }
 
     // Clamp rating to valid range
-    rating = Math.max(500, Math.min(5000, rating));
+    rating = Math.max(0, Math.min(5000, rating));
 
     const user = await prisma.user.update({
       where: { id: req.userId },
@@ -87,9 +87,9 @@ router.post("/onboard", authMiddleware, async (req, res) => {
       await prisma.ratingHistory.create({
         data: {
           userId: user.id,
-          oldRating: 1200,
+          oldRating: 1500,
           newRating: rating,
-          change: rating - 1200,
+          change: rating - 1500,
           reason: "onboarding",
           note: `Начальный рейтинг (${source})`,
         },
@@ -131,8 +131,8 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
   try {
     const { newRating, reason } = req.body;
 
-    if (!newRating || newRating < 500 || newRating > 5000) {
-      return res.status(400).json({ error: "Рейтинг должен быть от 500 до 5000" });
+    if (!newRating || newRating < 0 || newRating > 5000) {
+      return res.status(400).json({ error: "Рейтинг должен быть от 0 до 5000" });
     }
 
     const user = await prisma.user.findUnique({ where: { id: req.userId } });

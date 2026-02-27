@@ -26,10 +26,10 @@ module.exports = {
     NO_SHOW_PENALTY: -15,
   },
   LEVELS: [
-    { min: 0, max: 1199, level: 1.0, category: "D", name: "Новичок", ntrp: "1.0–2.5" },
-    { min: 1200, max: 1599, level: 2.0, category: "C", name: "Любитель", ntrp: "3.0–3.5" },
-    { min: 1600, max: 1999, level: 3.0, category: "B", name: "Продвинутый", ntrp: "4.0–4.5" },
-    { min: 2000, max: 9999, level: 4.0, category: "A", name: "Сильный", ntrp: "5.0+" },
+    { min: 0, max: 2500, level: 1.0, category: "D", name: "Новичок", ntrp: "1.0–2.5" },
+    { min: 2501, max: 3500, level: 2.0, category: "C", name: "Любитель", ntrp: "3.0–3.5" },
+    { min: 3501, max: 4500, level: 3.0, category: "B", name: "Продвинутый", ntrp: "4.0–4.5" },
+    { min: 4501, max: 5000, level: 4.0, category: "A", name: "Сильный", ntrp: "5.0+" },
   ],
   XP_LEVELS: [
     { min: 0, icon: "🌱", name: "Новичок" },

@@ -99,28 +99,28 @@ function calculateInitialElo(answers) {
     weighted += (answers[i] / maxOptions[i]) * weights[i];
   }
 
-  return Math.round(1000 + weighted * 1000);
+  return Math.round(1000 + weighted * 1500);
 }
 
 function convertExternalRating(system, value) {
   const num = parseFloat(value);
-  if (isNaN(num)) return 1200;
+  if (isNaN(num)) return 1500;
 
-  let rating = 1200;
+  let rating = 1500;
 
   if (system === "raceto" || system === "playtomic") {
-    // NTRP-based conversion: D(≤2.5)→0-1199, C(3.0-3.5)→1200-1599, B(4.0-4.5)→1600-1999, A(5.0+)→2000+
+    // NTRP-based conversion: D(≤2.5)→0-2500, C(3.0-3.5)→2501-3500, B(4.0-4.5)→3501-4500, A(5.0+)→4501+
     const clamped = Math.max(1, Math.min(8, num));
-    if (clamped <= 2.5) rating = 600 + (clamped - 1) * 400;
-    else if (clamped <= 3.5) rating = 1200 + (clamped - 2.5) * 400;
-    else if (clamped <= 4.5) rating = 1600 + (clamped - 3.5) * 400;
-    else rating = 2000 + (clamped - 4.5) * 200;
+    if (clamped <= 2.5) rating = 500 + (clamped - 1) * 1333;
+    else if (clamped <= 3.5) rating = 2501 + (clamped - 3.0) * 2000;
+    else if (clamped <= 4.5) rating = 3501 + (clamped - 4.0) * 2000;
+    else rating = 4501 + (clamped - 5.0) * 166;
   } else {
     rating = Math.round(num);
   }
 
-  // Clamp final rating to 500–5000
-  return Math.max(500, Math.min(5000, rating));
+  // Clamp final rating to 0–5000
+  return Math.max(0, Math.min(5000, rating));
 }
 
 module.exports = {

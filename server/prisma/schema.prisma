@@ -72,7 +72,7 @@ model User {
   position        Position?
   experience      Experience?
   preferredTime   TimeSlot  @default(ANY)
-  rating          Int       @default(1200)
+  rating          Int       @default(1500)
   ratingSource    String?
   matchesPlayed   Int       @default(0)
   wins            Int       @default(0)
