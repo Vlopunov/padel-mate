@@ -111,6 +111,70 @@ async function notifyMatchCancelled(telegramId, match) {
   await sendTelegramMessage(telegramId, text);
 }
 
+async function notifyMatchFull(telegramId, match, playerNames) {
+  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const venue = match.venue?.name || "";
+  const text =
+    `🎉 <b>Матч собран!</b> 4/4 игрока\n\n` +
+    `📍 ${venue}\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `👥 ${playerNames.join(", ")}`;
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyLeaderboardPosition(telegramId, position, prevPosition, rating) {
+  let text;
+  if (prevPosition && position < prevPosition) {
+    text = `🏆 Ты поднялся на <b>#${position}</b> в рейтинге! (был #${prevPosition})\n📊 Рейтинг: <b>${rating}</b>`;
+  } else if (position <= 10) {
+    text = `🔥 Ты в <b>топ-10</b>! Позиция: <b>#${position}</b>\n📊 Рейтинг: <b>${rating}</b>`;
+  } else if (position <= 3) {
+    text = `👑 Ты в <b>топ-3</b>! Позиция: <b>#${position}</b>\n📊 Рейтинг: <b>${rating}</b>`;
+  } else {
+    return; // Don't notify for positions > 10 without improvement
+  }
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyInactivePlayer(telegramId, firstName, availableMatches) {
+  let text = `👋 <b>${firstName}</b>, давно не играли!\n\n`;
+  if (availableMatches > 0) {
+    text += `🎾 Сейчас доступно <b>${availableMatches}</b> матчей — присоединяйся!`;
+  } else {
+    text += `Создай матч и позови друзей! 🎾`;
+  }
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyWeeklySummary(telegramId, data) {
+  let text = `📋 <b>Твоя неделя в Padel GO</b>\n\n`;
+  text += `🎾 Матчей сыграно: <b>${data.matchesPlayed}</b>\n`;
+  if (data.matchesPlayed > 0) {
+    text += `✅ Побед: <b>${data.wins}</b> | ❌ Поражений: <b>${data.losses}</b>\n`;
+    const sign = data.ratingChange >= 0 ? "+" : "";
+    text += `📊 Рейтинг: <b>${data.currentRating}</b> (${sign}${data.ratingChange} за неделю)\n`;
+  }
+  if (data.position) {
+    text += `🏆 Позиция: <b>#${data.position}</b>`;
+    if (data.positionChange) {
+      const arrow = data.positionChange > 0 ? `↓${data.positionChange}` : `↑${Math.abs(data.positionChange)}`;
+      text += ` (${arrow})`;
+    }
+    text += `\n`;
+  }
+  if (data.newAchievements > 0) {
+    text += `🏅 Новых достижений: <b>${data.newAchievements}</b>\n`;
+  }
+  text += `\nУдачной недели! 💪`;
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyMilestone(telegramId, milestone) {
+  const text = `🎯 <b>Padel GO — майлстоун!</b>\n\n${milestone}`;
+  await sendTelegramMessage(telegramId, text);
+}
+
 module.exports = {
   sendTelegramMessage,
   notifyScoreConfirmation,
@@ -120,4 +184,9 @@ module.exports = {
   notifyNewMatchInArea,
   notifyTournamentOpen,
   notifyMatchCancelled,
+  notifyMatchFull,
+  notifyLeaderboardPosition,
+  notifyInactivePlayer,
+  notifyWeeklySummary,
+  notifyMilestone,
 };

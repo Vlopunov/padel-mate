@@ -1,12 +1,14 @@
 const { PrismaClient } = require("@prisma/client");
-const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage } = require("./notifications");
-const { collectDailyStats, getTodaySummary, formatDigestMessage } = require("./analytics");
+const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage, notifyInactivePlayer, notifyWeeklySummary, notifyMilestone } = require("./notifications");
+const { collectDailyStats, getTodaySummary, formatDigestMessage, getUserWeeklySummary, getInactivePlayers, checkMilestones, getWeeklyReportData, formatWeeklyReport } = require("./analytics");
 
 const prisma = new PrismaClient();
 
 let isRunning = false;
 let lastDigestDate = null;
 let lastStatsHour = null;
+let lastWeeklyDate = null;
+let lastInactiveDate = null;
 
 async function checkAndSendReminders() {
   if (isRunning) return; // prevent overlapping runs
@@ -111,6 +113,15 @@ async function checkAndSendReminders() {
 
     // --- Daily digest at 21:00 Minsk time ---
     await checkDailyDigest(now);
+
+    // --- Weekly summaries (Sunday 20:00 Minsk) ---
+    await checkWeeklySummaries(now);
+
+    // --- Inactive player nudge (Wednesday 18:00 Minsk) ---
+    await checkInactivePlayerNudge(now);
+
+    // --- Milestone checks (hourly) ---
+    await checkPlatformMilestones(now);
 
   } catch (err) {
     console.error("[Reminder] Scheduler error:", err.message);
@@ -221,6 +232,133 @@ async function checkDailyDigest(now) {
     console.log(`[Digest] Sent to ${admins.length} admin(s)`);
   } catch (err) {
     console.error("[Digest] Error:", err.message);
+  }
+}
+
+/**
+ * Weekly summaries for all players (Sunday 20:00 Minsk) +
+ * Weekly admin report (Sunday 21:00 Minsk)
+ */
+async function checkWeeklySummaries(now) {
+  const minskHour = (now.getUTCHours() + 3) % 24;
+  const minskMinute = now.getUTCMinutes();
+  const minskOffset = 3 * 60 * 60 * 1000;
+  const minskNow = new Date(now.getTime() + minskOffset);
+  const dayOfWeek = minskNow.getUTCDay(); // 0 = Sunday
+  const todayStr = minskNow.toISOString().split("T")[0];
+
+  if (dayOfWeek !== 0) return; // Only on Sundays
+  if (lastWeeklyDate === todayStr) return; // Once per week
+
+  // Player summaries at 20:00
+  if (minskHour === 20 && minskMinute <= 1) {
+    lastWeeklyDate = todayStr;
+    try {
+      console.log("[Weekly] Sending player weekly summaries...");
+      const users = await prisma.user.findMany({
+        where: { matchesPlayed: { gt: 0 } },
+        select: { id: true },
+      });
+
+      let sent = 0;
+      for (const u of users) {
+        try {
+          const summary = await getUserWeeklySummary(u.id);
+          if (summary.matchesPlayed > 0 || summary.newAchievements > 0) {
+            await notifyWeeklySummary(summary.telegramId, summary);
+            sent++;
+          }
+        } catch (e) { /* skip user */ }
+      }
+      console.log(`[Weekly] Sent player summaries to ${sent} user(s)`);
+    } catch (err) {
+      console.error("[Weekly] Player summary error:", err.message);
+    }
+  }
+
+  // Admin weekly report at 21:00
+  if (minskHour === 21 && minskMinute <= 1) {
+    try {
+      console.log("[Weekly] Sending admin weekly report...");
+      const weekData = await getWeeklyReportData();
+      const message = formatWeeklyReport(weekData);
+
+      const admins = await prisma.user.findMany({
+        where: { isAdmin: true },
+        select: { telegramId: true },
+      });
+
+      for (const admin of admins) {
+        sendTelegramMessage(admin.telegramId.toString(), message).catch(() => {});
+      }
+      console.log(`[Weekly] Admin report sent to ${admins.length} admin(s)`);
+    } catch (err) {
+      console.error("[Weekly] Admin report error:", err.message);
+    }
+  }
+}
+
+/**
+ * Nudge inactive players (Wednesday 18:00 Minsk)
+ */
+async function checkInactivePlayerNudge(now) {
+  const minskHour = (now.getUTCHours() + 3) % 24;
+  const minskMinute = now.getUTCMinutes();
+  const minskOffset = 3 * 60 * 60 * 1000;
+  const minskNow = new Date(now.getTime() + minskOffset);
+  const dayOfWeek = minskNow.getUTCDay(); // 3 = Wednesday
+  const todayStr = minskNow.toISOString().split("T")[0];
+
+  if (dayOfWeek !== 3) return;
+  if (minskHour !== 18 || minskMinute > 1) return;
+  if (lastInactiveDate === todayStr) return;
+  lastInactiveDate = todayStr;
+
+  try {
+    console.log("[Inactive] Checking for inactive players...");
+    const inactivePlayers = await getInactivePlayers(14);
+
+    // Count available matches
+    const availableMatches = await prisma.match.count({
+      where: { status: "RECRUITING", date: { gt: now } },
+    });
+
+    let sent = 0;
+    for (const player of inactivePlayers) {
+      try {
+        await notifyInactivePlayer(player.telegramId.toString(), player.firstName, availableMatches);
+        sent++;
+      } catch (e) { /* skip */ }
+    }
+    console.log(`[Inactive] Nudged ${sent} inactive player(s)`);
+  } catch (err) {
+    console.error("[Inactive] Error:", err.message);
+  }
+}
+
+/**
+ * Check platform milestones (hourly, near hour start)
+ */
+async function checkPlatformMilestones(now) {
+  if (now.getMinutes() > 1) return; // Only near top of hour
+
+  try {
+    const milestones = await checkMilestones();
+    if (milestones.length === 0) return;
+
+    const admins = await prisma.user.findMany({
+      where: { isAdmin: true },
+      select: { telegramId: true },
+    });
+
+    for (const milestone of milestones) {
+      for (const admin of admins) {
+        notifyMilestone(admin.telegramId.toString(), milestone).catch(() => {});
+      }
+    }
+    console.log(`[Milestone] Sent ${milestones.length} milestone(s)`);
+  } catch (err) {
+    console.error("[Milestone] Error:", err.message);
   }
 }
 

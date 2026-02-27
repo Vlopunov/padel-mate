@@ -3,7 +3,7 @@ const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
 const { calculateRatingChanges, determineWinner, getLevel } = require("../services/rating");
 const { checkAndAwardAchievements, checkEventAchievement } = require("../services/achievements");
-const { notifyRatingChange, notifyNewAchievement, sendTelegramMessage, notifyScoreConfirmation } = require("../services/notifications");
+const { notifyRatingChange, notifyNewAchievement, sendTelegramMessage, notifyScoreConfirmation, notifyMatchFull, notifyLeaderboardPosition } = require("../services/notifications");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -245,6 +245,18 @@ async function approvePlayerLogic(matchId, userId) {
   const approvedCount = approvedPlayers(match.players).length + 1;
   if (approvedCount >= 4) {
     await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
+
+    // Notify all players that the match is full
+    try {
+      const fullMatch = await prisma.match.findUnique({
+        where: { id: matchId },
+        include: { players: { where: { status: "APPROVED" }, include: { user: true } }, venue: true },
+      });
+      const playerNames = fullMatch.players.map((p) => p.user.firstName);
+      for (const p of fullMatch.players) {
+        notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch(() => {});
+      }
+    } catch (e) { console.error("[MatchFull] notify error:", e.message); }
   }
 
   // Notify the approved player
@@ -928,6 +940,17 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
         change.change
       );
 
+      // Notify leaderboard position (top-10 or improved)
+      try {
+        const higherCount = await prisma.user.count({ where: { rating: { gt: change.newRating } } });
+        const position = higherCount + 1;
+        const prevHigherCount = await prisma.user.count({ where: { rating: { gt: change.oldRating } } });
+        const prevPosition = prevHigherCount + 1;
+        if (position <= 10 || position < prevPosition) {
+          await notifyLeaderboardPosition(user.telegramId.toString(), position, prevPosition, change.newRating);
+        }
+      } catch (e) { console.error("[Leaderboard] notify error:", e.message); }
+
       // Check achievements
       const newAchievements = await checkAndAwardAchievements(change.userId);
       for (const a of newAchievements) {
@@ -1220,6 +1243,18 @@ router.post("/:id/accept-invite", authMiddleware, async (req, res) => {
     // Check if match is now full
     if (approved.length + 1 >= 4) {
       await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
+
+      // Notify all players that the match is full
+      try {
+        const fullMatch = await prisma.match.findUnique({
+          where: { id: matchId },
+          include: { players: { where: { status: "APPROVED" }, include: { user: true } }, venue: true },
+        });
+        const playerNames = fullMatch.players.map((p) => p.user.firstName);
+        for (const p of fullMatch.players) {
+          notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch(() => {});
+        }
+      } catch (e) { console.error("[MatchFull] notify error:", e.message); }
     }
 
     // Notify creator
