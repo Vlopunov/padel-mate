@@ -182,9 +182,21 @@ function formatDigestMessage(today, yesterday) {
   return text;
 }
 
+/**
+ * Check if a Telegram user is admin (used by bot command)
+ */
+async function isAdmin(telegramId) {
+  const user = await prisma.user.findUnique({
+    where: { telegramId: BigInt(telegramId) },
+    select: { isAdmin: true },
+  });
+  return user?.isAdmin === true;
+}
+
 module.exports = {
   collectDailyStats,
   getDashboardData,
   getTodaySummary,
   formatDigestMessage,
+  isAdmin,
 };

@@ -1,26 +1,26 @@
-const { PrismaClient } = require("@prisma/client");
-
-const prisma = new PrismaClient();
+// Uses analytics service from server (shares same process)
+// Do NOT import @prisma/client here — bot has separate node_modules
 
 module.exports = async function statsCommand(bot, msg) {
   const chatId = msg.chat.id;
-  const telegramId = BigInt(msg.from.id);
+  const telegramId = msg.from.id;
 
   try {
-    // Check if user is admin
-    const user = await prisma.user.findUnique({
-      where: { telegramId },
-      select: { isAdmin: true },
-    });
+    const {
+      isAdmin,
+      getTodaySummary,
+      formatDigestMessage,
+    } = require("../../server/services/analytics");
 
-    if (!user || !user.isAdmin) {
+    // Check if user is admin
+    const admin = await isAdmin(telegramId);
+    if (!admin) {
       await bot.sendMessage(chatId, "⛔ Эта команда доступна только администраторам.");
       return;
     }
 
     await bot.sendMessage(chatId, "📊 Собираю статистику...");
 
-    const { getTodaySummary, formatDigestMessage } = require("../../server/services/analytics");
     const { today, yesterday } = await getTodaySummary();
     const message = formatDigestMessage(today, yesterday);
 
