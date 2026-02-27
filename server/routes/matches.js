@@ -461,7 +461,7 @@ router.post("/:id/bot-confirm/:telegramId", async (req, res) => {
     if (!confirmingPlayer) {
       return res.status(403).json({ error: "Вы не участник этого матча" });
     }
-    if (submitterPlayer && confirmingPlayer.team === submitterPlayer.team) {
+    if (submitterPlayer && confirmingPlayer.team != null && submitterPlayer.team != null && confirmingPlayer.team === submitterPlayer.team) {
       return res.status(400).json({ error: "Подтвердить должен соперник (игрок другой команды)" });
     }
 
@@ -475,6 +475,9 @@ router.post("/:id/bot-confirm/:telegramId", async (req, res) => {
     // Apply ratings
     const team1 = allApproved.filter((p) => p.team === 1).map((p) => p.user);
     const team2 = allApproved.filter((p) => p.team === 2).map((p) => p.user);
+    if (team1.length !== 2 || team2.length !== 2) {
+      return res.status(400).json({ error: "Команды не распределены корректно" });
+    }
     const tournament = match.tournamentId
       ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
       : null;
@@ -714,6 +717,13 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Вы не участник этого матча" });
     }
 
+    // Validate team assignments: must have exactly 2 players per team
+    const team1Count = teams.filter((t) => t.team === 1).length;
+    const team2Count = teams.filter((t) => t.team === 2).length;
+    if (team1Count !== 2 || team2Count !== 2) {
+      return res.status(400).json({ error: "В каждой команде должно быть по 2 игрока" });
+    }
+
     // Update team assignments from frontend
     for (const t of teams) {
       await prisma.matchPlayer.updateMany({
@@ -848,7 +858,7 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
       return res.status(403).json({ error: "Вы не участник этого матча" });
     }
 
-    if (submitterPlayer && confirmingPlayer.team === submitterPlayer.team) {
+    if (submitterPlayer && confirmingPlayer.team != null && submitterPlayer.team != null && confirmingPlayer.team === submitterPlayer.team) {
       return res.status(400).json({ error: "Подтвердить должен соперник (игрок другой команды)" });
     }
 
@@ -862,6 +872,9 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
     // Only 1 opponent confirmation needed — apply ratings immediately
     const team1 = approvedPlayers.filter((p) => p.team === 1).map((p) => p.user);
     const team2 = approvedPlayers.filter((p) => p.team === 2).map((p) => p.user);
+    if (team1.length !== 2 || team2.length !== 2) {
+      return res.status(400).json({ error: "Команды не распределены корректно" });
+    }
     const tournament = match.tournamentId
       ? await prisma.tournament.findUnique({ where: { id: match.tournamentId } })
       : null;

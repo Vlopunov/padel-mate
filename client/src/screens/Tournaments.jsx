@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { COLORS, CITIES } from '../config';
+import { COLORS, CITIES, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -218,7 +218,7 @@ export function Tournaments({ user, onNavigate }) {
 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <Badge>{formatMap[t.format] || t.format}</Badge>
-                <Badge variant="accent">{t.levelMin}-{t.levelMax}</Badge>
+                <Badge variant="accent">{getLevelByValue(t.levelMin).category}-{getLevelByValue(t.levelMax).category}</Badge>
                 <Badge>{t.teamsRegistered || 0}/{t.maxTeams} команд</Badge>
                 {t.price && <Badge variant="warning">{t.price}</Badge>}
               </div>
@@ -277,7 +277,7 @@ export function Tournaments({ user, onNavigate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: COLORS.textDim, fontSize: 13 }}>Уровень</span>
                 <span style={{ color: COLORS.accent, fontSize: 13, fontWeight: 600 }}>
-                  {selectedTournament.levelMin} — {selectedTournament.levelMax}
+                  {getLevelByValue(selectedTournament.levelMin).category} — {getLevelByValue(selectedTournament.levelMax).category}
                 </span>
               </div>
             </div>

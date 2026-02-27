@@ -54,7 +54,9 @@ export function Stats({ user, onBack, onNavigate }) {
     );
   }
 
-  const xp = getXpLevel(user.xp || 0);
+  // Use XP from stats response (freshly checked) rather than stale user prop
+  const freshXp = stats?.xp ?? user.xp ?? 0;
+  const xp = getXpLevel(freshXp);
   const winRate = stats?.winRate || 0;
   const unlockedIds = new Set(myAchievements.map((a) => a.id));
 
@@ -129,13 +131,13 @@ export function Stats({ user, onBack, onNavigate }) {
               </p>
             </div>
           </div>
-          <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{user.xp || 0} XP</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{freshXp} XP</span>
         </div>
         {xp.next && (
           <>
             <ProgressBar progress={xp.progress} />
             <p style={{ fontSize: 11, color: COLORS.textDim, marginTop: 4, textAlign: 'right' }}>
-              До {xp.next.icon} {xp.next.name}: {xp.next.min - (user.xp || 0)} XP
+              До {xp.next.icon} {xp.next.name}: {xp.next.min - freshXp} XP
             </p>
           </>
         )}
@@ -185,8 +187,10 @@ export function Stats({ user, onBack, onNavigate }) {
             История матчей
           </h3>
           {stats.matchHistory.map((match) => {
-            const team1 = match.players?.filter((p) => p.team === 1) || [];
-            const team2 = match.players?.filter((p) => p.team === 2) || [];
+            const hasTeams = match.players?.some((p) => p.team != null);
+            const team1 = hasTeams ? (match.players?.filter((p) => p.team === 1) || []) : [];
+            const team2 = hasTeams ? (match.players?.filter((p) => p.team === 2) || []) : [];
+            const unassigned = !hasTeams ? (match.players || []) : [];
             const setsStr = match.sets?.map((s) => {
               let str = `${s.team1Score}:${s.team2Score}`;
               if (s.team1Tiebreak != null && s.team2Tiebreak != null) str += `(${s.team1Tiebreak}:${s.team2Tiebreak})`;
@@ -204,7 +208,11 @@ export function Stats({ user, onBack, onNavigate }) {
                       {new Date(match.date).toLocaleDateString('ru-RU')}
                     </p>
                     <p style={{ fontSize: 13, color: COLORS.text, marginTop: 2 }}>
-                      {renderClickableTeam(team1, user.id, onNavigate)} vs {renderClickableTeam(team2, user.id, onNavigate)}
+                      {hasTeams ? (
+                        <>{renderClickableTeam(team1, user.id, onNavigate)} vs {renderClickableTeam(team2, user.id, onNavigate)}</>
+                      ) : (
+                        renderClickableTeam(unassigned, user.id, onNavigate)
+                      )}
                     </p>
                     {setsStr && (
                       <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginTop: 2 }}>{setsStr}</p>

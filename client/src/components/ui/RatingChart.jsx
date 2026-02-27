@@ -4,7 +4,20 @@ import { COLORS } from '../../config';
 export function RatingChart({ data, currentRating }) {
   if (!data || data.length < 2) return null;
 
-  const ratings = data.map((d) => d.newRating).reverse();
+  // Sort chronologically (data comes DESC from API) and deduplicate by timestamp
+  const sorted = [...data].reverse();
+  const seen = new Set();
+  const unique = sorted.filter((d) => {
+    const key = `${d.newRating}-${d.createdAt}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // If only 1 unique point, add current rating as second point
+  const chartData = unique.length >= 2 ? unique : [unique[0], { newRating: currentRating, change: 0 }];
+
+  const ratings = chartData.map((d) => d.newRating);
   const lastChange = data[0]?.change || 0;
 
   // Nice rounded axis bounds
@@ -29,11 +42,16 @@ export function RatingChart({ data, currentRating }) {
 
   // Smooth curve using cardinal spline
   let pathD = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const cpx = (prev.x + curr.x) / 2;
-    pathD += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`;
+  if (points.length === 2) {
+    // Simple line for 2 points — no weird bezier overshoot
+    pathD += ` L ${points[1].x} ${points[1].y}`;
+  } else {
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cpx = (prev.x + curr.x) / 2;
+      pathD += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`;
+    }
   }
   const areaD = pathD + ` L ${points[points.length - 1].x} ${height - padding.bottom} L ${points[0].x} ${height - padding.bottom} Z`;
 

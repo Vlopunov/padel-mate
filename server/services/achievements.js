@@ -54,6 +54,8 @@ async function checkAndAwardAchievements(userId) {
         });
         const partnerIds = new Set();
         for (const mp of partners) {
+          // Skip if team not yet assigned (null)
+          if (mp.team == null) continue;
           const teammates = await prisma.matchPlayer.findMany({
             where: { matchId: mp.matchId, team: mp.team, userId: { not: userId } },
             select: { userId: true },
@@ -69,7 +71,7 @@ async function checkAndAwardAchievements(userId) {
           where: { userId },
           include: { match: { include: { venue: true } } },
         });
-        const cities = new Set(matchPlayers.map((mp) => mp.match.venue.city));
+        const cities = new Set(matchPlayers.filter((mp) => mp.match?.venue?.city).map((mp) => mp.match.venue.city));
         earned = cities.size >= condition.value;
         break;
       }
@@ -79,7 +81,7 @@ async function checkAndAwardAchievements(userId) {
           where: { userId },
           include: { match: true },
         });
-        const venueIds = new Set(matchPlayers.map((mp) => mp.match.venueId));
+        const venueIds = new Set(matchPlayers.filter((mp) => mp.match?.venueId).map((mp) => mp.match.venueId));
         earned = venueIds.size >= condition.value;
         break;
       }

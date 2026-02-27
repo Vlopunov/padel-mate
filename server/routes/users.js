@@ -79,17 +79,22 @@ router.post("/onboard", authMiddleware, async (req, res) => {
       },
     });
 
-    // Create initial rating history
-    await prisma.ratingHistory.create({
-      data: {
-        userId: user.id,
-        oldRating: 1200,
-        newRating: rating,
-        change: rating - 1200,
-        reason: "onboarding",
-        note: `Начальный рейтинг (${source})`,
-      },
+    // Create initial rating history (only if not already exists)
+    const existingOnboarding = await prisma.ratingHistory.findFirst({
+      where: { userId: user.id, reason: "onboarding" },
     });
+    if (!existingOnboarding) {
+      await prisma.ratingHistory.create({
+        data: {
+          userId: user.id,
+          oldRating: 1200,
+          newRating: rating,
+          change: rating - 1200,
+          reason: "onboarding",
+          note: `Начальный рейтинг (${source})`,
+        },
+      });
+    }
 
     res.json(serializeUser(user));
   } catch (err) {
@@ -238,13 +243,22 @@ router.get("/:id", authMiddleware, async (req, res) => {
 router.get("/:id/stats", authMiddleware, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    let user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: "Пользователь не найден" });
+
+    // Retroactively check achievements (catches any missed awards)
+    try {
+      await checkAndAwardAchievements(userId);
+      // Re-fetch user to get updated XP
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    } catch (achErr) {
+      console.error("Achievement check error:", achErr);
+    }
 
     const ratingHistory = await prisma.ratingHistory.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 30,
     });
 
     const achievements = await prisma.userAchievement.findMany({
