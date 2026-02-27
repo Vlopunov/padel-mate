@@ -133,8 +133,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
-  // Calendar
-  const [calendarLoading, setCalendarLoading] = useState(false);
+  // Calendar (no loading state — opens link in external browser)
 
   useEffect(() => {
     loadMatches();
@@ -262,14 +261,56 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
     openTelegramLink(shareUrl);
   }
 
-  async function handleDownloadCalendar(matchId) {
-    setCalendarLoading(true);
-    try {
-      await api.matches.downloadCalendar(matchId);
-    } catch (err) {
-      alert(err.message);
+  async function handleDownloadCalendar(match) {
+    // Generate .ics client-side to avoid Telegram WebView download issues
+    const pad = (n) => String(n).padStart(2, '0');
+    const fmtDate = (d) =>
+      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+    const esc = (s) => s.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+
+    const start = new Date(match.date);
+    const end = new Date(start.getTime() + match.durationMin * 60000);
+    const approvedNames = match.players
+      .filter((p) => p.status === 'APPROVED')
+      .map((p) => `${p.user.firstName}${p.user.lastName ? ' ' + p.user.lastName : ''} (${p.user.rating})`)
+      .join('\\n');
+    const typeLabel = match.matchType === 'RATED' ? 'Рейтинговый' : 'Дружеский';
+    const lvl = getLevel(match.levelMin || 1500);
+
+    const icsText = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Padel GO//Match//RU',
+      'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+      `UID:padel-go-match-${match.id}@padelgo.by`,
+      `DTSTART:${fmtDate(start)}`, `DTEND:${fmtDate(end)}`,
+      `SUMMARY:${esc('Падел — ' + (match.venue?.name || 'Матч'))}`,
+      `LOCATION:${match.venue ? esc(match.venue.name + ', ' + match.venue.address) : ''}`,
+      `DESCRIPTION:${esc(`Тип: ${typeLabel}\nУровень: ${lvl.category} — ${lvl.name}\n\nИгроки:\n${approvedNames}\n\nPadel GO — t.me/PadelGoBY_bot`)}`,
+      'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Матч через 2 часа!',
+      'TRIGGER:-PT2H', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+
+    const blob = new Blob([icsText], { type: 'text/calendar;charset=utf-8' });
+    const file = new File([blob], `padel-match-${match.id}.ics`, { type: 'text/calendar' });
+
+    // Try native share (iOS share sheet → Calendar app)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ title: 'Падел матч', files: [file] });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user cancelled share sheet
+      }
     }
-    setCalendarLoading(false);
+
+    // Fallback: open server URL in external browser
+    const token = api.getToken();
+    const url = `${window.location.origin}/api/matches/${match.id}/calendar?token=${encodeURIComponent(token)}`;
+    const tg = window.Telegram?.WebApp;
+    if (tg?.openLink) {
+      tg.openLink(url, { try_instant_view: false });
+    } else {
+      window.open(url, '_blank');
+    }
   }
 
   function openEdit(match) {
@@ -547,7 +588,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                   await api.matches.acceptInvite(match.id);
                   loadMatches();
                   if (new Date(match.date) > new Date() && confirm('Добавить матч в календарь?')) {
-                    handleDownloadCalendar(match.id);
+                    handleDownloadCalendar(match);
                   }
                 } catch (err) { alert(err.message); }
               }}>
@@ -761,8 +802,8 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             </Button>
           )}
           {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
-            <Button fullWidth variant="outline" onClick={() => handleDownloadCalendar(match.id)} disabled={calendarLoading}>
-              {'\uD83D\uDCC5'} {calendarLoading ? 'Загрузка...' : 'Добавить в календарь'}
+            <Button fullWidth variant="outline" onClick={() => handleDownloadCalendar(match)}>
+              📅 Добавить в календарь
             </Button>
           )}
           <div style={{ display: 'flex', gap: 8 }}>

@@ -83,23 +83,16 @@ export const api = {
     declineInvite: (matchId) => api.fetch(`/matches/${matchId}/decline-invite`, { method: 'POST' }),
     getComments: (matchId) => api.fetch(`/matches/${matchId}/comments`),
     addComment: (matchId, text) => api.fetch(`/matches/${matchId}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
-    downloadCalendar: async (matchId) => {
-      const res = await fetch(`${API_BASE}/matches/${matchId}/calendar`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `HTTP ${res.status}`);
+    downloadCalendar: (matchId) => {
+      // Build full URL with token for external browser opening
+      // Telegram WebView on iOS can't handle blob downloads — open in system browser instead
+      const url = `${window.location.origin}${API_BASE}/matches/${matchId}/calendar?token=${encodeURIComponent(authToken)}`;
+      const tg = window.Telegram?.WebApp;
+      if (tg?.openLink) {
+        tg.openLink(url);
+      } else {
+        window.open(url, '_blank');
       }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `padel-match-${matchId}.ics`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     },
   },
 

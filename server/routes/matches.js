@@ -1035,10 +1035,27 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
   }
 });
 
-// ─── Calendar .ics download ───
+// ─── Calendar .ics download (supports token via query for external browser) ───
 
-router.get("/:id/calendar", authMiddleware, async (req, res) => {
+router.get("/:id/calendar", async (req, res) => {
   try {
+    // Auth: header OR query param (for external browser opening)
+    const jwt = require("jsonwebtoken");
+    const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+    let userId;
+
+    const authHeader = req.headers.authorization;
+    const queryToken = req.query.token;
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : queryToken;
+
+    if (!token) return res.status(401).json({ error: "Требуется авторизация" });
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      userId = decoded.id;
+    } catch {
+      return res.status(401).json({ error: "Недействительный токен" });
+    }
+
     const matchId = parseInt(req.params.id);
     const match = await prisma.match.findUnique({
       where: { id: matchId },
@@ -1054,62 +1071,64 @@ router.get("/:id/calendar", authMiddleware, async (req, res) => {
 
     if (!match) return res.status(404).json({ error: "Матч не найден" });
 
-    const myPlayer = match.players.find((p) => p.userId === req.userId && p.status === "APPROVED");
+    const myPlayer = match.players.find((p) => p.userId === userId && p.status === "APPROVED");
     if (!myPlayer) {
       return res.status(403).json({ error: "Только участники могут скачать календарь" });
     }
 
-    const { createEvent } = require("ics");
+    // Generate .ics manually for proper UTF-8 support
     const matchDate = new Date(match.date);
-    const start = [
-      matchDate.getUTCFullYear(),
-      matchDate.getUTCMonth() + 1,
-      matchDate.getUTCDate(),
-      matchDate.getUTCHours(),
-      matchDate.getUTCMinutes(),
-    ];
+    const endDate = new Date(matchDate.getTime() + match.durationMin * 60000);
+
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmtDate = (d) =>
+      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+
+    const icsEscape = (s) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 
     const approvedNames = match.players
       .filter((p) => p.status === "APPROVED")
       .map((p) => `${p.user.firstName}${p.user.lastName ? " " + p.user.lastName : ""} (${p.user.rating})`)
-      .join("\n");
+      .join("\\n");
 
     const matchTypeLabel = match.matchType === "RATED" ? "Рейтинговый" : "Дружеский";
-    const level = getLevel(match.levelMin || 1200);
+    const level = getLevel(match.levelMin || 1500);
 
-    const description = [
-      `Тип: ${matchTypeLabel}`,
-      `Уровень: ${level.category} — ${level.name}`,
-      "",
-      "Игроки:",
-      approvedNames,
-      "",
-      "Padel GO — t.me/PadelGoBY_bot",
-    ].join("\n");
+    const summary = icsEscape(`Падел — ${match.venue?.name || "Матч"}`);
+    const location = match.venue ? icsEscape(`${match.venue.name}, ${match.venue.address}`) : "";
+    const description = icsEscape(
+      `Тип: ${matchTypeLabel}\nУровень: ${level.category} — ${level.name}\n\nИгроки:\n${approvedNames}\n\nPadel GO — t.me/PadelGoBY_bot`
+    );
 
-    const event = {
-      title: `Падел — ${match.venue?.name || "Матч"}`,
-      start,
-      duration: { minutes: match.durationMin },
-      location: match.venue ? `${match.venue.name}, ${match.venue.address}` : "",
-      description,
-      uid: `padel-go-match-${match.id}@padelgo.by`,
-      alarms: [{ action: "display", description: "Матч через 2 часа!", trigger: { minutes: 120, before: true } }],
-      startInputType: "utc",
-      calName: "Padel GO",
-    };
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Padel GO//Match//RU",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:padel-go-match-${match.id}@padelgo.by`,
+      `DTSTART:${fmtDate(matchDate)}`,
+      `DTEND:${fmtDate(endDate)}`,
+      `SUMMARY:${summary}`,
+      `LOCATION:${location}`,
+      `DESCRIPTION:${description}`,
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Матч через 2 часа!",
+      "TRIGGER:-PT2H",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
 
-    createEvent(event, (error, value) => {
-      if (error) {
-        console.error("ICS generation error:", error);
-        return res.status(500).json({ error: "Ошибка генерации календаря" });
-      }
-      res.set({
-        "Content-Type": "text/calendar; charset=utf-8",
-        "Content-Disposition": `attachment; filename="padel-match-${match.id}.ics"`,
-      });
-      res.send(value);
+    const buf = Buffer.from(ics, "utf-8");
+    res.set({
+      "Content-Type": "text/calendar; charset=utf-8",
+      "Content-Disposition": `attachment; filename="padel-match-${match.id}.ics"`,
+      "Content-Length": buf.length,
     });
+    res.send(buf);
   } catch (err) {
     console.error("Calendar generation error:", err);
     res.status(500).json({ error: "Ошибка генерации календаря" });
