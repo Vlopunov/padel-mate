@@ -126,7 +126,7 @@ router.patch("/me", authMiddleware, async (req, res) => {
   }
 });
 
-// Manual rating edit
+// Manual rating edit (one-time, ±500 max)
 router.patch("/me/rating", authMiddleware, async (req, res) => {
   try {
     const { newRating, reason } = req.body;
@@ -137,11 +137,20 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!user) return res.status(404).json({ error: "Пользователь не найден" });
+
+    if (user.ratingEditUsed) {
+      return res.status(403).json({ error: "Вы уже использовали редактирование рейтинга" });
+    }
+
     const oldRating = user.rating;
+    const diff = Math.abs(newRating - oldRating);
+    if (diff > 500) {
+      return res.status(400).json({ error: "Изменение не может превышать 500 Elo" });
+    }
 
     await prisma.user.update({
       where: { id: req.userId },
-      data: { rating: newRating, ratingSource: "manual" },
+      data: { rating: newRating, ratingSource: "manual", ratingEditUsed: true },
     });
 
     await prisma.ratingHistory.create({

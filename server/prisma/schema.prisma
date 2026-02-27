@@ -79,6 +79,7 @@ model User {
   losses          Int       @default(0)
   winStreak       Int       @default(0)
   maxWinStreak    Int       @default(0)
+  ratingEditUsed  Boolean   @default(false)
   isVisible       Boolean   @default(true)
   reminderMinutes Int       @default(120)
   xp              Int       @default(0)

@@ -227,29 +227,35 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           </button>
         </div>
 
-        <Button variant="secondary" fullWidth onClick={() => setShowRatingEdit(true)} size="sm">
-          {'\u270F\uFE0F'} Редактировать рейтинг
-        </Button>
+        {!user.ratingEditUsed && (
+          <Button variant="secondary" fullWidth onClick={() => setShowRatingEdit(true)} size="sm">
+            {'\u270F\uFE0F'} Редактировать рейтинг (1 раз)
+          </Button>
+        )}
       </Card>
 
       <Button variant="danger" fullWidth onClick={onLogout}>
         Выйти из аккаунта
       </Button>
 
-      {/* Rating edit modal */}
+      {/* Rating edit modal (one-time, ±500) */}
       <Modal isOpen={showRatingEdit} onClose={() => setShowRatingEdit(false)} title="Редактировать рейтинг">
+        <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 12 }}>
+          Можно изменить рейтинг один раз, не более чем на 500 Elo.
+          Текущий рейтинг: <b style={{ color: COLORS.text }}>{user.rating}</b> (допустимо: {Math.max(0, user.rating - 500)} — {Math.min(5000, user.rating + 500)})
+        </p>
         <Input
           label="Новый рейтинг"
           value={newRating}
           onChange={setNewRating}
           type="number"
-          placeholder="500 — 5000"
-          min={500}
-          max={5000}
+          placeholder={`${Math.max(0, user.rating - 500)} — ${Math.min(5000, user.rating + 500)}`}
+          min={Math.max(0, user.rating - 500)}
+          max={Math.min(5000, user.rating + 500)}
         />
-        {newRating && (parseInt(newRating) < 500 || parseInt(newRating) > 5000) && (
+        {newRating && Math.abs(parseInt(newRating) - user.rating) > 500 && (
           <p style={{ color: COLORS.danger, fontSize: 13, marginTop: -8, marginBottom: 8 }}>
-            Допустимый диапазон: 500 — 5000
+            Изменение не может превышать 500 Elo
           </p>
         )}
         <Select
@@ -267,7 +273,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         <Button
           fullWidth
           onClick={handleRatingEdit}
-          disabled={!newRating || parseInt(newRating) < 500 || parseInt(newRating) > 5000}
+          disabled={!newRating || Math.abs(parseInt(newRating) - user.rating) > 500 || parseInt(newRating) < 0 || parseInt(newRating) > 5000}
           style={{ marginTop: 8 }}
         >
           Сохранить
