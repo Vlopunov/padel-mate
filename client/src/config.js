@@ -1,5 +1,5 @@
 export const APP_NAME = "PadelMate";
-export const BOT_USERNAME = "PadelMateBY_bot";
+export const BOT_USERNAME = "PadelGoBY_bot";
 export const TG_CHANNEL = "https://t.me/PadelMateBY";
 export const TG_CHAT = "https://t.me/PadelMateChat";
 
