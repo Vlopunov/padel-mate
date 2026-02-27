@@ -71,10 +71,10 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{APP_NAME} Community</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHANNEL)} style={{ flex: 1 }}>
+          <Button size="sm" variant="outline" onClick={() => openTelegramLink('https://t.me/+lYChWj6kOAowYzIy')} style={{ flex: 1 }}>
             {'\u{1F4E2}'} Канал
           </Button>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHAT)} style={{ flex: 1 }}>
+          <Button size="sm" variant="outline" onClick={() => openTelegramLink('https://t.me/+vN-cOzsA47E2OGY6')} style={{ flex: 1 }}>
             {'\u{1F4AC}'} Чат
           </Button>
         </div>

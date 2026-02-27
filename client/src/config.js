@@ -1,7 +1,7 @@
 export const APP_NAME = "Padel GO";
 export const BOT_USERNAME = "PadelGoBY_bot";
-export const TG_CHANNEL = "https://t.me/PadelMateBY";
-export const TG_CHAT = "https://t.me/PadelMateChat";
+export const TG_CHANNEL = "https://t.me/+BByQAZ7kUmthNjFi";
+export const TG_CHAT = "https://t.me/+8aNdiXqCrWwyMDQy";
 
 export const COLORS = {
   bg: "#0A0E1A",
