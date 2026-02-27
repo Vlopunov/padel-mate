@@ -29,8 +29,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
   const [venueId, setVenueId] = useState('');
   const [courtBooked, setCourtBooked] = useState(false);
   const [courtNumber, setCourtNumber] = useState('');
-  const [levelMin, setLevelMin] = useState('1.0');
-  const [levelMax, setLevelMax] = useState('4.0');
+  const [level, setLevel] = useState('1.0');
   const [matchType, setMatchType] = useState('RATED');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,8 +87,8 @@ export function CreateMatch({ user, onBack, onCreated }) {
         venueId: parseInt(venueId),
         date: dateTime.toISOString(),
         durationMin: parseInt(durationMin),
-        levelMin: parseFloat(levelMin),
-        levelMax: parseFloat(levelMax),
+        levelMin: parseFloat(level),
+        levelMax: parseFloat(level),
         courtBooked,
         courtNumber: showCourtNumber && courtNumber ? parseInt(courtNumber) : null,
         matchType,
@@ -189,22 +188,12 @@ export function CreateMatch({ user, onBack, onCreated }) {
 
       {/* Level & Type */}
       <Card style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Select
-            label="Уровень от"
-            value={levelMin}
-            onChange={setLevelMin}
-            options={levelOptions}
-            style={{ flex: 1 }}
-          />
-          <Select
-            label="Уровень до"
-            value={levelMax}
-            onChange={setLevelMax}
-            options={levelOptions}
-            style={{ flex: 1 }}
-          />
-        </div>
+        <Select
+          label="Уровень"
+          value={level}
+          onChange={setLevel}
+          options={levelOptions}
+        />
 
         <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 8, fontWeight: 500, marginTop: 4 }}>Тип</p>
         <ToggleGroup
