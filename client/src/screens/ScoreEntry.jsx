@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { COLORS, CITIES } from '../config';
+import { COLORS, CITIES, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -29,6 +29,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
     venueId: '',
     durationMin: '90',
     matchType: 'RATED',
+    level: '1.0',
   });
   const [venues, setVenues] = useState([]);
   const [selectedPlayers, setSelectedPlayers] = useState([]); // array of user objects (max 3)
@@ -177,6 +178,8 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
         venueId: parseInt(pastForm.venueId),
         date: pastForm.date,
         durationMin: parseInt(pastForm.durationMin),
+        levelMin: parseFloat(pastForm.level),
+        levelMax: parseFloat(pastForm.level),
         matchType: pastForm.matchType,
         playerIds: selectedPlayers.map((p) => p.id),
       });
@@ -470,6 +473,13 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                 { value: '150', label: '150 мин' },
                 { value: '180', label: '180 мин' },
               ]}
+            />
+
+            <Select
+              label="Уровень"
+              value={pastForm.level}
+              onChange={(v) => setPastForm({ ...pastForm, level: v })}
+              options={LEVELS.map((l) => ({ value: String(l.level), label: `${l.category} — ${l.name}` }))}
             />
 
             <Select
