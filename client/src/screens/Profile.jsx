@@ -67,7 +67,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
       {/* Community banner */}
       <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}10, ${COLORS.purple}10)` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 20 }}>{'\u{1F3F8}'}</span>
+          <span style={{ fontSize: 20 }}>{'\u{1F3BE}'}</span>
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{APP_NAME} Community</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

@@ -82,7 +82,7 @@ export function Home({ user, onNavigate }) {
       {/* Community banner */}
       <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}10, ${COLORS.purple}10)` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 24 }}>{'\u{1F3F8}'}</span>
+          <span style={{ fontSize: 24 }}>{'\u{1F3BE}'}</span>
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{APP_NAME} Community</p>
             <p style={{ fontSize: 12, color: COLORS.textDim }}>Новости, анонсы, общение</p>

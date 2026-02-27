@@ -122,7 +122,7 @@ export function Onboarding({ onComplete }) {
       <div style={containerStyle}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <span style={{ fontSize: 48 }}>{'\u{1F3F8}'}</span>
+            <span style={{ fontSize: 48 }}>{'\u{1F3BE}'}</span>
             <h1 style={{ fontSize: 28, fontWeight: 800, color: COLORS.text, marginTop: 12 }}>
               {APP_NAME}
             </h1>
