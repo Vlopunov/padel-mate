@@ -1,5 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
-const { notifyMatchReminder } = require("./notifications");
+const { notifyMatchReminder, notifyMatchCancelled } = require("./notifications");
 
 const prisma = new PrismaClient();
 
@@ -100,10 +100,55 @@ async function checkAndSendReminders() {
         }
       }
     }
+    // --- Auto-cancel expired RECRUITING matches ---
+    await cancelExpiredMatches(now);
+
   } catch (err) {
     console.error("[Reminder] Scheduler error:", err.message);
   } finally {
     isRunning = false;
+  }
+}
+
+async function cancelExpiredMatches(now) {
+  try {
+    // Find RECRUITING matches whose start time has passed
+    const expiredMatches = await prisma.match.findMany({
+      where: {
+        status: "RECRUITING",
+        date: { lt: now },
+      },
+      include: {
+        players: {
+          where: { status: "APPROVED" },
+          include: { user: true },
+        },
+        venue: true,
+      },
+    });
+
+    for (const match of expiredMatches) {
+      await prisma.match.update({
+        where: { id: match.id },
+        data: { status: "CANCELLED" },
+      });
+
+      // Notify players that match was auto-cancelled
+      for (const player of match.players) {
+        try {
+          await notifyMatchCancelled(
+            player.user.telegramId.toString(),
+            match
+          );
+        } catch (notifyErr) {
+          // Notification failed — not critical
+        }
+      }
+
+      console.log(`[AutoCancel] Match #${match.id} cancelled — expired while RECRUITING (${match.players.length}/4 players)`);
+    }
+  } catch (err) {
+    console.error("[AutoCancel] Error:", err.message);
   }
 }
 

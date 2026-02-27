@@ -102,6 +102,15 @@ async function notifyTournamentOpen(telegramId, tournament) {
   await sendTelegramMessage(telegramId, text);
 }
 
+async function notifyMatchCancelled(telegramId, match) {
+  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const venue = match.venue?.name || "";
+  const approvedCount = match.players?.filter((p) => p.status === "APPROVED").length || 0;
+  const text = `❌ <b>Матч отменён</b>\n\n📅 ${dateStr}, ${timeStr}\n📍 ${venue}\n\nПричина: не набралось 4 игрока (было ${approvedCount}/4).`;
+  await sendTelegramMessage(telegramId, text);
+}
+
 module.exports = {
   sendTelegramMessage,
   notifyScoreConfirmation,
@@ -110,4 +119,5 @@ module.exports = {
   notifyMatchReminder,
   notifyNewMatchInArea,
   notifyTournamentOpen,
+  notifyMatchCancelled,
 };
