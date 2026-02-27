@@ -52,17 +52,13 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
       {/* Profile header */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <Avatar src={user.photoUrl} name={user.firstName} size={80} style={{ margin: '0 auto 12px' }} />
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, margin: 0 }}>
           {user.firstName} {user.lastName || ''}
-          {user.isVip && (
-            <span style={{
-              fontSize: 12, fontWeight: 700, marginLeft: 8, padding: '2px 8px',
-              borderRadius: 6, background: `${COLORS.gold}25`, color: COLORS.gold,
-              verticalAlign: 'middle',
-            }}>⭐ VIP</span>
-          )}
         </h2>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          {user.isVip && (
+            <Badge style={{ background: `${COLORS.gold}25`, color: COLORS.gold, fontWeight: 700 }}>⭐ VIP</Badge>
+          )}
           <Badge variant="accent">{user.rating} — {level.category} {level.name}</Badge>
           <Badge>{xp.current.icon} {xp.current.name}</Badge>
         </div>
