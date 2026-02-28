@@ -37,17 +37,17 @@ export function Home({ user, onNavigate }) {
 
       if (tournaments.length > 0) setTournament(tournaments[0]);
 
-      // Load upcoming training sessions and homework (if student has a coach)
-      try {
-        const [mySessions, myHomework] = await Promise.all([
-          api.training.my(),
-          api.training.homework(),
-        ]);
-        setTrainingSessions(mySessions.slice(0, 3));
-        setHomework(myHomework.slice(0, 3));
-      } catch (e) {
-        // Not critical — may not have training sessions
-      }
+      // HIDDEN: Coach features (training sessions & homework) — will enable later
+      // try {
+      //   const [mySessions, myHomework] = await Promise.all([
+      //     api.training.my(),
+      //     api.training.homework(),
+      //   ]);
+      //   setTrainingSessions(mySessions.slice(0, 3));
+      //   setHomework(myHomework.slice(0, 3));
+      // } catch (e) {
+      //   // Not critical — may not have training sessions
+      // }
     } catch (err) {
       console.error('Home load error:', err);
     }
@@ -196,20 +196,7 @@ export function Home({ user, onNavigate }) {
         ))}
       </div>
 
-      {/* Find a coach banner */}
-      <Card
-        onClick={() => onNavigate('findCoach')}
-        style={{ marginBottom: 12, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.purple}15, ${COLORS.accent}10)` }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 24 }}>{'\u{1F3BE}'}</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.purple }}>Найти тренера</p>
-            <p style={{ fontSize: 12, color: COLORS.textDim }}>Индивидуальные и групповые тренировки</p>
-          </div>
-          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
-        </div>
-      </Card>
+      {/* HIDDEN: Find a coach banner — will enable later */}
 
       {/* FAQ link */}
       <Card
@@ -226,61 +213,7 @@ export function Home({ user, onNavigate }) {
         </div>
       </Card>
 
-      {/* Upcoming training sessions */}
-      {trainingSessions.length > 0 && (
-        <>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-            {'\u{1F3BE}'} Ближайшие тренировки
-          </h3>
-          {trainingSessions.map((s) => {
-            const d = new Date(s.date);
-            const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-            const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            return (
-              <Card key={s.id} style={{ marginBottom: 8, border: `1px solid ${COLORS.purple}30` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Avatar src={s.coach?.photoUrl} name={s.coach?.firstName} size={36} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, margin: 0 }}>
-                      {dateStr}, {timeStr}
-                    </p>
-                    <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
-                      {s.coach?.firstName} {s.coach?.lastName || ''} · {s.type === 'GROUP' ? 'Групповая' : 'Индивид.'} · {s.durationMin} мин
-                    </p>
-                  </div>
-                  {s.venue && (
-                    <span style={{ fontSize: 11, color: COLORS.textDim }}>{s.venue.name}</span>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-          <div style={{ marginBottom: 16 }} />
-        </>
-      )}
-
-      {/* Homework from coach */}
-      {homework.length > 0 && (
-        <>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-            {'\u{1F4DD}'} Домашние задания
-          </h3>
-          {homework.map((hw) => (
-            <Card key={hw.id} style={{ marginBottom: 8, border: `1px solid ${COLORS.warning}30` }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: COLORS.textDim }}>
-                  {hw.coach?.firstName} {hw.coach?.lastName || ''} · {new Date(hw.createdAt).toLocaleDateString('ru-RU')}
-                </span>
-                <Badge variant="warning" style={{ fontSize: 10 }}>{'\u{1F4DD}'}</Badge>
-              </div>
-              <p style={{ fontSize: 13, color: COLORS.text, margin: 0, whiteSpace: 'pre-wrap' }}>
-                {hw.text.length > 120 ? hw.text.substring(0, 120) + '...' : hw.text}
-              </p>
-            </Card>
-          ))}
-          <div style={{ marginBottom: 16 }} />
-        </>
-      )}
+      {/* HIDDEN: Training sessions & homework sections — will enable later */}
 
       {/* Upcoming match */}
       {matches.length > 0 && (
