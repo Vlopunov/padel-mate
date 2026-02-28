@@ -85,7 +85,7 @@ router.get("/:id/public", async (req, res) => {
 
     const tournament = await prisma.tournament.findUnique({
       where: { id },
-      select: { id: true, name: true, status: true, format: true, date: true, pointsToWin: true, venue: { select: { name: true } } },
+      select: { id: true, name: true, status: true, format: true, date: true, pointsPerMatch: true, venue: { select: { name: true } } },
     });
     if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
 
@@ -97,7 +97,7 @@ router.get("/:id/public", async (req, res) => {
         status: tournament.status,
         format: tournament.format,
         date: tournament.date,
-        pointsToWin: tournament.pointsToWin,
+        pointsPerMatch: tournament.pointsPerMatch,
         venue: tournament.venue,
         standings: [],
         rounds: [],
