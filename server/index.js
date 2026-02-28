@@ -117,6 +117,17 @@ if (fs.existsSync(clientDist)) {
   console.log("index.html exists:", fs.existsSync(indexPath));
 
   app.use(express.static(clientDist));
+
+  // TV display page (standalone, no React)
+  const tvPath = path.join(clientDist, "tv.html");
+  app.get("/tv/:id", (req, res) => {
+    if (fs.existsSync(tvPath)) {
+      res.sendFile(tvPath);
+    } else {
+      res.status(404).send("TV page not found");
+    }
+  });
+
   app.get("*", (req, res) => {
     if (req.path.startsWith("/api/")) {
       return res.status(404).json({ error: "Not found" });

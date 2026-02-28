@@ -77,6 +77,29 @@ router.get("/:id/live", authMiddleware, async (req, res) => {
   }
 });
 
+// Public tournament data (no auth — for TV display)
+router.get("/:id/public", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Некорректный ID" });
+
+    const tournament = await prisma.tournament.findUnique({ where: { id }, select: { status: true } });
+    if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
+    if (tournament.status === "REGISTRATION" || tournament.status === "UPCOMING") {
+      return res.status(404).json({ error: "Турнир ещё не начался" });
+    }
+
+    const data = await getLiveData(id);
+    // Strip private data
+    delete data.registrations;
+    delete data.ratingChanges;
+    res.json(data);
+  } catch (err) {
+    console.error("Tournament public error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 // Register individually (for Americano/Mexicano)
 router.post("/:id/register-individual", authMiddleware, async (req, res) => {
   try {

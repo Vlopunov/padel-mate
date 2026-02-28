@@ -2356,6 +2356,39 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
         ))}
       </Card>
 
+      {/* TV Link */}
+      {isLiveFormat && (isInProgress || isCompleted) && (
+        <Card style={{ marginBottom: 12, padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{'\uD83D\uDCFA'}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>TV-экран</p>
+              <p style={{ fontSize: 11, color: COLORS.textDim, wordBreak: 'break-all' }}>
+                {window.location.origin}/tv/{t.id}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/tv/${t.id}`;
+                if (navigator.clipboard) {
+                  navigator.clipboard.writeText(url);
+                  alert('Ссылка скопирована!');
+                } else {
+                  prompt('Скопируйте:', url);
+                }
+              }}
+              style={{
+                padding: '8px 14px', borderRadius: 10, border: `1px solid ${COLORS.accent}40`,
+                background: `${COLORS.accent}15`, color: COLORS.accent,
+                fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              {'\uD83D\uDD17'} Копировать
+            </button>
+          </div>
+        </Card>
+      )}
+
       {/* Actions */}
       <div style={{ display: 'flex', gap: 10 }}>
         <button

@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padel GO — Tournament TV</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0A0E1A;
+      --card: #131828;
+      --surface: #0F1425;
+      --accent: #00E68A;
+      --accent-dim: #00C074;
+      --accent-glow: rgba(0, 230, 138, 0.15);
+      --purple: #A855F7;
+      --warning: #FFB020;
+      --danger: #FF4757;
+      --gold: #FFD700;
+      --silver: #C0C0C0;
+      --bronze: #CD7F32;
+      --text: #E8ECF4;
+      --text-dim: #7A8299;
+      --text-muted: #4A5068;
+      --border: #1E2640;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Header ─── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .header-logo {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .header-name {
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .header-meta {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 230, 138, 0.12);
+      color: var(--accent);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .live-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease infinite;
+    }
+    .completed-badge {
+      background: rgba(168, 85, 247, 0.12);
+      color: var(--purple);
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    /* ─── Main layout ─── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      min-height: calc(100vh - 90px);
+    }
+    .matches-section {
+      padding: 30px 40px;
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .standings-section {
+      padding: 30px 40px;
+      overflow-y: auto;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Round selector ─── */
+    .rounds {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .round-btn {
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .round-btn:hover { border-color: var(--accent); color: var(--text); }
+    .round-btn.active {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .round-btn.completed { color: var(--accent); }
+    .round-btn.completed::after { content: ' \u2713'; }
+
+    /* ─── Match cards ─── */
+    .match-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 16px;
+      transition: border-color 0.3s;
+    }
+    .match-card.live { border-color: var(--accent); }
+    .match-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .court-label {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+    .match-status {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 12px;
+    }
+    .match-status.live {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
+    .match-status.completed {
+      background: rgba(76, 175, 80, 0.15);
+      color: #4CAF50;
+    }
+    .match-status.pending {
+      background: rgba(122, 130, 153, 0.15);
+      color: var(--text-dim);
+    }
+    .match-teams {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .team {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .team.right { justify-content: flex-end; text-align: right; }
+    .team-names {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .team-names span { display: block; }
+    .team-names .small-name {
+      font-size: 14px;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+    .score {
+      font-size: 48px;
+      font-weight: 800;
+      min-width: 60px;
+      text-align: center;
+      color: var(--accent);
+    }
+    .score.pending-score {
+      color: var(--text-muted);
+      font-size: 32px;
+    }
+    .vs {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+    .team.loser .team-names { opacity: 0.5; }
+    .score.loser { opacity: 0.5; color: var(--text-dim); }
+
+    /* ─── Standings table ─── */
+    .standings-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .standings-table th {
+      text-align: left;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .standings-table th:last-child,
+    .standings-table td:last-child { text-align: right; }
+    .standings-table th:nth-child(3),
+    .standings-table td:nth-child(3) { text-align: center; }
+    .standings-table th:nth-child(4),
+    .standings-table td:nth-child(4) { text-align: center; }
+    .standings-table tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.3s;
+    }
+    .standings-table td {
+      padding: 14px 12px;
+      font-size: 20px;
+      font-weight: 500;
+    }
+    .standings-table tr:nth-child(-n+3) td:first-child {
+      font-size: 24px;
+    }
+    .pos { font-weight: 700; min-width: 40px; }
+    .player-name {
+      font-weight: 600;
+      font-size: 22px;
+    }
+    .points-cell {
+      font-weight: 800;
+      font-size: 24px;
+      color: var(--accent);
+    }
+    .wl { color: var(--text-dim); font-size: 18px; }
+    .diff { font-size: 18px; }
+    .diff.positive { color: var(--accent); }
+    .diff.negative { color: var(--danger); }
+
+    /* ─── Podium ─── */
+    .podium-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .podium-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--gold);
+      margin-bottom: 40px;
+    }
+    .podium {
+      display: flex;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .podium-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .podium-medal { font-size: 48px; margin-bottom: 12px; }
+    .podium-name {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .podium-points {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .podium-bar {
+      width: 140px;
+      border-radius: 12px 12px 0 0;
+      margin-top: 12px;
+    }
+    .podium-item:nth-child(1) .podium-bar { /* 2nd place */
+      height: 100px;
+      background: linear-gradient(180deg, var(--silver), #8a8a8a);
+    }
+    .podium-item:nth-child(2) .podium-bar { /* 1st place */
+      height: 140px;
+      background: linear-gradient(180deg, var(--gold), #cc9900);
+    }
+    .podium-item:nth-child(3) .podium-bar { /* 3rd place */
+      height: 70px;
+      background: linear-gradient(180deg, var(--bronze), #a0622a);
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 40px;
+      border-top: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .refresh-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .refresh-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: blink 10s linear infinite;
+    }
+    @keyframes blink {
+      0%, 95% { opacity: 0.3; }
+      97% { opacity: 1; }
+      100% { opacity: 0.3; }
+    }
+
+    /* ─── Loading / Error ─── */
+    .fullscreen-msg {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 16px;
+    }
+    .fullscreen-msg .icon { font-size: 64px; }
+    .fullscreen-msg .title { font-size: 28px; font-weight: 700; }
+    .fullscreen-msg .subtitle { font-size: 18px; color: var(--text-dim); }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 1024px) {
+      .main { grid-template-columns: 1fr; }
+      .matches-section { border-right: none; border-bottom: 1px solid var(--border); }
+      .header { padding: 16px 20px; }
+      .header-name { font-size: 20px; }
+      .matches-section, .standings-section { padding: 20px; }
+      .team-names { font-size: 18px; }
+      .score { font-size: 36px; }
+      .player-name { font-size: 18px; }
+      .standings-table td { font-size: 16px; padding: 10px 8px; }
+      .points-cell { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <div class="fullscreen-msg" id="loading">
+    <div class="spinner"></div>
+    <div class="title">Загрузка турнира...</div>
+  </div>
+</div>
+
+<script>
+  const POLL_INTERVAL = 10000;
+  const MEDALS = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
+  const FORMAT_LABELS = {
+    americano: 'Americano',
+    mexicano: 'Mexicano',
+    round_robin: 'Круговой',
+    single_elimination: 'Олимпийская',
+  };
+
+  let tournament = null;
+  let selectedRound = null;
+  let pollTimer = null;
+
+  // Get tournament ID from URL
+  const pathParts = window.location.pathname.split('/');
+  const tournamentId = pathParts[pathParts.length - 1];
+
+  if (!tournamentId || isNaN(parseInt(tournamentId))) {
+    showError('\u26A0\uFE0F', 'Некорректная ссылка', 'Формат: /tv/{id}');
+  } else {
+    loadData();
+    pollTimer = setInterval(loadData, POLL_INTERVAL);
+  }
+
+  async function loadData() {
+    try {
+      const res = await fetch(`/api/tournaments/${tournamentId}/public`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        if (res.status === 404) {
+          showError('\u{1F3BE}', err.error || 'Турнир не найден', 'Проверьте ссылку или дождитесь начала турнира');
+          clearInterval(pollTimer);
+          return;
+        }
+        throw new Error(err.error || 'Ошибка загрузки');
+      }
+      tournament = await res.json();
+      if (selectedRound === null && tournament.currentRound > 0) {
+        selectedRound = tournament.currentRound;
+      }
+      render();
+    } catch (err) {
+      console.error('Load error:', err);
+    }
+  }
+
+  function showError(icon, title, subtitle) {
+    document.getElementById('app').innerHTML = `
+      <div class="fullscreen-msg">
+        <div class="icon">${icon}</div>
+        <div class="title">${title}</div>
+        <div class="subtitle">${subtitle}</div>
+      </div>
+    `;
+  }
+
+  function render() {
+    if (!tournament) return;
+    const t = tournament;
+    const isCompleted = t.status === 'COMPLETED';
+    const isInProgress = t.status === 'IN_PROGRESS';
+    const format = (t.format || '').toLowerCase();
+    const totalRounds = t.rounds?.length || 0;
+
+    document.title = `${t.name} — Padel GO TV`;
+
+    const currentRoundData = t.rounds?.find(r => r.roundNumber === selectedRound);
+
+    document.getElementById('app').innerHTML = `
+      ${renderHeader(t, isInProgress, isCompleted, format, totalRounds)}
+      <div class="main">
+        ${isCompleted && t.standings?.length >= 3
+          ? renderPodium(t.standings)
+          : renderMatches(currentRoundData, t.rounds, totalRounds)}
+        ${renderStandings(t.standings)}
+      </div>
+      <div class="footer">
+        <span>\u{1F3BE} Padel GO — ${window.location.href}</span>
+        <div class="refresh-indicator">
+          <div class="refresh-dot"></div>
+          <span>Auto-refresh ${POLL_INTERVAL / 1000}s</span>
+        </div>
+      </div>
+    `;
+
+    // Attach round button listeners
+    document.querySelectorAll('.round-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedRound = parseInt(btn.dataset.round);
+        render();
+      });
+    });
+  }
+
+  function renderHeader(t, isInProgress, isCompleted, format, totalRounds) {
+    const formatLabel = FORMAT_LABELS[format] || format;
+    const venueName = t.venue?.name || '';
+    const statusBadge = isInProgress
+      ? `<div class="live-badge"><div class="live-dot"></div>LIVE \u00B7 \u0420\u0430\u0443\u043D\u0434 ${t.currentRound}${totalRounds ? ' / ' + totalRounds : ''}</div>`
+      : isCompleted
+        ? `<div class="live-badge completed-badge">\u{1F3C6} \u0417\u0430\u0432\u0435\u0440\u0448\u0451\u043D</div>`
+        : '';
+
+    return `
+      <div class="header">
+        <div class="header-left">
+          <div>
+            <div class="header-logo">\u{1F3BE} PADEL GO</div>
+          </div>
+          <div>
+            <div class="header-name">${esc(t.name)}</div>
+            <div class="header-meta">${formatLabel} \u00B7 ${t.pointsPerMatch} pts \u00B7 ${esc(venueName)}</div>
+          </div>
+        </div>
+        <div class="header-right">
+          ${statusBadge}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderMatches(roundData, rounds, totalRounds) {
+    // Round selector
+    let roundsHtml = '<div class="rounds">';
+    if (rounds && rounds.length > 0) {
+      for (const r of rounds) {
+        const active = r.roundNumber === selectedRound ? 'active' : '';
+        const completed = r.status === 'COMPLETED' ? 'completed' : '';
+        roundsHtml += `<button class="round-btn ${active} ${completed}" data-round="${r.roundNumber}">${r.roundNumber}</button>`;
+      }
+    }
+    roundsHtml += '</div>';
+
+    // Match cards
+    let matchesHtml = '';
+    if (roundData && roundData.matches) {
+      for (const m of roundData.matches) {
+        const isLive = m.status === 'IN_PROGRESS' || (m.status === 'PENDING' && roundData.status === 'IN_PROGRESS');
+        const isCompleted = m.status === 'COMPLETED';
+        const hasScore = m.team1Score !== null && m.team2Score !== null;
+
+        const t1Won = hasScore && m.team1Score > m.team2Score;
+        const t2Won = hasScore && m.team2Score > m.team1Score;
+
+        const statusClass = isCompleted ? 'completed' : isLive ? 'live' : 'pending';
+        const statusText = isCompleted ? '\u2713' : isLive ? 'LIVE' : '\u23F3';
+
+        const p = (player) => player ? esc(player.firstName) : '?';
+
+        matchesHtml += `
+          <div class="match-card ${isLive ? 'live' : ''}">
+            <div class="match-header">
+              <span class="court-label">\u{1F3BE} \u041A\u043E\u0440\u0442 ${m.courtNumber}</span>
+              <span class="match-status ${statusClass}">${statusText}</span>
+            </div>
+            <div class="match-teams">
+              <div class="team ${t2Won ? 'loser' : ''}">
+                <div class="team-names">
+                  <span>${p(m.team1Player1)}</span>
+                  <span>${p(m.team1Player2)}</span>
+                </div>
+              </div>
+              <div class="score ${t2Won ? 'loser' : ''} ${!hasScore ? 'pending-score' : ''}">${hasScore ? m.team1Score : '-'}</div>
+              <div class="vs">:</div>
+              <div class="score ${t1Won ? 'loser' : ''} ${!hasScore ? 'pending-score' : ''}">${hasScore ? m.team2Score : '-'}</div>
+              <div class="team right ${t1Won ? 'loser' : ''}">
+                <div class="team-names">
+                  <span>${p(m.team2Player1)}</span>
+                  <span>${p(m.team2Player2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    } else {
+      matchesHtml = '<div style="text-align:center;color:var(--text-dim);padding:40px;font-size:18px;">\u041D\u0435\u0442 \u043C\u0430\u0442\u0447\u0435\u0439</div>';
+    }
+
+    return `
+      <div class="matches-section">
+        <div class="section-title">\u041C\u0430\u0442\u0447\u0438</div>
+        ${roundsHtml}
+        ${matchesHtml}
+      </div>
+    `;
+  }
+
+  function renderStandings(standings) {
+    if (!standings || standings.length === 0) {
+      return '<div class="standings-section"><div class="section-title">\u0422\u0430\u0431\u043B\u0438\u0446\u0430</div><div style="text-align:center;color:var(--text-dim);padding:40px;font-size:18px;">\u041D\u0435\u0442 \u0434\u0430\u043D\u043D\u044B\u0445</div></div>';
+    }
+
+    let rows = '';
+    for (const s of standings) {
+      const pos = s.position;
+      const medal = pos <= 3 ? MEDALS[pos - 1] : pos;
+      const diff = s.pointsFor - s.pointsAgainst;
+      const diffClass = diff > 0 ? 'positive' : diff < 0 ? 'negative' : '';
+      const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+      const name = s.user ? esc(s.user.firstName + (s.user.lastName ? ' ' + s.user.lastName.charAt(0) + '.' : '')) : '?';
+
+      rows += `
+        <tr>
+          <td class="pos">${medal}</td>
+          <td class="player-name">${name}</td>
+          <td class="points-cell">${s.points}</td>
+          <td class="wl">${s.wins}/${s.losses}</td>
+          <td class="diff ${diffClass}">${diffStr}</td>
+        </tr>
+      `;
+    }
+
+    return `
+      <div class="standings-section">
+        <div class="section-title">\u0422\u0430\u0431\u043B\u0438\u0446\u0430</div>
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>\u0418\u0433\u0440\u043E\u043A</th>
+              <th>\u041E\u0447\u043A\u0438</th>
+              <th>W/L</th>
+              <th>+/-</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderPodium(standings) {
+    if (!standings || standings.length < 3) return renderMatches(null, [], 0);
+
+    const top3 = standings.slice(0, 3);
+    // Display order: 2nd, 1st, 3rd
+    const ordered = [top3[1], top3[0], top3[2]];
+    const medals = ['\u{1F948}', '\u{1F947}', '\u{1F949}'];
+
+    let items = '';
+    ordered.forEach((s, i) => {
+      const name = s.user ? esc(s.user.firstName) : '?';
+      items += `
+        <div class="podium-item">
+          <div class="podium-medal">${medals[i]}</div>
+          <div class="podium-name">${name}</div>
+          <div class="podium-points">${s.points} pts</div>
+          <div class="podium-bar"></div>
+        </div>
+      `;
+    });
+
+    return `
+      <div class="podium-section matches-section" style="border-right: 1px solid var(--border);">
+        <div class="podium-title">\u{1F3C6} \u0420\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u044B</div>
+        <div class="podium">${items}</div>
+      </div>
+    `;
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+</script>
+
+</body>
+</html>
