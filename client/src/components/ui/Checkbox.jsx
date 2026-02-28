@@ -3,7 +3,10 @@ import { COLORS } from '../../config';
 
 export function Checkbox({ checked, onChange, label }) {
   return (
-    <label
+    <div
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -15,6 +18,7 @@ export function Checkbox({ checked, onChange, label }) {
         WebkitTapHighlightColor: 'transparent',
       }}
       onClick={() => onChange(!checked)}
+      onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onChange(!checked); } }}
     >
       <div
         style={{
@@ -37,6 +41,6 @@ export function Checkbox({ checked, onChange, label }) {
         )}
       </div>
       {label}
-    </label>
+    </div>
   );
 }

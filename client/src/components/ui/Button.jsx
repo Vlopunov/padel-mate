@@ -60,6 +60,7 @@ export function Button({ children, onClick, variant = 'primary', disabled, style
 
   return (
     <button
+      type="button"
       style={base}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}

@@ -43,7 +43,7 @@ export function useTelegram() {
       if (type === 'impact') tg?.HapticFeedback?.impactOccurred(style);
       else if (type === 'notification') tg?.HapticFeedback?.notificationOccurred(style);
       else if (type === 'selection') tg?.HapticFeedback?.selectionChanged();
-    } catch {}
+    } catch (e) { /* Haptic not available outside Telegram */ }
   }, []);
 
   return { tg, user, initData, openTelegramLink, close, showAlert, hapticFeedback };

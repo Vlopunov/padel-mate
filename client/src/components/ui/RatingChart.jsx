@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { COLORS } from '../../config';
 
 export function RatingChart({ data, currentRating }) {
+  const uniqueId = useId();
   if (!data || data.length < 2) return null;
 
   // Sort chronologically (data comes DESC from API) and deduplicate by timestamp
@@ -62,7 +63,7 @@ export function RatingChart({ data, currentRating }) {
   }
 
   // Unique gradient ID to avoid conflicts when multiple charts on page
-  const gradientId = `ratingGrad-${currentRating || 'default'}`;
+  const gradientId = `ratingGrad${uniqueId.replace(/:/g, '')}`;
 
   return (
     <div>

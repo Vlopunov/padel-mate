@@ -26,7 +26,7 @@ export function Home({ user, onNavigate }) {
         api.matches.list({ status: 'recruiting' }),
         api.tournaments.list({ status: 'registration' }),
       ]);
-      setMatches(allMatches.slice(0, 3));
+      setMatches(allMatches.slice(0, 2));
 
       // Find pending score matches for this user
       const full = await api.matches.list({ status: 'full' });
@@ -219,7 +219,7 @@ export function Home({ user, onNavigate }) {
       {matches.length > 0 && (
         <>
           <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>Ближайшие матчи</h3>
-          {matches.slice(0, 2).map((match) => (
+          {matches.map((match) => (
             <Card key={match.id} onClick={() => onNavigate('matches', { matchId: match.id })} style={{ marginBottom: 8, cursor: 'pointer' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
