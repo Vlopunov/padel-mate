@@ -2357,7 +2357,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       </Card>
 
       {/* TV Link */}
-      {isLiveFormat && (isInProgress || isCompleted) && (
+      {isLiveFormat && (
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 20 }}>{'\uD83D\uDCFA'}</span>
@@ -2366,6 +2366,11 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               <p style={{ fontSize: 11, color: COLORS.textDim, wordBreak: 'break-all' }}>
                 {window.location.origin}/tv/{t.id}
               </p>
+              {!isInProgress && !isCompleted && (
+                <p style={{ fontSize: 11, color: COLORS.warning, marginTop: 2 }}>
+                  Заработает после старта турнира
+                </p>
+              )}
             </div>
             <button
               onClick={() => {

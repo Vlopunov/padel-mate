@@ -467,10 +467,28 @@
     const t = tournament;
     const isCompleted = t.status === 'COMPLETED';
     const isInProgress = t.status === 'IN_PROGRESS';
+    const isWaiting = t.status === 'REGISTRATION' || t.status === 'UPCOMING';
     const format = (t.format || '').toLowerCase();
     const totalRounds = t.rounds?.length || 0;
 
     document.title = `${t.name} — Padel GO TV`;
+
+    // Waiting for start screen
+    if (isWaiting) {
+      document.getElementById('app').innerHTML = `
+        ${renderHeader(t, false, false, format, 0)}
+        <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;min-height:60vh;text-align:center;padding:40px;">
+          <div style="font-size:80px;">\u{1F3BE}</div>
+          <div style="font-size:36px;font-weight:800;color:var(--text);">Ожидание старта</div>
+          <div style="font-size:20px;color:var(--text-dim);">Турнир ещё не начался. Страница обновится автоматически.</div>
+          <div class="refresh-indicator" style="margin-top:16px;">
+            <div class="refresh-dot"></div>
+            <span>Auto-refresh ${POLL_INTERVAL / 1000}s</span>
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     const currentRoundData = t.rounds?.find(r => r.roundNumber === selectedRound);
 

@@ -83,10 +83,25 @@ router.get("/:id/public", async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Некорректный ID" });
 
-    const tournament = await prisma.tournament.findUnique({ where: { id }, select: { status: true } });
+    const tournament = await prisma.tournament.findUnique({
+      where: { id },
+      select: { id: true, name: true, status: true, format: true, date: true, pointsToWin: true, venue: { select: { name: true } } },
+    });
     if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
+
+    // For not-yet-started tournaments, return basic info
     if (tournament.status === "REGISTRATION" || tournament.status === "UPCOMING") {
-      return res.status(404).json({ error: "Турнир ещё не начался" });
+      return res.json({
+        id: tournament.id,
+        name: tournament.name,
+        status: tournament.status,
+        format: tournament.format,
+        date: tournament.date,
+        pointsToWin: tournament.pointsToWin,
+        venue: tournament.venue,
+        standings: [],
+        rounds: [],
+      });
     }
 
     const data = await getLiveData(id);
