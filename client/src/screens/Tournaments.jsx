@@ -42,6 +42,11 @@ export function Tournaments({ user, onNavigate }) {
   }
 
   const openDetail = async (tournament) => {
+    // For IN_PROGRESS or COMPLETED — go directly to live screen
+    if (tournament.status === 'IN_PROGRESS' || tournament.status === 'COMPLETED') {
+      onNavigate('tournamentLive', { tournamentId: tournament.id });
+      return;
+    }
     try {
       const detail = await api.tournaments.getById(tournament.id);
       setSelectedTournament(detail);
@@ -127,6 +132,18 @@ export function Tournaments({ user, onNavigate }) {
     setRegistering(false);
   }
 
+  async function handleRegisterIndividual() {
+    if (!selectedTournament) return;
+    setRegistering(true);
+    try {
+      await api.tournaments.registerIndividual(selectedTournament.id);
+      await refreshDetail(selectedTournament.id);
+    } catch (err) {
+      alert(err.message);
+    }
+    setRegistering(false);
+  }
+
   async function handleUnregister() {
     if (!selectedTournament) return;
     if (!confirm('Отменить запись на турнир?')) return;
@@ -157,9 +174,12 @@ export function Tournaments({ user, onNavigate }) {
 
   const formatMap = {
     americano: 'Americano',
+    mexicano: 'Mexicano',
     round_robin: 'Round Robin',
     round_robin_playoff: 'Round Robin + Playoff',
   };
+
+  const isIndividualMode = selectedTournament?.registrationMode === 'INDIVIDUAL';
 
   const isFull = selectedTournament
     ? (selectedTournament.teamsRegistered || selectedTournament.registrations?.length || 0) >= selectedTournament.maxTeams
@@ -171,7 +191,8 @@ export function Tournaments({ user, onNavigate }) {
 
       <FilterTabs
         options={[
-          { value: 'registration', label: 'Открыта запись' },
+          { value: 'registration', label: 'Запись' },
+          { value: 'in_progress', label: 'Live' },
           { value: 'completed', label: 'Завершённые' },
           { value: 'all', label: 'Все' },
         ]}
@@ -193,16 +214,23 @@ export function Tournaments({ user, onNavigate }) {
 
         {tournaments.map((t) => {
           const isActive = t.status === 'REGISTRATION';
+          const isLive = t.status === 'IN_PROGRESS';
+          const isDone = t.status === 'COMPLETED';
+          const regLabel = t.registrationMode === 'INDIVIDUAL' ? 'игроков' : 'команд';
           return (
             <Card
               key={t.id}
-              variant={isActive ? 'purple' : 'default'}
+              variant={isActive ? 'purple' : isLive ? 'default' : 'default'}
               onClick={() => openDetail(t)}
-              style={{ marginBottom: 10, cursor: 'pointer' }}
+              style={{
+                marginBottom: 10,
+                cursor: 'pointer',
+                borderColor: isLive ? `${COLORS.accent}40` : undefined,
+              }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div>
-                  <h4 style={{ fontSize: 16, fontWeight: 700, color: isActive ? COLORS.purple : COLORS.text }}>
+                  <h4 style={{ fontSize: 16, fontWeight: 700, color: isActive ? COLORS.purple : isLive ? COLORS.accent : COLORS.text }}>
                     {t.name}
                   </h4>
                   <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 2 }}>
@@ -211,15 +239,19 @@ export function Tournaments({ user, onNavigate }) {
                     {CITIES.find((c) => c.value === t.city)?.label}
                   </p>
                 </div>
-                {t.ratingMultiplier > 1 && (
-                  <Badge variant="purple">{'\u00D7'}{t.ratingMultiplier}</Badge>
-                )}
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {isLive && <Badge variant="accent">{'\u{1F534}'} LIVE</Badge>}
+                  {isDone && <Badge>{'\u2705'}</Badge>}
+                  {t.ratingMultiplier > 1 && (
+                    <Badge variant="purple">{'\u00D7'}{t.ratingMultiplier}</Badge>
+                  )}
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 <Badge>{formatMap[t.format] || t.format}</Badge>
                 <Badge variant="accent">{getLevelByValue(t.levelMin).category}-{getLevelByValue(t.levelMax).category}</Badge>
-                <Badge>{t.teamsRegistered || 0}/{t.maxTeams} команд</Badge>
+                <Badge>{t.teamsRegistered || 0}/{t.maxTeams} {regLabel}</Badge>
                 {t.price && <Badge variant="warning">{t.price}</Badge>}
               </div>
             </Card>
@@ -300,9 +332,17 @@ export function Tournaments({ user, onNavigate }) {
                   <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Вы записаны!</span>
                 </div>
                 <p style={{ fontSize: 13, color: COLORS.textDim }}>
-                  Ваша пара: <span style={{ color: COLORS.text, fontWeight: 600 }}>
-                    {myRegistration.player1?.firstName} & {myRegistration.player2?.firstName}
-                  </span>
+                  {isIndividualMode ? (
+                    <span style={{ color: COLORS.text, fontWeight: 600 }}>
+                      {myRegistration.player1?.firstName}
+                    </span>
+                  ) : (
+                    <>
+                      Ваша пара: <span style={{ color: COLORS.text, fontWeight: 600 }}>
+                        {myRegistration.player1?.firstName} & {myRegistration.player2?.firstName}
+                      </span>
+                    </>
+                  )}
                 </p>
                 {selectedTournament.status === 'REGISTRATION' && (
                   <button
@@ -325,7 +365,7 @@ export function Tournaments({ user, onNavigate }) {
               </Card>
             )}
 
-            {/* Registered teams */}
+            {/* Registered participants */}
             {selectedTournament.registrations?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
@@ -349,23 +389,35 @@ export function Tournaments({ user, onNavigate }) {
                       {idx + 1}.
                     </span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span
-                          onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player1?.id }); }}
-                          style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          {reg.player1?.firstName}
-                        </span>
-                        <Badge style={{ fontSize: 10 }}>{reg.player1?.rating}</Badge>
-                        <span style={{ color: COLORS.textDim, fontSize: 12 }}>&</span>
-                        <span
-                          onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player2?.id }); }}
-                          style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
-                        >
-                          {reg.player2?.firstName}
-                        </span>
-                        <Badge style={{ fontSize: 10 }}>{reg.player2?.rating}</Badge>
-                      </div>
+                      {isIndividualMode ? (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player1?.id }); }}
+                            style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {reg.player1?.firstName} {reg.player1?.lastName || ''}
+                          </span>
+                          <Badge style={{ fontSize: 10 }}>{reg.player1?.rating}</Badge>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); onNavigate('playerProfile', { userId: reg.player1?.id }); }}
+                            style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {reg.player1?.firstName}
+                          </span>
+                          <Badge style={{ fontSize: 10 }}>{reg.player1?.rating}</Badge>
+                          <span style={{ color: COLORS.textDim, fontSize: 12 }}>&</span>
+                          <span
+                            onClick={(e) => { e.stopPropagation(); if (reg.player2?.id) onNavigate('playerProfile', { userId: reg.player2.id }); }}
+                            style={{ fontSize: 13, color: COLORS.text, fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            {reg.player2?.firstName || '—'}
+                          </span>
+                          {reg.player2?.rating && <Badge style={{ fontSize: 10 }}>{reg.player2.rating}</Badge>}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -378,6 +430,10 @@ export function Tournaments({ user, onNavigate }) {
                 {isFull ? (
                   <Button variant="default" fullWidth size="lg" disabled>
                     Все места заняты
+                  </Button>
+                ) : isIndividualMode ? (
+                  <Button variant="purple" fullWidth onClick={handleRegisterIndividual} size="lg" disabled={registering}>
+                    {registering ? 'Запись...' : '\u{1F3C6} Записаться на турнир'}
                   </Button>
                 ) : (
                   <Button variant="purple" fullWidth onClick={openPartnerModal} size="lg">

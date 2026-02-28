@@ -16,6 +16,7 @@ import { Profile } from './screens/Profile';
 import { Admin } from './screens/Admin';
 import { PlayerProfile } from './screens/PlayerProfile';
 import { FAQ } from './screens/FAQ';
+import { TournamentLive } from './screens/TournamentLive';
 // HIDDEN: Coach features — will enable later
 // import { CoachPanel } from './screens/CoachPanel';
 // import { CoachStudentDetail } from './screens/CoachStudentDetail';
@@ -33,12 +34,16 @@ export default function App() {
   const [deepLinkMatchId, setDeepLinkMatchId] = useState(null);
 
   useEffect(() => {
-    // Check for deep link match param
+    // Check for deep link params
     const urlParams = new URLSearchParams(window.location.search);
     const matchParam = urlParams.get('match');
     if (matchParam) {
       setDeepLinkMatchId(parseInt(matchParam));
       setActiveTab('matches');
+    }
+    const tournamentParam = urlParams.get('tournament');
+    if (tournamentParam) {
+      setSubScreen({ name: 'tournamentLive', params: { tournamentId: parseInt(tournamentParam) } });
     }
     authenticate();
   }, []);
@@ -120,7 +125,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -238,6 +243,17 @@ export default function App() {
         return (
           <div style={containerStyle}>
             <FAQ onBack={() => setSubScreen(null)} />
+          </div>
+        );
+      case 'tournamentLive':
+        return (
+          <div style={containerStyle}>
+            <TournamentLive
+              tournamentId={subScreen.params?.tournamentId}
+              user={user}
+              onBack={() => setSubScreen(null)}
+              onNavigate={handleNavigate}
+            />
           </div>
         );
       // HIDDEN: Coach screens — will enable later

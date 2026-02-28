@@ -30,20 +30,34 @@ const T_STATUS_LABELS = {
 };
 
 const FORMAT_OPTIONS = [
+  { value: 'americano', label: 'Americano' },
+  { value: 'mexicano', label: 'Mexicano' },
   { value: 'round_robin', label: 'Круговой' },
   { value: 'single_elimination', label: 'Олимпийская' },
   { value: 'double_elimination', label: 'Двойная элиминация' },
-  { value: 'americano', label: 'Американо' },
   { value: 'mixto', label: 'Микст' },
 ];
 
 const FORMAT_LABELS = {
+  americano: 'Americano',
+  mexicano: 'Mexicano',
   round_robin: 'Круговой',
   single_elimination: 'Олимпийская',
   double_elimination: 'Двойная элиминация',
-  americano: 'Американо',
   mixto: 'Микст',
 };
+
+const POINTS_PER_MATCH_OPTIONS = [
+  { value: '12', label: '12 очков' },
+  { value: '16', label: '16 очков' },
+  { value: '24', label: '24 очка' },
+  { value: '32', label: '32 очка' },
+];
+
+const REGISTRATION_MODE_OPTIONS = [
+  { value: 'INDIVIDUAL', label: 'Индивидуальная' },
+  { value: 'TEAMS', label: 'Парная' },
+];
 
 // ─── Match constants ───
 
@@ -114,6 +128,7 @@ export function Admin({ onBack }) {
     name: '', description: '', date: '', endDate: '', city: 'MINSK',
     venueId: '', format: 'americano', levelMin: '1.0', levelMax: '4.0',
     maxTeams: '16', price: '', ratingMultiplier: '1.0', status: 'REGISTRATION',
+    pointsPerMatch: '24', courtsCount: '1', registrationMode: 'INDIVIDUAL',
   });
 
   useEffect(() => {
@@ -252,6 +267,7 @@ export function Admin({ onBack }) {
       city: 'MINSK', venueId: venues.length > 0 ? String(venues[0].id) : '',
       format: 'americano', levelMin: '1.0', levelMax: '4.0',
       maxTeams: '16', price: '', ratingMultiplier: '1.0', status: 'REGISTRATION',
+      pointsPerMatch: '24', courtsCount: '1', registrationMode: 'INDIVIDUAL',
     });
     setShowTournamentForm(true);
   }
@@ -271,6 +287,9 @@ export function Admin({ onBack }) {
       levelMin: String(t.levelMin), levelMax: String(t.levelMax),
       maxTeams: String(t.maxTeams), price: t.price || '',
       ratingMultiplier: String(t.ratingMultiplier), status: t.status,
+      pointsPerMatch: String(t.pointsPerMatch || 24),
+      courtsCount: String(t.courtsCount || 1),
+      registrationMode: t.registrationMode || 'TEAMS',
     });
     setShowTournamentForm(true);
   }
@@ -885,9 +904,66 @@ export function Admin({ onBack }) {
             <Select
               label={'\uD83C\uDFBE Формат'}
               value={tForm.format}
-              onChange={(v) => setTForm({ ...tForm, format: v })}
+              onChange={(v) => {
+                const isLiveFormat = v === 'americano' || v === 'mexicano';
+                setTForm({
+                  ...tForm,
+                  format: v,
+                  registrationMode: isLiveFormat ? 'INDIVIDUAL' : 'TEAMS',
+                });
+              }}
               options={FORMAT_OPTIONS}
             />
+            <Select
+              label="Тип регистрации"
+              value={tForm.registrationMode}
+              onChange={(v) => setTForm({ ...tForm, registrationMode: v })}
+              options={REGISTRATION_MODE_OPTIONS}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <Select
+                label="Очков за матч"
+                value={tForm.pointsPerMatch}
+                onChange={(v) => setTForm({ ...tForm, pointsPerMatch: v })}
+                options={POINTS_PER_MATCH_OPTIONS}
+                style={{ flex: 1 }}
+              />
+              <Input
+                label="Кортов"
+                type="number"
+                value={tForm.courtsCount}
+                onChange={(v) => setTForm({ ...tForm, courtsCount: v })}
+                placeholder="1"
+                style={{ flex: 1 }}
+              />
+            </div>
+            {/* Preview: estimated rounds/matches */}
+            {(tForm.format === 'americano' || tForm.format === 'mexicano') && (() => {
+              const players = parseInt(tForm.maxTeams) || 8;
+              const courts = parseInt(tForm.courtsCount) || 1;
+              const playersPerRound = Math.min(courts * 4, players);
+              const matchesPerRound = Math.floor(playersPerRound / 4);
+              const estRounds = tForm.format === 'americano' ? Math.max(players - 1, 1) : null;
+              const estMatches = estRounds ? estRounds * matchesPerRound : null;
+              const sitOuts = players - playersPerRound;
+              return (
+                <div style={{
+                  padding: '10px 14px', borderRadius: 12, marginBottom: 6,
+                  background: `${COLORS.accent}08`, border: `1px solid ${COLORS.accent}20`,
+                }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent, marginBottom: 4 }}>
+                    {'\uD83D\uDCCA'} Предпросмотр
+                  </p>
+                  <p style={{ fontSize: 12, color: COLORS.textDim, lineHeight: 1.6, margin: 0 }}>
+                    {'\uD83D\uDC65'} {players} игроков, {courts} корт(ов)
+                    {'\n'}{'\u{1F3BE}'} {matchesPerRound} матч(ей) за раунд
+                    {estRounds && <>{'\n'}{'\uD83D\uDD04'} ~{estRounds} раундов, ~{estMatches} матчей всего</>}
+                    {!estRounds && <>{'\n'}{'\uD83D\uDD04'} Раунды генерируются динамически (Mexicano)</>}
+                    {sitOuts > 0 && <>{'\n'}{'\u23F8\uFE0F'} {sitOuts} игроков отдыхают каждый раунд</>}
+                  </p>
+                </div>
+              );
+            })()}
             <div style={{ display: 'flex', gap: 10 }}>
               <Select
                 label="Уровень от"
@@ -908,7 +984,7 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Input
-              label={'\uD83D\uDC65 Макс. пар'}
+              label={tForm.registrationMode === 'INDIVIDUAL' ? '\uD83D\uDC65 Макс. игроков' : '\uD83D\uDC65 Макс. пар'}
               type="number"
               value={tForm.maxTeams}
               onChange={(v) => setTForm({ ...tForm, maxTeams: v })}
@@ -1600,7 +1676,7 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
   );
 }
 
-// ─── Tournament Detail View ───
+// ─── Tournament Detail View (Enhanced with Live Controls) ───
 
 function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, onChangeStatus }) {
   const t = tournament;
@@ -1608,8 +1684,119 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
   const statusColor = T_STATUS_COLORS[t.status] || COLORS.textDim;
   const statusLabel = T_STATUS_LABELS[t.status] || t.status;
 
+  const [liveData, setLiveData] = useState(null);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [selectedRound, setSelectedRound] = useState(null);
+  const [scores, setScores] = useState({}); // matchId -> { team1: '', team2: '' }
+  const [submittingScore, setSubmittingScore] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const isLiveFormat = ['americano', 'mexicano'].includes(t.format?.toLowerCase());
+  const isInProgress = t.status === 'IN_PROGRESS';
+  const isCompleted = t.status === 'COMPLETED';
+  const isRegistration = t.status === 'REGISTRATION';
+  const isMexicano = t.format?.toLowerCase() === 'mexicano';
+  const isIndividual = t.registrationMode === 'INDIVIDUAL';
+
+  // Load live data for live-format tournaments
+  useEffect(() => {
+    if (isLiveFormat && (isInProgress || isCompleted)) {
+      loadLiveData();
+    }
+  }, [t.id, t.status]);
+
+  async function loadLiveData() {
+    setLiveLoading(true);
+    try {
+      const data = await api.tournaments.live(t.id);
+      setLiveData(data);
+      if (selectedRound === null && data.currentRound > 0) {
+        setSelectedRound(data.currentRound);
+      }
+    } catch (err) {
+      console.error('Load live data error:', err);
+    }
+    setLiveLoading(false);
+  }
+
+  async function handleStartTournament() {
+    if (!confirm('Запустить турнир? Это сгенерирует раунды и начнёт турнир.')) return;
+    setActionLoading(true);
+    try {
+      await api.admin.startTournament(t.id);
+      onChangeStatus(t.id, 'IN_PROGRESS');
+      await loadLiveData();
+    } catch (err) {
+      alert(err.message || 'Ошибка запуска');
+    }
+    setActionLoading(false);
+  }
+
+  async function handleInlineScore(matchId) {
+    const s = scores[matchId];
+    if (!s) return;
+    const s1 = parseInt(s.team1);
+    const s2 = parseInt(s.team2);
+    if (isNaN(s1) || isNaN(s2) || s1 < 0 || s2 < 0) {
+      alert('Введите корректные очки');
+      return;
+    }
+    const ppm = liveData?.pointsPerMatch || t.pointsPerMatch || 24;
+    if (s1 + s2 !== ppm) {
+      alert(`Сумма очков должна быть ${ppm}. Сейчас: ${s1 + s2}`);
+      return;
+    }
+    setSubmittingScore(matchId);
+    try {
+      await api.admin.submitTournamentScore(t.id, matchId, s1, s2);
+      setScores(prev => { const n = { ...prev }; delete n[matchId]; return n; });
+      await loadLiveData();
+    } catch (err) {
+      alert(err.message || 'Ошибка записи счёта');
+    }
+    setSubmittingScore(null);
+  }
+
+  async function handleNextRound() {
+    setActionLoading(true);
+    try {
+      await api.admin.nextTournamentRound(t.id);
+      const data = await api.tournaments.live(t.id);
+      setLiveData(data);
+      setSelectedRound(data.currentRound);
+    } catch (err) {
+      alert(err.message || 'Ошибка генерации раунда');
+    }
+    setActionLoading(false);
+  }
+
+  async function handleCompleteTournament() {
+    if (!confirm('Завершить турнир? Будут рассчитаны рейтинговые изменения.')) return;
+    setActionLoading(true);
+    try {
+      await api.admin.completeTournament(t.id);
+      onChangeStatus(t.id, 'COMPLETED');
+      await loadLiveData();
+    } catch (err) {
+      alert(err.message || 'Ошибка завершения');
+    }
+    setActionLoading(false);
+  }
+
+  function updateScore(matchId, team, value) {
+    setScores(prev => ({
+      ...prev,
+      [matchId]: { ...(prev[matchId] || { team1: '', team2: '' }), [team]: value },
+    }));
+  }
+
+  const currentRoundData = liveData?.rounds?.find(r => r.roundNumber === selectedRound);
+  const currentRoundPending = currentRoundData?.matches?.filter(m => m.status !== 'COMPLETED');
+  const allCurrentRoundDone = currentRoundData && currentRoundPending?.length === 0;
+
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <button
           onClick={onBack}
@@ -1633,6 +1820,32 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
         </span>
       </div>
 
+      {/* Status pipeline */}
+      {isLiveFormat && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 0, marginBottom: 16,
+          background: COLORS.surface, borderRadius: 14, padding: 4, overflow: 'hidden',
+        }}>
+          {['REGISTRATION', 'IN_PROGRESS', 'COMPLETED'].map((s, idx) => {
+            const isCurrent = t.status === s;
+            const isPast = (s === 'REGISTRATION' && (isInProgress || isCompleted)) ||
+                           (s === 'IN_PROGRESS' && isCompleted);
+            const clr = T_STATUS_COLORS[s];
+            return (
+              <div key={s} style={{
+                flex: 1, textAlign: 'center', padding: '8px 4px',
+                borderRadius: 10,
+                background: isCurrent ? `${clr}25` : 'transparent',
+                fontSize: 11, fontWeight: 700,
+                color: isCurrent ? clr : isPast ? COLORS.accent : COLORS.textMuted,
+              }}>
+                {isPast ? '\u2705' : ''} {T_STATUS_LABELS[s]}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Info */}
       <Card style={{ marginBottom: 12, padding: 14 }}>
         {t.description && (
@@ -1648,42 +1861,361 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
           <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={t.venue?.name || '\u2014'} />
           <InfoRow icon={'\uD83C\uDFBE'} label="Формат" value={FORMAT_LABELS[t.format] || t.format} />
           <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(t.levelMin).category} \u2014 ${getLevelByValue(t.levelMax).category}`} />
-          <InfoRow icon={'\uD83D\uDC65'} label="Пар" value={`${t.teamsRegistered}/${t.maxTeams}`} />
+          <InfoRow icon={'\uD83D\uDC65'} label={isIndividual ? 'Игроков' : 'Пар'} value={`${t.teamsRegistered}/${t.maxTeams}`} />
+          {isLiveFormat && <InfoRow icon={'\u{1F3BE}'} label="Очков/матч" value={t.pointsPerMatch || 24} />}
+          {isLiveFormat && <InfoRow icon={'\u{1F3DF}\uFE0F'} label="Кортов" value={t.courtsCount || 1} />}
           {t.price && <InfoRow icon={'\uD83D\uDCB0'} label="Цена" value={t.price} />}
           {t.ratingMultiplier !== 1.0 && <InfoRow icon={'\u2B50'} label="Множитель" value={`x${t.ratingMultiplier}`} />}
         </div>
       </Card>
 
-      {/* Status control */}
-      <Card style={{ marginBottom: 12, padding: 14 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Изменить статус</p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {['UPCOMING', 'REGISTRATION', 'IN_PROGRESS', 'COMPLETED'].map((s) => {
-            const active = t.status === s;
-            const clr = T_STATUS_COLORS[s];
-            return (
-              <button
-                key={s}
-                onClick={() => !active && onChangeStatus(t.id, s)}
-                style={{
-                  padding: '6px 12px', borderRadius: 10, border: 'none',
-                  background: active ? `${clr}30` : COLORS.surface,
-                  color: active ? clr : COLORS.textDim,
-                  fontSize: 12, fontWeight: 600, cursor: active ? 'default' : 'pointer',
-                  opacity: active ? 1 : 0.8,
-                }}
-              >
-                {T_STATUS_LABELS[s]}
-              </button>
-            );
-          })}
-        </div>
-      </Card>
+      {/* ─── LIVE: Start Button ─── */}
+      {isLiveFormat && isRegistration && (
+        <Card style={{ marginBottom: 12, padding: 16, textAlign: 'center' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
+            {'\u{1F680}'} Готовы к старту?
+          </p>
+          <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 14 }}>
+            {t.teamsRegistered} {isIndividual ? 'игроков' : 'пар'} зарегистрировано (минимум 4 игрока)
+          </p>
+          <button
+            onClick={handleStartTournament}
+            disabled={actionLoading || t.teamsRegistered < (isIndividual ? 4 : 2)}
+            style={{
+              width: '100%', padding: '14px 0', borderRadius: 14, border: 'none',
+              background: !actionLoading && t.teamsRegistered >= (isIndividual ? 4 : 2) ? COLORS.accent : COLORS.border,
+              color: !actionLoading && t.teamsRegistered >= (isIndividual ? 4 : 2) ? '#000' : COLORS.textDim,
+              fontSize: 15, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            {actionLoading ? 'Запуск...' : '\u{1F680} Запустить турнир'}
+          </button>
+        </Card>
+      )}
+
+      {/* ─── LIVE: Rounds & Matches (In Progress / Completed) ─── */}
+      {isLiveFormat && (isInProgress || isCompleted) && (
+        <>
+          {liveLoading && !liveData && (
+            <div style={{ textAlign: 'center', padding: 30, color: COLORS.textDim }}>
+              Загрузка раундов...
+            </div>
+          )}
+
+          {liveData && (
+            <>
+              {/* Round selector */}
+              {liveData.rounds?.length > 0 && (
+                <div style={{
+                  display: 'flex', gap: 6, marginBottom: 12,
+                  overflowX: 'auto', paddingBottom: 4,
+                }}>
+                  {liveData.rounds.map(round => {
+                    const isActive = round.roundNumber === selectedRound;
+                    const isCurrent = round.roundNumber === liveData.currentRound;
+                    const isDone = round.status === 'COMPLETED';
+                    return (
+                      <button
+                        key={round.id}
+                        onClick={() => setSelectedRound(round.roundNumber)}
+                        style={{
+                          padding: '6px 14px', borderRadius: 20, whiteSpace: 'nowrap',
+                          border: isActive ? 'none' : `1px solid ${COLORS.border}`,
+                          background: isActive ? COLORS.accent : isDone ? `${COLORS.accent}10` : 'transparent',
+                          color: isActive ? COLORS.bg : isDone ? COLORS.accent : COLORS.textDim,
+                          fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          position: 'relative',
+                        }}
+                      >
+                        {isDone && !isActive ? '\u2705 ' : ''}R{round.roundNumber}
+                        {isCurrent && isInProgress && !isActive && (
+                          <span style={{
+                            position: 'absolute', top: -2, right: -2,
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: COLORS.warning,
+                          }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Inline matches with score entry */}
+              {currentRoundData?.matches?.length > 0 && (
+                <Card style={{ marginBottom: 12, padding: 12 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+                    {'\u{1F3BE}'} Раунд {selectedRound} — {currentRoundData.matches.length} матч(ей)
+                    {currentRoundData.status === 'COMPLETED' && (
+                      <span style={{ color: COLORS.accent, marginLeft: 6 }}>{'\u2705'}</span>
+                    )}
+                  </p>
+
+                  {currentRoundData.matches.map(match => {
+                    const isDone = match.status === 'COMPLETED';
+                    const t1Won = isDone && match.team1Score > match.team2Score;
+                    const t2Won = isDone && match.team2Score > match.team1Score;
+                    const p1 = match.team1Player1;
+                    const p2 = match.team1Player2;
+                    const p3 = match.team2Player1;
+                    const p4 = match.team2Player2;
+                    const sc = scores[match.id] || { team1: '', team2: '' };
+                    const ppm = liveData.pointsPerMatch || 24;
+                    const scoreSum = (parseInt(sc.team1) || 0) + (parseInt(sc.team2) || 0);
+                    const sumOk = scoreSum === ppm && sc.team1 !== '' && sc.team2 !== '';
+
+                    return (
+                      <div key={match.id} style={{
+                        padding: '10px 12px', borderRadius: 12, marginBottom: 8,
+                        background: isDone ? `${COLORS.surface}` : `${COLORS.warning}08`,
+                        border: `1px solid ${isDone ? COLORS.border : `${COLORS.warning}30`}`,
+                      }}>
+                        {/* Court header */}
+                        <div style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          marginBottom: 8, fontSize: 11, color: COLORS.textDim,
+                        }}>
+                          <span style={{ fontWeight: 600 }}>Корт {match.courtNumber}</span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                            background: isDone ? `${COLORS.accent}15` : `${COLORS.warning}15`,
+                            color: isDone ? COLORS.accent : COLORS.warning,
+                          }}>
+                            {isDone ? 'Завершён' : 'LIVE'}
+                          </span>
+                        </div>
+
+                        {isDone ? (
+                          /* Completed match display */
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{
+                                fontSize: 13, fontWeight: t1Won ? 700 : 500,
+                                color: t1Won ? COLORS.accent : COLORS.text,
+                              }}>
+                                {p1?.firstName} + {p2?.firstName}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: t1Won ? COLORS.accent : COLORS.text, minWidth: 28, textAlign: 'center' }}>
+                              {match.team1Score}
+                            </span>
+                            <span style={{ fontSize: 11, color: COLORS.textMuted }}>:</span>
+                            <span style={{ fontSize: 18, fontWeight: 800, color: t2Won ? COLORS.accent : COLORS.text, minWidth: 28, textAlign: 'center' }}>
+                              {match.team2Score}
+                            </span>
+                            <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                              <span style={{
+                                fontSize: 13, fontWeight: t2Won ? 700 : 500,
+                                color: t2Won ? COLORS.accent : COLORS.text,
+                              }}>
+                                {p3?.firstName} + {p4?.firstName}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Active match — inline score entry */
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>
+                                  {p1?.firstName} + {p2?.firstName}
+                                </span>
+                              </div>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={sc.team1}
+                                onChange={e => updateScore(match.id, 'team1', e.target.value)}
+                                placeholder="0"
+                                style={{
+                                  width: 52, padding: '8px 4px', borderRadius: 10,
+                                  border: `1px solid ${COLORS.border}`, background: COLORS.bg,
+                                  color: COLORS.text, fontSize: 18, fontWeight: 700,
+                                  textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                                }}
+                              />
+                              <span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 600 }}>vs</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                value={sc.team2}
+                                onChange={e => updateScore(match.id, 'team2', e.target.value)}
+                                placeholder="0"
+                                style={{
+                                  width: 52, padding: '8px 4px', borderRadius: 10,
+                                  border: `1px solid ${COLORS.border}`, background: COLORS.bg,
+                                  color: COLORS.text, fontSize: 18, fontWeight: 700,
+                                  textAlign: 'center', fontFamily: 'inherit', outline: 'none',
+                                }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                                <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>
+                                  {p3?.firstName} + {p4?.firstName}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => handleInlineScore(match.id)}
+                                disabled={!sumOk || submittingScore === match.id}
+                                style={{
+                                  padding: '8px 10px', borderRadius: 10, border: 'none',
+                                  background: sumOk ? COLORS.accent : COLORS.border,
+                                  color: sumOk ? '#000' : COLORS.textDim,
+                                  fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                                }}
+                              >
+                                {submittingScore === match.id ? '...' : '\u2713'}
+                              </button>
+                            </div>
+                            {sc.team1 !== '' && sc.team2 !== '' && !sumOk && (
+                              <p style={{ fontSize: 11, color: COLORS.danger, marginTop: 4, textAlign: 'center' }}>
+                                Сумма: {scoreSum} / {ppm}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Round incomplete warning */}
+                  {isInProgress && currentRoundPending?.length > 0 && (
+                    <p style={{ fontSize: 12, color: COLORS.warning, textAlign: 'center', marginTop: 4 }}>
+                      {'\u26A0\uFE0F'} Осталось {currentRoundPending.length} незавершённых матч(ей)
+                    </p>
+                  )}
+                </Card>
+              )}
+
+              {/* Standings */}
+              {liveData.standings?.length > 0 && (
+                <Card style={{ marginBottom: 12, padding: 12 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+                    {'\uD83D\uDCCA'} Таблица
+                  </p>
+                  <div style={{ fontSize: 11, color: COLORS.textMuted, display: 'grid', gridTemplateColumns: '28px 1fr 44px 44px 40px', gap: 0, padding: '4px 0', marginBottom: 4 }}>
+                    <span>#</span><span>Игрок</span><span style={{ textAlign: 'center' }}>Очки</span><span style={{ textAlign: 'center' }}>W/L</span><span style={{ textAlign: 'center' }}>+/-</span>
+                  </div>
+                  {liveData.standings.map((s, idx) => {
+                    const diff = s.pointsFor - s.pointsAgainst;
+                    return (
+                      <div key={s.id} style={{
+                        display: 'grid', gridTemplateColumns: '28px 1fr 44px 44px 40px',
+                        padding: '6px 0', alignItems: 'center',
+                        borderTop: `1px solid ${COLORS.border}`,
+                      }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: idx < 3 ? [COLORS.gold, '#C0C0C0', '#CD7F32'][idx] : COLORS.textDim }}>
+                          {idx < 3 ? ['\u{1F947}', '\u{1F948}', '\u{1F949}'][idx] : idx + 1}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {s.user?.firstName}
+                        </span>
+                        <span style={{ textAlign: 'center', fontSize: 13, fontWeight: 800, color: COLORS.text }}>{s.points}</span>
+                        <span style={{ textAlign: 'center', fontSize: 11, color: COLORS.textDim }}>{s.wins}/{s.losses}</span>
+                        <span style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: diff > 0 ? COLORS.accent : diff < 0 ? COLORS.danger : COLORS.textDim }}>
+                          {diff > 0 ? '+' : ''}{diff}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </Card>
+              )}
+
+              {/* Rating changes for completed tournaments */}
+              {isCompleted && liveData.ratingChanges?.length > 0 && (
+                <Card style={{ marginBottom: 12, padding: 12 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+                    {'\uD83D\uDCC8'} Рейтинговые изменения
+                  </p>
+                  {liveData.ratingChanges.map(rc => (
+                    <div key={rc.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '6px 0', borderBottom: `1px solid ${COLORS.border}`,
+                    }}>
+                      <span style={{ fontSize: 12, color: COLORS.text }}>{rc.user?.firstName} {rc.user?.lastName || ''}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: COLORS.textDim }}>{rc.oldRating}</span>
+                        <span style={{ fontSize: 11, color: COLORS.textDim }}>{'\u2192'}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>{rc.newRating}</span>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
+                          background: rc.change >= 0 ? `${COLORS.accent}15` : `${COLORS.danger}15`,
+                          color: rc.change >= 0 ? COLORS.accent : COLORS.danger,
+                        }}>
+                          {rc.change > 0 ? '+' : ''}{rc.change}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </Card>
+              )}
+
+              {/* Admin control buttons */}
+              {isInProgress && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                  {/* Next round for Mexicano */}
+                  {isMexicano && allCurrentRoundDone && (
+                    <button
+                      onClick={handleNextRound}
+                      disabled={actionLoading}
+                      style={{
+                        width: '100%', padding: '12px 0', borderRadius: 14, border: 'none',
+                        background: COLORS.purple, color: '#fff',
+                        fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      {actionLoading ? 'Генерация...' : '\u27A1\uFE0F Следующий раунд'}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleCompleteTournament}
+                    disabled={actionLoading}
+                    style={{
+                      width: '100%', padding: '12px 0', borderRadius: 14,
+                      border: `1px solid ${COLORS.warning}40`, background: 'transparent',
+                      color: COLORS.warning, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    {actionLoading ? 'Завершение...' : '\u{1F3C1} Завершить турнир'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {/* Non-live status control */}
+      {!isLiveFormat && (
+        <Card style={{ marginBottom: 12, padding: 14 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Изменить статус</p>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {['UPCOMING', 'REGISTRATION', 'IN_PROGRESS', 'COMPLETED'].map((s) => {
+              const active = t.status === s;
+              const clr = T_STATUS_COLORS[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => !active && onChangeStatus(t.id, s)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 10, border: 'none',
+                    background: active ? `${clr}30` : COLORS.surface,
+                    color: active ? clr : COLORS.textDim,
+                    fontSize: 12, fontWeight: 600, cursor: active ? 'default' : 'pointer',
+                    opacity: active ? 1 : 0.8,
+                  }}
+                >
+                  {T_STATUS_LABELS[s]}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Registrations */}
       <Card style={{ marginBottom: 12, padding: 14 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-          {'\uD83D\uDC65'} Зарегистрированные пары ({t.registrations?.length || 0})
+          {'\uD83D\uDC65'} {isIndividual ? 'Участники' : 'Зарегистрированные пары'} ({t.registrations?.length || 0})
         </p>
 
         {(!t.registrations || t.registrations.length === 0) && (
@@ -1707,22 +2239,26 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
                 {reg.player1?.firstName} {reg.player1?.lastName || ''}
                 <span style={{ color: COLORS.accent, fontSize: 11, marginLeft: 4 }}>{reg.player1?.rating}</span>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginTop: 2 }}>
-                <span style={{ fontSize: 11, color: 'transparent', marginRight: 6 }}>#{idx + 1}</span>
-                {reg.player2?.firstName} {reg.player2?.lastName || ''}
-                <span style={{ color: COLORS.accent, fontSize: 11, marginLeft: 4 }}>{reg.player2?.rating}</span>
-              </div>
+              {!isIndividual && reg.player2 && (
+                <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginTop: 2 }}>
+                  <span style={{ fontSize: 11, color: 'transparent', marginRight: 6 }}>#{idx + 1}</span>
+                  {reg.player2?.firstName} {reg.player2?.lastName || ''}
+                  <span style={{ color: COLORS.accent, fontSize: 11, marginLeft: 4 }}>{reg.player2?.rating}</span>
+                </div>
+              )}
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDeleteReg(t.id, reg.id); }}
-              style={{
-                padding: '4px 10px', borderRadius: 8, border: `1px solid ${COLORS.danger}30`,
-                background: 'transparent', color: COLORS.danger,
-                fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-              }}
-            >
-              {'\u274C'}
-            </button>
+            {isRegistration && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteReg(t.id, reg.id); }}
+                style={{
+                  padding: '4px 10px', borderRadius: 8, border: `1px solid ${COLORS.danger}30`,
+                  background: 'transparent', color: COLORS.danger,
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                {'\u274C'}
+              </button>
+            )}
           </div>
         ))}
       </Card>

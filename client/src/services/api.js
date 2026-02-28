@@ -116,7 +116,9 @@ export const api = {
       return api.fetch(`/tournaments${qs ? `?${qs}` : ''}`);
     },
     getById: (id) => api.fetch(`/tournaments/${id}`),
+    live: (id) => api.fetch(`/tournaments/${id}/live`),
     register: (id, partnerId) => api.fetch(`/tournaments/${id}/register`, { method: 'POST', body: JSON.stringify({ partnerId }) }),
+    registerIndividual: (id) => api.fetch(`/tournaments/${id}/register-individual`, { method: 'POST' }),
     unregister: (id) => api.fetch(`/tournaments/${id}/unregister`, { method: 'DELETE' }),
   },
 
@@ -202,6 +204,11 @@ export const api = {
     updateTournament: (id, data) => api.fetch(`/admin/tournaments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     deleteTournament: (id) => api.fetch(`/admin/tournaments/${id}`, { method: 'DELETE' }),
     deleteRegistration: (tournamentId, regId) => api.fetch(`/admin/tournaments/${tournamentId}/registration/${regId}`, { method: 'DELETE' }),
+    // Tournament live engine (admin)
+    startTournament: (id) => api.fetch(`/admin/tournaments/${id}/start`, { method: 'POST' }),
+    submitTournamentScore: (id, matchId, team1Score, team2Score) => api.fetch(`/admin/tournaments/${id}/score`, { method: 'POST', body: JSON.stringify({ matchId, team1Score, team2Score }) }),
+    nextTournamentRound: (id) => api.fetch(`/admin/tournaments/${id}/next-round`, { method: 'POST' }),
+    completeTournament: (id) => api.fetch(`/admin/tournaments/${id}/complete`, { method: 'POST' }),
     analytics: (days = 30) => api.fetch(`/admin/analytics?days=${days}`),
   },
 };

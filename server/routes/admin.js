@@ -124,6 +124,9 @@ router.delete("/users/:id", authMiddleware, adminMiddleware, async (req, res) =>
     await prisma.tournamentRegistration.deleteMany({
       where: { OR: [{ player1Id: userId }, { player2Id: userId }] },
     });
+    await prisma.tournamentRatingChange.deleteMany({ where: { userId } });
+    await prisma.tournamentStanding.deleteMany({ where: { userId } });
+    // Note: TournamentMatch has cascading deletes via Tournament
 
     // Handle matches created by this user: delete all their data first, then the matches
     const createdMatches = await prisma.match.findMany({ where: { creatorId: userId }, select: { id: true } });
@@ -299,7 +302,7 @@ router.get("/tournaments", authMiddleware, adminMiddleware, async (req, res) => 
 // Create tournament
 router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status } = req.body;
+    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
 
     if (!name || !date || !city || !venueId || !format || levelMin === undefined || levelMax === undefined || !maxTeams) {
       return res.status(400).json({ error: "Заполните обязательные поля" });
@@ -320,6 +323,9 @@ router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) =>
         price: price || null,
         ratingMultiplier: ratingMultiplier ? parseFloat(ratingMultiplier) : 1.0,
         status: status || "REGISTRATION",
+        pointsPerMatch: pointsPerMatch ? parseInt(pointsPerMatch) : 24,
+        courtsCount: courtsCount ? parseInt(courtsCount) : 1,
+        registrationMode: registrationMode || "TEAMS",
       },
       include: { venue: true },
     });
@@ -335,7 +341,7 @@ router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) =>
 router.patch("/tournaments/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status } = req.body;
+    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
 
     const data = {};
     if (name !== undefined) data.name = name;
@@ -351,6 +357,9 @@ router.patch("/tournaments/:id", authMiddleware, adminMiddleware, async (req, re
     if (price !== undefined) data.price = price || null;
     if (ratingMultiplier !== undefined) data.ratingMultiplier = parseFloat(ratingMultiplier);
     if (status !== undefined) data.status = status;
+    if (pointsPerMatch !== undefined) data.pointsPerMatch = parseInt(pointsPerMatch);
+    if (courtsCount !== undefined) data.courtsCount = parseInt(courtsCount);
+    if (registrationMode !== undefined) data.registrationMode = registrationMode;
 
     const tournament = await prisma.tournament.update({
       where: { id },
@@ -365,10 +374,14 @@ router.patch("/tournaments/:id", authMiddleware, adminMiddleware, async (req, re
   }
 });
 
-// Delete tournament
+// Delete tournament (with all related data)
 router.delete("/tournaments/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    await prisma.tournamentRatingChange.deleteMany({ where: { tournamentId: id } });
+    await prisma.tournamentStanding.deleteMany({ where: { tournamentId: id } });
+    await prisma.tournamentMatch.deleteMany({ where: { tournamentId: id } });
+    await prisma.tournamentRound.deleteMany({ where: { tournamentId: id } });
     await prisma.tournamentRegistration.deleteMany({ where: { tournamentId: id } });
     await prisma.tournament.delete({ where: { id } });
     res.json({ success: true });
@@ -386,6 +399,68 @@ router.delete("/tournaments/:id/registration/:regId", authMiddleware, adminMiddl
   } catch (err) {
     console.error("Admin delete registration error:", err);
     res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// ─── Tournament Live Engine (admin) ───
+
+const {
+  startTournament,
+  submitScore,
+  generateNextRound,
+  completeTournament,
+} = require("../services/tournamentEngine");
+
+// Start tournament (generate rounds, create standings)
+router.post("/tournaments/:id/start", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await startTournament(parseInt(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error("Admin start tournament error:", err);
+    res.status(400).json({ error: err.message || "Ошибка запуска турнира" });
+  }
+});
+
+// Submit match score
+router.post("/tournaments/:id/score", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { matchId, team1Score, team2Score } = req.body;
+    if (matchId === undefined || team1Score === undefined || team2Score === undefined) {
+      return res.status(400).json({ error: "Укажите matchId, team1Score, team2Score" });
+    }
+    const result = await submitScore(
+      parseInt(req.params.id),
+      parseInt(matchId),
+      parseInt(team1Score),
+      parseInt(team2Score)
+    );
+    res.json(result);
+  } catch (err) {
+    console.error("Admin submit score error:", err);
+    res.status(400).json({ error: err.message || "Ошибка записи счёта" });
+  }
+});
+
+// Generate next round (Mexicano only)
+router.post("/tournaments/:id/next-round", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await generateNextRound(parseInt(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error("Admin next round error:", err);
+    res.status(400).json({ error: err.message || "Ошибка генерации раунда" });
+  }
+});
+
+// Complete tournament (calculate ratings, finalize)
+router.post("/tournaments/:id/complete", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const result = await completeTournament(parseInt(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error("Admin complete tournament error:", err);
+    res.status(400).json({ error: err.message || "Ошибка завершения турнира" });
   }
 });
 

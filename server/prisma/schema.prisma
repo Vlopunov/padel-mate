@@ -60,6 +60,23 @@ enum TournamentStatus {
   COMPLETED
 }
 
+enum RegistrationMode {
+  INDIVIDUAL
+  TEAMS
+}
+
+enum TournamentRoundStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TournamentMatchStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
 // === Coach Panel enums ===
 
 enum CoachSubscriptionTier {
@@ -147,6 +164,14 @@ model User {
   matchComments   MatchComment[]
   tournamentRegs1 TournamentRegistration[] @relation("TournamentPlayer1")
   tournamentRegs2 TournamentRegistration[] @relation("TournamentPlayer2")
+
+  // Tournament live engine relations
+  tmTeam1Player1  TournamentMatch[]      @relation("tm1p1")
+  tmTeam1Player2  TournamentMatch[]      @relation("tm1p2")
+  tmTeam2Player1  TournamentMatch[]      @relation("tm2p1")
+  tmTeam2Player2  TournamentMatch[]      @relation("tm2p2")
+  tStandings      TournamentStanding[]
+  tRatingChanges  TournamentRatingChange[]
 
   // Coach relations
   coachStudents         CoachStudent[]         @relation("CoachRelation")
@@ -304,7 +329,17 @@ model Tournament {
   prizes           Json?
   createdAt        DateTime         @default(now())
 
+  // Live tournament engine fields
+  pointsPerMatch   Int              @default(24)
+  courtsCount      Int              @default(1)
+  currentRound     Int              @default(0)
+  registrationMode RegistrationMode @default(TEAMS)
+
   registrations TournamentRegistration[]
+  rounds        TournamentRound[]
+  matches       TournamentMatch[]
+  standings     TournamentStanding[]
+  ratingChanges TournamentRatingChange[]
 }
 
 model TournamentRegistration {
@@ -313,8 +348,8 @@ model TournamentRegistration {
   tournament   Tournament @relation(fields: [tournamentId], references: [id])
   player1Id    Int
   player1      User       @relation("TournamentPlayer1", fields: [player1Id], references: [id])
-  player2Id    Int
-  player2      User       @relation("TournamentPlayer2", fields: [player2Id], references: [id])
+  player2Id    Int?
+  player2      User?      @relation("TournamentPlayer2", fields: [player2Id], references: [id])
   createdAt    DateTime   @default(now())
 
   @@unique([tournamentId, player1Id])
@@ -333,6 +368,69 @@ model DailyStats {
   topRatingUserId  Int?
   cityCounts       Json     @default("{}")
   createdAt        DateTime @default(now())
+}
+
+// === Tournament Live Engine models ===
+
+model TournamentRound {
+  id           Int                   @id @default(autoincrement())
+  tournament   Tournament            @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId Int
+  roundNumber  Int
+  status       TournamentRoundStatus @default(PENDING)
+  matches      TournamentMatch[]
+
+  @@unique([tournamentId, roundNumber])
+}
+
+model TournamentMatch {
+  id             Int                   @id @default(autoincrement())
+  tournament     Tournament            @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId   Int
+  round          TournamentRound       @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  roundId        Int
+  courtNumber    Int                   @default(1)
+  team1Player1   User                  @relation("tm1p1", fields: [team1Player1Id], references: [id])
+  team1Player1Id Int
+  team1Player2   User                  @relation("tm1p2", fields: [team1Player2Id], references: [id])
+  team1Player2Id Int
+  team2Player1   User                  @relation("tm2p1", fields: [team2Player1Id], references: [id])
+  team2Player1Id Int
+  team2Player2   User                  @relation("tm2p2", fields: [team2Player2Id], references: [id])
+  team2Player2Id Int
+  team1Score     Int?
+  team2Score     Int?
+  status         TournamentMatchStatus @default(PENDING)
+  completedAt    DateTime?
+}
+
+model TournamentStanding {
+  id            Int        @id @default(autoincrement())
+  tournament    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId  Int
+  user          User       @relation(fields: [userId], references: [id])
+  userId        Int
+  points        Int        @default(0)
+  wins          Int        @default(0)
+  losses        Int        @default(0)
+  pointsFor     Int        @default(0)
+  pointsAgainst Int        @default(0)
+  position      Int        @default(0)
+
+  @@unique([tournamentId, userId])
+}
+
+model TournamentRatingChange {
+  id           Int        @id @default(autoincrement())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId Int
+  user         User       @relation(fields: [userId], references: [id])
+  userId       Int
+  oldRating    Int
+  newRating    Int
+  change       Int
+
+  @@unique([tournamentId, userId])
 }
 
 // === Coach Panel models ===

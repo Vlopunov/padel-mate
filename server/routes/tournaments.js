@@ -2,6 +2,7 @@ const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
 const { sendTelegramMessage } = require("../services/notifications");
+const { getLiveData } = require("../services/tournamentEngine");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -62,6 +63,63 @@ router.get("/:id", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error("Tournament detail error:", err);
     res.status(500).json({ error: "Ошибка получения турнира" });
+  }
+});
+
+// Get tournament live data (rounds, matches, standings)
+router.get("/:id/live", authMiddleware, async (req, res) => {
+  try {
+    const data = await getLiveData(parseInt(req.params.id));
+    res.json(data);
+  } catch (err) {
+    console.error("Tournament live error:", err);
+    res.status(500).json({ error: err.message || "Ошибка получения live-данных" });
+  }
+});
+
+// Register individually (for Americano/Mexicano)
+router.post("/:id/register-individual", authMiddleware, async (req, res) => {
+  try {
+    const tournamentId = parseInt(req.params.id);
+    const userIdInt = req.userId;
+
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: { registrations: true },
+    });
+
+    if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
+    if (tournament.status !== "REGISTRATION") {
+      return res.status(400).json({ error: "Регистрация закрыта" });
+    }
+    if (tournament.registrationMode !== "INDIVIDUAL") {
+      return res.status(400).json({ error: "Этот турнир с парной регистрацией" });
+    }
+    if (tournament.registrations.length >= tournament.maxTeams) {
+      return res.status(400).json({ error: "Все места заняты" });
+    }
+
+    // Check if already registered
+    const existing = tournament.registrations.find((r) => r.player1Id === userIdInt);
+    if (existing) {
+      return res.status(400).json({ error: "Вы уже зарегистрированы" });
+    }
+
+    const reg = await prisma.tournamentRegistration.create({
+      data: {
+        tournamentId,
+        player1Id: userIdInt,
+        // player2Id is null for individual registration
+      },
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
+      },
+    });
+
+    res.json(reg);
+  } catch (err) {
+    console.error("Tournament individual register error:", err);
+    res.status(500).json({ error: "Ошибка регистрации" });
   }
 });
 

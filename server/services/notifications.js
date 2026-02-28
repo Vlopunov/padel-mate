@@ -311,6 +311,73 @@ async function notifyCoachNote(telegramId, coachName, text) {
   await sendTelegramMessage(telegramId, msg);
 }
 
+// ─── Tournament Live Notifications ───
+
+async function notifyTournamentStart(telegramId, tournament, matchInfo) {
+  let text = `🏆 <b>Турнир начался!</b>\n\n` +
+    `<b>${tournament.name}</b>\n` +
+    `🎾 Формат: ${tournament.format}\n` +
+    `📍 ${tournament.venue?.name || ""}\n`;
+
+  if (matchInfo) {
+    text += `\n🎯 <b>Ваш первый матч:</b>\n` +
+      `📌 Корт ${matchInfo.court}\n` +
+      `👥 ${matchInfo.partner} (ваш партнёр)\n` +
+      `⚔️ vs ${matchInfo.opponents}`;
+  }
+
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть турнир", web_app: { url: `${MINI_APP_URL}?tournament=${tournament.id}` } }],
+      ],
+    },
+  });
+}
+
+async function notifyNextRound(telegramId, tournament, roundNumber, matchInfo) {
+  let text = `🔔 <b>Раунд ${roundNumber}!</b>\n\n` +
+    `🏆 ${tournament.name}\n`;
+
+  if (matchInfo) {
+    text += `\n📌 Корт ${matchInfo.court}\n` +
+      `👥 Партнёр: ${matchInfo.partner}\n` +
+      `⚔️ vs ${matchInfo.opponents}`;
+  } else {
+    text += `\n⏸️ Этот раунд вы отдыхаете`;
+  }
+
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть турнир", web_app: { url: `${MINI_APP_URL}?tournament=${tournament.id}` } }],
+      ],
+    },
+  });
+}
+
+async function notifyTournamentComplete(telegramId, tournament, position, ratingChange) {
+  const medal = position === 1 ? "🥇" : position === 2 ? "🥈" : position === 3 ? "🥉" : "🏅";
+  const sign = ratingChange >= 0 ? "+" : "";
+
+  let text = `🏁 <b>Турнир завершён!</b>\n\n` +
+    `🏆 ${tournament.name}\n` +
+    `${medal} Ваше место: <b>#${position}</b>\n` +
+    `📊 Рейтинг: <b>${sign}${ratingChange}</b>`;
+
+  if (position <= 3) {
+    text += `\n\n🎉 Поздравляем с подиумом!`;
+  }
+
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Смотреть результаты", web_app: { url: `${MINI_APP_URL}?tournament=${tournament.id}` } }],
+      ],
+    },
+  });
+}
+
 module.exports = {
   sendTelegramMessage,
   notifyScoreConfirmation,
@@ -333,4 +400,8 @@ module.exports = {
   // Notes
   notifyHomework,
   notifyCoachNote,
+  // Tournament live
+  notifyTournamentStart,
+  notifyNextRound,
+  notifyTournamentComplete,
 };
