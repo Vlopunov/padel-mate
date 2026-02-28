@@ -2357,7 +2357,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       </Card>
 
       {/* TV Link */}
-      {isLiveFormat && (
+      {(
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 20 }}>{'\uD83D\uDCFA'}</span>
