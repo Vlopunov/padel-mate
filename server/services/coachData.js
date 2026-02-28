@@ -729,6 +729,302 @@ async function getStudentHomework(studentId) {
   return homework;
 }
 
+// ─── Payments ───
+
+// Record a payment
+async function recordPayment(coachId, { studentId, amount, type, packageId, note, status }) {
+  if (!studentId || !amount) throw new Error("Укажите ученика и сумму");
+
+  // Verify student link
+  const link = await prisma.coachStudent.findUnique({
+    where: { coachId_studentId: { coachId, studentId } },
+  });
+  if (!link || !link.active) throw new Error("Ученик не найден");
+
+  const payment = await prisma.coachPayment.create({
+    data: {
+      coachId,
+      studentId,
+      amount,
+      type: type || "SINGLE",
+      packageId: packageId || null,
+      note: note || null,
+      status: status || "AWAITING",
+      paidAt: status === "PAID" ? new Date() : null,
+    },
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+    },
+  });
+
+  return payment;
+}
+
+// Get all payments for coach (with filters)
+async function getPayments(coachId, { studentId, status, from, to, limit } = {}) {
+  const where = { coachId };
+  if (studentId) where.studentId = studentId;
+  if (status) where.status = status;
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = new Date(from);
+    if (to) where.createdAt.lte = new Date(to);
+  }
+
+  const payments = await prisma.coachPayment.findMany({
+    where,
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+      package: { select: { id: true, totalSessions: true, usedSessions: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit || 100,
+  });
+
+  return payments;
+}
+
+// Update payment (mark paid, edit note)
+async function updatePayment(coachId, paymentId, data) {
+  const payment = await prisma.coachPayment.findFirst({
+    where: { id: paymentId, coachId },
+  });
+  if (!payment) throw new Error("Платёж не найден");
+
+  const updateData = {};
+  if (data.status) {
+    updateData.status = data.status;
+    if (data.status === "PAID" && !payment.paidAt) {
+      updateData.paidAt = new Date();
+    }
+  }
+  if (data.note !== undefined) updateData.note = data.note;
+  if (data.amount !== undefined) updateData.amount = data.amount;
+
+  const updated = await prisma.coachPayment.update({
+    where: { id: paymentId },
+    data: updateData,
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+    },
+  });
+
+  return updated;
+}
+
+// Delete a payment
+async function deletePayment(coachId, paymentId) {
+  const payment = await prisma.coachPayment.findFirst({
+    where: { id: paymentId, coachId },
+  });
+  if (!payment) throw new Error("Платёж не найден");
+
+  await prisma.coachPayment.delete({ where: { id: paymentId } });
+  return { success: true };
+}
+
+// Get balance for a student (total owed - paid)
+async function getStudentBalance(coachId, studentId) {
+  // Total sessions conducted (completed) for this student
+  const completedSessions = await prisma.sessionBooking.count({
+    where: {
+      studentId,
+      session: { coachId, status: "COMPLETED" },
+      status: "CONFIRMED",
+    },
+  });
+
+  // All payments from this student
+  const payments = await prisma.coachPayment.findMany({
+    where: { coachId, studentId },
+    select: { amount: true, status: true, type: true },
+  });
+
+  const totalPaid = payments
+    .filter((p) => p.status === "PAID")
+    .reduce((sum, p) => sum + p.amount, 0);
+  const totalAwaiting = payments
+    .filter((p) => p.status === "AWAITING")
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  // Active packages
+  const packages = await prisma.coachPackage.findMany({
+    where: { coachId, studentId, active: true },
+    select: { totalSessions: true, usedSessions: true, priceTotal: true },
+  });
+
+  const packageSessionsLeft = packages.reduce(
+    (sum, p) => sum + (p.totalSessions - p.usedSessions), 0
+  );
+
+  return {
+    completedSessions,
+    totalPaid,
+    totalAwaiting,
+    packageSessionsLeft,
+    packages,
+  };
+}
+
+// Create a package (bundle of sessions)
+async function createPackage(coachId, { studentId, totalSessions, priceTotal }) {
+  if (!studentId || !totalSessions || !priceTotal) {
+    throw new Error("Укажите ученика, кол-во тренировок и цену");
+  }
+
+  // Verify link
+  const link = await prisma.coachStudent.findUnique({
+    where: { coachId_studentId: { coachId, studentId } },
+  });
+  if (!link || !link.active) throw new Error("Ученик не найден");
+
+  const pkg = await prisma.coachPackage.create({
+    data: {
+      coachId,
+      studentId,
+      totalSessions,
+      priceTotal,
+    },
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+    },
+  });
+
+  return pkg;
+}
+
+// Get all packages
+async function getPackages(coachId, { studentId, activeOnly } = {}) {
+  const where = { coachId };
+  if (studentId) where.studentId = studentId;
+  if (activeOnly) where.active = true;
+
+  const packages = await prisma.coachPackage.findMany({
+    where,
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+      payments: { select: { id: true, amount: true, status: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return packages;
+}
+
+// Update a package (use session, deactivate)
+async function updatePackage(coachId, packageId, data) {
+  const pkg = await prisma.coachPackage.findFirst({
+    where: { id: packageId, coachId },
+  });
+  if (!pkg) throw new Error("Пакет не найден");
+
+  const updateData = {};
+  if (data.usedSessions !== undefined) updateData.usedSessions = data.usedSessions;
+  if (data.active !== undefined) updateData.active = data.active;
+  if (data.totalSessions !== undefined) updateData.totalSessions = data.totalSessions;
+
+  const updated = await prisma.coachPackage.update({
+    where: { id: packageId },
+    data: updateData,
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+    },
+  });
+
+  return updated;
+}
+
+// Use one session from a package
+async function usePackageSession(coachId, packageId) {
+  const pkg = await prisma.coachPackage.findFirst({
+    where: { id: packageId, coachId },
+  });
+  if (!pkg) throw new Error("Пакет не найден");
+  if (!pkg.active) throw new Error("Пакет неактивен");
+  if (pkg.usedSessions >= pkg.totalSessions) throw new Error("Все тренировки в пакете использованы");
+
+  const updated = await prisma.coachPackage.update({
+    where: { id: packageId },
+    data: {
+      usedSessions: pkg.usedSessions + 1,
+      active: pkg.usedSessions + 1 < pkg.totalSessions,
+    },
+  });
+
+  return updated;
+}
+
+// Payment summary for dashboard
+async function getPaymentSummary(coachId) {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  // This month revenue
+  const thisMonthPaid = await prisma.coachPayment.aggregate({
+    where: { coachId, status: "PAID", paidAt: { gte: monthStart } },
+    _sum: { amount: true },
+    _count: true,
+  });
+
+  // Previous month revenue
+  const prevMonthPaid = await prisma.coachPayment.aggregate({
+    where: { coachId, status: "PAID", paidAt: { gte: prevMonthStart, lt: monthStart } },
+    _sum: { amount: true },
+  });
+
+  // Total awaiting
+  const awaiting = await prisma.coachPayment.aggregate({
+    where: { coachId, status: "AWAITING" },
+    _sum: { amount: true },
+    _count: true,
+  });
+
+  // All-time total
+  const allTime = await prisma.coachPayment.aggregate({
+    where: { coachId, status: "PAID" },
+    _sum: { amount: true },
+  });
+
+  // Per-student balances
+  const students = await prisma.coachStudent.findMany({
+    where: { coachId, active: true },
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+    },
+  });
+
+  const studentBalances = await Promise.all(
+    students.map(async (link) => {
+      const studentAwaiting = await prisma.coachPayment.aggregate({
+        where: { coachId, studentId: link.studentId, status: "AWAITING" },
+        _sum: { amount: true },
+      });
+      const activePkgs = await prisma.coachPackage.findMany({
+        where: { coachId, studentId: link.studentId, active: true },
+        select: { totalSessions: true, usedSessions: true },
+      });
+      const sessionsLeft = activePkgs.reduce((s, p) => s + (p.totalSessions - p.usedSessions), 0);
+
+      return {
+        ...link.student,
+        awaiting: studentAwaiting._sum.amount || 0,
+        packageSessionsLeft: sessionsLeft,
+      };
+    })
+  );
+
+  return {
+    thisMonth: thisMonthPaid._sum.amount || 0,
+    thisMonthCount: thisMonthPaid._count || 0,
+    prevMonth: prevMonthPaid._sum.amount || 0,
+    totalAwaiting: awaiting._sum.amount || 0,
+    awaitingCount: awaiting._count || 0,
+    allTimeTotal: allTime._sum.amount || 0,
+    studentBalances,
+  };
+}
+
 module.exports = {
   getCoachStudents,
   getStudentAnalytics,
@@ -753,4 +1049,15 @@ module.exports = {
   addNote,
   deleteNote,
   getStudentHomework,
+  // Payments
+  recordPayment,
+  getPayments,
+  updatePayment,
+  deletePayment,
+  getStudentBalance,
+  createPackage,
+  getPackages,
+  updatePackage,
+  usePackageSession,
+  getPaymentSummary,
 };

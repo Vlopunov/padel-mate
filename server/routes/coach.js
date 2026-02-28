@@ -304,4 +304,144 @@ router.delete("/notes/:noteId", authMiddleware, coachMiddleware, async (req, res
   }
 });
 
+// ─── Payments ───
+
+// GET /api/coach/payments — list payments (with optional filters)
+router.get("/payments", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { studentId, status, from, to } = req.query;
+    const payments = await coachData.getPayments(req.userId, {
+      studentId: studentId ? parseInt(studentId) : undefined,
+      status,
+      from,
+      to,
+    });
+    res.json(payments);
+  } catch (err) {
+    console.error("Coach payments error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// POST /api/coach/payments — record a payment
+router.post("/payments", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { studentId, amount, type, packageId, note, status } = req.body;
+    const payment = await coachData.recordPayment(req.userId, {
+      studentId: parseInt(studentId),
+      amount: parseInt(amount),
+      type,
+      packageId: packageId ? parseInt(packageId) : null,
+      note,
+      status,
+    });
+    res.json(payment);
+  } catch (err) {
+    console.error("Coach record payment error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// PATCH /api/coach/payments/:id — update payment (mark paid, edit)
+router.patch("/payments/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.id);
+    const payment = await coachData.updatePayment(req.userId, paymentId, req.body);
+    res.json(payment);
+  } catch (err) {
+    console.error("Coach update payment error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// DELETE /api/coach/payments/:id — delete payment
+router.delete("/payments/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const paymentId = parseInt(req.params.id);
+    const result = await coachData.deletePayment(req.userId, paymentId);
+    res.json(result);
+  } catch (err) {
+    console.error("Coach delete payment error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// GET /api/coach/students/:studentId/balance — student balance
+router.get("/students/:studentId/balance", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const balance = await coachData.getStudentBalance(req.userId, studentId);
+    res.json(balance);
+  } catch (err) {
+    console.error("Coach student balance error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// GET /api/coach/packages — list packages
+router.get("/packages", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { studentId, activeOnly } = req.query;
+    const packages = await coachData.getPackages(req.userId, {
+      studentId: studentId ? parseInt(studentId) : undefined,
+      activeOnly: activeOnly === "true",
+    });
+    res.json(packages);
+  } catch (err) {
+    console.error("Coach packages error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// POST /api/coach/packages — create a package
+router.post("/packages", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { studentId, totalSessions, priceTotal } = req.body;
+    const pkg = await coachData.createPackage(req.userId, {
+      studentId: parseInt(studentId),
+      totalSessions: parseInt(totalSessions),
+      priceTotal: parseInt(priceTotal),
+    });
+    res.json(pkg);
+  } catch (err) {
+    console.error("Coach create package error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// PATCH /api/coach/packages/:id — update package
+router.patch("/packages/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const packageId = parseInt(req.params.id);
+    const pkg = await coachData.updatePackage(req.userId, packageId, req.body);
+    res.json(pkg);
+  } catch (err) {
+    console.error("Coach update package error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// POST /api/coach/packages/:id/use — use one session from package
+router.post("/packages/:id/use", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const packageId = parseInt(req.params.id);
+    const pkg = await coachData.usePackageSession(req.userId, packageId);
+    res.json(pkg);
+  } catch (err) {
+    console.error("Coach use package session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// GET /api/coach/payment-summary — aggregated payment stats
+router.get("/payment-summary", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const summary = await coachData.getPaymentSummary(req.userId);
+    res.json(summary);
+  } catch (err) {
+    console.error("Coach payment summary error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 module.exports = router;

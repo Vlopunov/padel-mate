@@ -149,6 +149,24 @@ export const api = {
     getNotes: (studentId) => api.fetch(`/coach/students/${studentId}/notes`),
     addNote: (studentId, data) => api.fetch(`/coach/students/${studentId}/notes`, { method: 'POST', body: JSON.stringify(data) }),
     deleteNote: (noteId) => api.fetch(`/coach/notes/${noteId}`, { method: 'DELETE' }),
+    // Payments
+    payments: (params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return api.fetch(`/coach/payments${qs ? `?${qs}` : ''}`);
+    },
+    createPayment: (data) => api.fetch('/coach/payments', { method: 'POST', body: JSON.stringify(data) }),
+    updatePayment: (id, data) => api.fetch(`/coach/payments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deletePayment: (id) => api.fetch(`/coach/payments/${id}`, { method: 'DELETE' }),
+    studentBalance: (studentId) => api.fetch(`/coach/students/${studentId}/balance`),
+    // Packages
+    packages: (params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return api.fetch(`/coach/packages${qs ? `?${qs}` : ''}`);
+    },
+    createPackage: (data) => api.fetch('/coach/packages', { method: 'POST', body: JSON.stringify(data) }),
+    updatePackage: (id, data) => api.fetch(`/coach/packages/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    usePackageSession: (id) => api.fetch(`/coach/packages/${id}/use`, { method: 'POST' }),
+    paymentSummary: () => api.fetch('/coach/payment-summary'),
   },
 
   // Training (student-facing)

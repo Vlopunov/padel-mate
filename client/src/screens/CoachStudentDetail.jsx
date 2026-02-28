@@ -55,6 +55,7 @@ export function CoachStudentDetail({ studentId, onBack, onNavigate }) {
     { id: 'stats', label: 'Статистика' },
     { id: 'matches', label: 'Матчи' },
     { id: 'notes', label: 'Заметки' },
+    { id: 'payments', label: 'Оплаты' },
   ];
 
   return (
@@ -244,6 +245,11 @@ export function CoachStudentDetail({ studentId, onBack, onNavigate }) {
       {activeSection === 'notes' && (
         <NotesSection studentId={studentId} notes={data.notes || []} onRefresh={loadData} />
       )}
+
+      {/* Payments */}
+      {activeSection === 'payments' && (
+        <PaymentsSection studentId={studentId} />
+      )}
     </div>
   );
 }
@@ -389,6 +395,228 @@ function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
       </Modal>
     </div>
   );
+}
+
+// === Payments Section ===
+function PaymentsSection({ studentId }) {
+  const [balance, setBalance] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [packages, setPackages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({ amount: '', note: '', status: 'AWAITING' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadPayments();
+  }, [studentId]);
+
+  async function loadPayments() {
+    try {
+      const [bal, pays, pkgs] = await Promise.all([
+        api.coach.studentBalance(studentId),
+        api.coach.payments({ studentId }),
+        api.coach.packages({ studentId }),
+      ]);
+      setBalance(bal);
+      setPayments(pays);
+      setPackages(pkgs);
+    } catch (err) {
+      console.error('Load payments error:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleCreatePayment() {
+    if (!paymentForm.amount) return;
+    setSaving(true);
+    try {
+      await api.coach.createPayment({
+        studentId,
+        amount: Math.round(parseFloat(paymentForm.amount) * 100),
+        note: paymentForm.note || null,
+        status: paymentForm.status,
+      });
+      setShowPaymentModal(false);
+      setPaymentForm({ amount: '', note: '', status: 'AWAITING' });
+      await loadPayments();
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+    setSaving(false);
+  }
+
+  async function handleMarkPaid(paymentId) {
+    try {
+      await api.coach.updatePayment(paymentId, { status: 'PAID' });
+      await loadPayments();
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+  }
+
+  if (loading) {
+    return <p style={{ color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Загрузка...</p>;
+  }
+
+  return (
+    <div>
+      {/* Balance summary */}
+      {balance && (
+        <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}08, ${COLORS.purple}08)` }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: COLORS.accent, margin: 0 }}>
+                {formatBYN(balance.totalPaid)}
+              </p>
+              <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>Оплачено BYN</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: balance.totalAwaiting > 0 ? COLORS.warning : COLORS.textDim, margin: 0 }}>
+                {formatBYN(balance.totalAwaiting)}
+              </p>
+              <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>Ожидает BYN</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 16, fontWeight: 800, color: COLORS.purple, margin: 0 }}>
+                {balance.packageSessionsLeft}
+              </p>
+              <p style={{ fontSize: 10, color: COLORS.textDim, margin: 0 }}>Осталось тр.</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Button fullWidth variant="secondary" onClick={() => setShowPaymentModal(true)} style={{ marginBottom: 12 }}>
+        {'\u2795'} Записать оплату
+      </Button>
+
+      {/* Active packages */}
+      {packages.filter((p) => p.active).length > 0 && (
+        <>
+          <h4 style={{ fontSize: 13, fontWeight: 600, color: COLORS.textDim, marginBottom: 6 }}>
+            {'\u{1F4E6}'} Активные пакеты
+          </h4>
+          {packages.filter((p) => p.active).map((pkg) => {
+            const remaining = pkg.totalSessions - pkg.usedSessions;
+            const progress = pkg.usedSessions / pkg.totalSessions;
+            return (
+              <Card key={pkg.id} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>
+                    {formatBYN(pkg.priceTotal)} BYN · {pkg.totalSessions} тр.
+                  </span>
+                  <span style={{ fontSize: 12, color: remaining > 0 ? COLORS.accent : COLORS.danger }}>
+                    Осталось: {remaining}
+                  </span>
+                </div>
+                <div style={{ height: 4, borderRadius: 2, background: COLORS.surface, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%',
+                    width: `${Math.min(100, progress * 100)}%`,
+                    borderRadius: 2,
+                    background: COLORS.purple,
+                  }} />
+                </div>
+              </Card>
+            );
+          })}
+        </>
+      )}
+
+      {/* Payment history */}
+      <h4 style={{ fontSize: 13, fontWeight: 600, color: COLORS.textDim, marginBottom: 6, marginTop: 8 }}>
+        История оплат
+      </h4>
+      {payments.length === 0 ? (
+        <Card style={{ textAlign: 'center', padding: 20 }}>
+          <p style={{ color: COLORS.textDim, fontSize: 13 }}>Нет записей</p>
+        </Card>
+      ) : (
+        payments.map((p) => {
+          const statusColor = p.status === 'PAID' ? COLORS.accent : p.status === 'AWAITING' ? COLORS.warning : COLORS.danger;
+          const statusLabel = p.status === 'PAID' ? '\u2705' : p.status === 'AWAITING' ? '\u23F3' : '\u21A9\uFE0F';
+          return (
+            <Card key={p.id} style={{ marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 16 }}>{statusLabel}</span>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+                    {formatBYN(p.amount)} BYN
+                  </span>
+                  <span style={{ fontSize: 12, color: COLORS.textDim, marginLeft: 8 }}>
+                    {new Date(p.createdAt).toLocaleDateString('ru-RU')}
+                  </span>
+                  {p.note && (
+                    <p style={{ fontSize: 11, color: COLORS.textDim, margin: '2px 0 0', fontStyle: 'italic' }}>{p.note}</p>
+                  )}
+                </div>
+                {p.status === 'AWAITING' && (
+                  <button
+                    onClick={() => handleMarkPaid(p.id)}
+                    style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', padding: 4 }}
+                  >{'\u2705'}</button>
+                )}
+              </div>
+            </Card>
+          );
+        })
+      )}
+
+      {/* Payment modal */}
+      <Modal
+        isOpen={showPaymentModal}
+        onClose={() => { setShowPaymentModal(false); setPaymentForm({ amount: '', note: '', status: 'AWAITING' }); }}
+        title="Записать оплату"
+      >
+        <Input
+          label="Сумма (BYN)"
+          type="number"
+          value={paymentForm.amount}
+          onChange={(v) => setPaymentForm({ ...paymentForm, amount: v })}
+          placeholder="0.00"
+        />
+        <Input
+          label="Заметка"
+          value={paymentForm.note}
+          onChange={(v) => setPaymentForm({ ...paymentForm, note: v })}
+          placeholder="За что оплата..."
+        />
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+          {[
+            { value: 'AWAITING', label: '\u23F3 Ожидает' },
+            { value: 'PAID', label: '\u2705 Оплачено' },
+          ].map((s) => (
+            <button
+              key={s.value}
+              onClick={() => setPaymentForm({ ...paymentForm, status: s.value })}
+              style={{
+                flex: 1,
+                padding: '8px 0',
+                borderRadius: 8,
+                border: `1px solid ${paymentForm.status === s.value ? COLORS.accent : COLORS.border}`,
+                background: paymentForm.status === s.value ? `${COLORS.accent}20` : COLORS.surface,
+                color: paymentForm.status === s.value ? COLORS.accent : COLORS.textDim,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+        <Button fullWidth onClick={handleCreatePayment} disabled={saving || !paymentForm.amount}>
+          {saving ? 'Сохранение...' : 'Записать'}
+        </Button>
+      </Modal>
+    </div>
+  );
+}
+
+function formatBYN(kopeks) {
+  if (!kopeks) return '0';
+  return (kopeks / 100).toFixed(kopeks % 100 === 0 ? 0 : 2);
 }
 
 // Helper
