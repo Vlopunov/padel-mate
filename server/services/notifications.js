@@ -217,6 +217,74 @@ async function notifyMilestone(telegramId, milestone) {
   await sendTelegramMessage(telegramId, text);
 }
 
+// ─── Training Session Notifications ───
+
+async function notifyTrainingReminder(telegramId, session, minutesBefore) {
+  const sessionDate = new Date(session.date);
+  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+
+  let timeLabel;
+  if (minutesBefore >= 60) {
+    const hours = Math.floor(minutesBefore / 60);
+    const mins = minutesBefore % 60;
+    timeLabel = mins > 0 ? `${hours} ч ${mins} мин` : `${hours} ч`;
+  } else {
+    timeLabel = `${minutesBefore} мин`;
+  }
+
+  const typeLabel = session.type === "GROUP" ? "Групповая" : "Индивидуальная";
+  const text =
+    `⏰ <b>Напоминание о тренировке!</b>\n\n` +
+    `Через <b>${timeLabel}</b> у вас ${typeLabel.toLowerCase()} тренировка:\n` +
+    `👨‍🏫 ${session.coach?.firstName || "Тренер"}\n` +
+    `📍 ${session.venue?.name || "—"}\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `⏱ ${session.durationMin} мин`;
+  await sendTelegramMessage(telegramId, text, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть приложение", web_app: { url: MINI_APP_URL } }],
+      ],
+    },
+  });
+}
+
+async function notifyTrainingBooked(telegramId, session, student) {
+  const sessionDate = new Date(session.date);
+  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const typeLabel = session.type === "GROUP" ? "групповую" : "индивидуальную";
+  const text =
+    `📝 <b>${student.firstName} ${student.lastName || ""}</b> записался на ${typeLabel} тренировку\n\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `📍 ${session.venue?.name || "—"}`;
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyTrainingCancelledByCoach(telegramId, session, coachName) {
+  const sessionDate = new Date(session.date);
+  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const text =
+    `❌ <b>Тренировка отменена</b>\n\n` +
+    `Тренер ${coachName} отменил тренировку:\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `📍 ${session.venue?.name || "—"}`;
+  await sendTelegramMessage(telegramId, text);
+}
+
+async function notifyTrainingCancelledByStudent(telegramId, session, student) {
+  const sessionDate = new Date(session.date);
+  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const text =
+    `⚠️ <b>${student.firstName} ${student.lastName || ""}</b> отменил запись на тренировку\n\n` +
+    `📅 ${dateStr}, ${timeStr}\n` +
+    `📍 ${session.venue?.name || "—"}`;
+  await sendTelegramMessage(telegramId, text);
+}
+
 module.exports = {
   sendTelegramMessage,
   notifyScoreConfirmation,
@@ -231,4 +299,9 @@ module.exports = {
   notifyInactivePlayer,
   notifyWeeklySummary,
   notifyMilestone,
+  // Training
+  notifyTrainingReminder,
+  notifyTrainingBooked,
+  notifyTrainingCancelledByCoach,
+  notifyTrainingCancelledByStudent,
 };

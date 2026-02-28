@@ -1,5 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
-const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage, notifyInactivePlayer, notifyWeeklySummary, notifyMilestone } = require("./notifications");
+const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage, notifyInactivePlayer, notifyWeeklySummary, notifyMilestone, notifyTrainingReminder } = require("./notifications");
 const { collectDailyStats, getTodaySummary, formatDigestMessage, getUserWeeklySummary, getInactivePlayers, checkMilestones, getWeeklyReportData, formatWeeklyReport } = require("./analytics");
 
 const prisma = new PrismaClient();
@@ -105,6 +105,9 @@ async function checkAndSendReminders() {
         }
       }
     }
+    // --- Training session reminders ---
+    await checkTrainingReminders(now);
+
     // --- Auto-cancel expired RECRUITING matches ---
     await cancelExpiredMatches(now);
 
@@ -127,6 +130,69 @@ async function checkAndSendReminders() {
     console.error("[Reminder] Scheduler error:", err.message);
   } finally {
     isRunning = false;
+  }
+}
+
+/**
+ * Send reminders for upcoming training sessions (2 hours before)
+ */
+async function checkTrainingReminders(now) {
+  try {
+    const reminderWindow = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours ahead
+
+    const upcomingSessions = await prisma.trainingSession.findMany({
+      where: {
+        date: {
+          gt: now,
+          lte: reminderWindow,
+        },
+        status: { in: ["OPEN", "FULL", "CONFIRMED"] },
+      },
+      include: {
+        venue: true,
+        coach: { select: { firstName: true } },
+        bookings: {
+          where: {
+            status: { in: ["PENDING", "CONFIRMED"] },
+            reminderSent: false,
+          },
+          include: {
+            student: { select: { telegramId: true, firstName: true, reminderMinutes: true } },
+          },
+        },
+      },
+    });
+
+    for (const session of upcomingSessions) {
+      const sessionTime = new Date(session.date).getTime();
+      const minutesUntil = Math.floor((sessionTime - now.getTime()) / 60000);
+
+      for (const booking of session.bookings) {
+        // Use student's reminder preference or default 120 min for training
+        const reminderMinutes = booking.student.reminderMinutes || 120;
+        if (reminderMinutes <= 0) continue;
+
+        // Send if within reminder window
+        if (minutesUntil <= reminderMinutes && minutesUntil > 0) {
+          try {
+            await notifyTrainingReminder(
+              booking.student.telegramId.toString(),
+              { ...session, coach: session.coach },
+              minutesUntil
+            );
+            await prisma.sessionBooking.update({
+              where: { id: booking.id },
+              data: { reminderSent: true },
+            });
+            console.log(`[TrainingReminder] Sent to ${booking.student.firstName} for session #${session.id}`);
+          } catch (err) {
+            console.error(`[TrainingReminder] Failed for session #${session.id}:`, err.message);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[TrainingReminder] Error:", err.message);
   }
 }
 

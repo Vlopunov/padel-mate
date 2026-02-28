@@ -104,7 +104,7 @@ export function CoachPanel({ user, onBack, onNavigate }) {
       {/* Tab content */}
       {activeTab === 'overview' && <OverviewTab dashboard={dashboard} />}
       {activeTab === 'students' && <StudentsTab dashboard={dashboard} onNavigate={onNavigate} />}
-      {activeTab === 'schedule' && <ScheduleTab dashboard={dashboard} />}
+      {activeTab === 'schedule' && <ScheduleTab dashboard={dashboard} onNavigate={onNavigate} />}
       {activeTab === 'payments' && <PaymentsTab dashboard={dashboard} />}
     </div>
   );
@@ -412,20 +412,373 @@ function StudentsTab({ dashboard, onNavigate }) {
   );
 }
 
-// === Schedule Tab (placeholder) ===
-function ScheduleTab({ dashboard }) {
+// === Schedule Tab ===
+function ScheduleTab({ dashboard, onNavigate }) {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [venues, setVenues] = useState([]);
+  const [filter, setFilter] = useState('upcoming'); // upcoming | past | all
+  const [form, setForm] = useState({
+    type: 'INDIVIDUAL',
+    date: '',
+    time: '',
+    durationMin: 60,
+    maxStudents: 1,
+    price: '',
+    venueId: '',
+    notes: '',
+  });
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadSessions();
+    loadVenues();
+  }, []);
+
+  async function loadVenues() {
+    try {
+      const v = await api.venues.list();
+      setVenues(v);
+    } catch (err) {
+      console.error('Load venues error:', err);
+    }
+  }
+
+  async function loadSessions() {
+    setLoading(true);
+    try {
+      const data = await api.coach.sessions();
+      setSessions(data);
+    } catch (err) {
+      console.error('Load sessions error:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleCreate() {
+    setFormError('');
+    if (!form.date || !form.time) {
+      setFormError('Укажите дату и время');
+      return;
+    }
+    setSaving(true);
+    try {
+      const dateTime = new Date(`${form.date}T${form.time}`);
+      await api.coach.createSession({
+        type: form.type,
+        date: dateTime.toISOString(),
+        durationMin: parseInt(form.durationMin) || 60,
+        maxStudents: form.type === 'GROUP' ? (parseInt(form.maxStudents) || 4) : 1,
+        price: form.price ? Math.round(parseFloat(form.price) * 100) : 0,
+        venueId: form.venueId ? parseInt(form.venueId) : null,
+        notes: form.notes || null,
+      });
+      setShowCreateModal(false);
+      setForm({ type: 'INDIVIDUAL', date: '', time: '', durationMin: 60, maxStudents: 1, price: '', venueId: '', notes: '' });
+      await loadSessions();
+    } catch (err) {
+      setFormError(err.message || 'Ошибка');
+    }
+    setSaving(false);
+  }
+
+  async function handleCancel(sessionId) {
+    if (!confirm('Отменить тренировку? Ученики получат уведомление.')) return;
+    try {
+      await api.coach.cancelSession(sessionId);
+      await loadSessions();
+    } catch (err) {
+      console.error('Cancel session error:', err);
+      alert(err.message || 'Ошибка');
+    }
+  }
+
+  async function handleComplete(sessionId) {
+    try {
+      await api.coach.completeSession(sessionId);
+      await loadSessions();
+    } catch (err) {
+      console.error('Complete session error:', err);
+    }
+  }
+
+  async function handleDelete(sessionId) {
+    if (!confirm('Удалить тренировку?')) return;
+    try {
+      await api.coach.deleteSession(sessionId);
+      await loadSessions();
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+  }
+
+  if (loading) {
+    return <p style={{ color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Загрузка...</p>;
+  }
+
+  const now = new Date();
+  const filtered = sessions.filter((s) => {
+    if (filter === 'upcoming') return new Date(s.date) > now && s.status !== 'CANCELLED';
+    if (filter === 'past') return new Date(s.date) <= now || s.status === 'COMPLETED' || s.status === 'CANCELLED';
+    return true;
+  });
+
   return (
     <div>
-      <Card style={{ textAlign: 'center', padding: 32 }}>
-        <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F4C5}'}</span>
-        <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
-          Расписание тренировок
-        </p>
-        <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 16 }}>
-          Создавайте слоты тренировок, ученики смогут записываться через приложение
-        </p>
-        <Badge variant="accent">Скоро</Badge>
-      </Card>
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {[
+          { id: 'upcoming', label: 'Предстоящие' },
+          { id: 'past', label: 'Прошедшие' },
+        ].map((f) => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: 'none',
+              background: filter === f.id ? COLORS.purple : COLORS.surface,
+              color: filter === f.id ? '#fff' : COLORS.textDim,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Create button */}
+      <Button fullWidth variant="secondary" onClick={() => setShowCreateModal(true)} style={{ marginBottom: 12 }}>
+        {'\u2795'} Создать тренировку
+      </Button>
+
+      {/* Session list */}
+      {filtered.length === 0 ? (
+        <Card style={{ textAlign: 'center', padding: 32 }}>
+          <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{'\u{1F4C5}'}</span>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+            {filter === 'upcoming' ? 'Нет предстоящих тренировок' : 'Нет прошедших тренировок'}
+          </p>
+          <p style={{ fontSize: 13, color: COLORS.textDim }}>
+            Создайте тренировку, ученики смогут записаться
+          </p>
+        </Card>
+      ) : (
+        filtered.map((s) => {
+          const d = new Date(s.date);
+          const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+          const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          const isPast = d <= now;
+          const statusColors = {
+            OPEN: COLORS.accent,
+            FULL: COLORS.purple,
+            CONFIRMED: COLORS.accent,
+            COMPLETED: COLORS.textDim,
+            CANCELLED: COLORS.danger,
+          };
+          const statusLabels = {
+            OPEN: 'Открыта',
+            FULL: 'Заполнена',
+            CONFIRMED: 'Подтверждена',
+            COMPLETED: 'Завершена',
+            CANCELLED: 'Отменена',
+          };
+
+          return (
+            <Card
+              key={s.id}
+              style={{ marginBottom: 8, opacity: s.status === 'CANCELLED' ? 0.5 : 1 }}
+              onClick={() => onNavigate('coachSessionDetail', { sessionId: s.id })}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontSize: 16 }}>
+                    {s.type === 'GROUP' ? '\u{1F46B}' : '\u{1F464}'}
+                  </span>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, margin: 0 }}>
+                      {dateStr}, {timeStr}
+                    </p>
+                    <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
+                      {s.type === 'GROUP' ? 'Групповая' : 'Индивидуальная'} · {s.durationMin} мин
+                    </p>
+                  </div>
+                </div>
+                <Badge style={{ background: `${statusColors[s.status]}20`, color: statusColors[s.status], fontSize: 11 }}>
+                  {statusLabels[s.status]}
+                </Badge>
+              </div>
+
+              {s.venue && (
+                <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 4 }}>
+                  {'\u{1F4CD}'} {s.venue.name}
+                </p>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: COLORS.textDim }}>
+                    {'\u{1F464}'} {s.bookedCount}/{s.maxStudents}
+                  </span>
+                  {s.price > 0 && (
+                    <span style={{ fontSize: 12, color: COLORS.accent, fontWeight: 600 }}>
+                      {formatBYN(s.price)} BYN
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                  {!isPast && s.status !== 'CANCELLED' && s.status !== 'COMPLETED' && (
+                    <>
+                      <button
+                        onClick={() => handleComplete(s.id)}
+                        style={{ background: 'none', border: 'none', color: COLORS.accent, fontSize: 18, cursor: 'pointer', padding: 4 }}
+                        title="Завершить"
+                      >{'\u2705'}</button>
+                      <button
+                        onClick={() => handleCancel(s.id)}
+                        style={{ background: 'none', border: 'none', color: COLORS.danger, fontSize: 18, cursor: 'pointer', padding: 4 }}
+                        title="Отменить"
+                      >{'\u274C'}</button>
+                    </>
+                  )}
+                  {(s.status === 'CANCELLED' || (s.status !== 'COMPLETED' && s.bookedCount === 0)) && (
+                    <button
+                      onClick={() => handleDelete(s.id)}
+                      style={{ background: 'none', border: 'none', color: COLORS.textDim, fontSize: 16, cursor: 'pointer', padding: 4 }}
+                      title="Удалить"
+                    >{'\u{1F5D1}'}</button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          );
+        })
+      )}
+
+      {/* Create session modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => { setShowCreateModal(false); setFormError(''); }}
+        title="Новая тренировка"
+      >
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[
+            { value: 'INDIVIDUAL', label: '\u{1F464} Индивид.' },
+            { value: 'GROUP', label: '\u{1F46B} Групповая' },
+          ].map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setForm({ ...form, type: t.value, maxStudents: t.value === 'GROUP' ? 4 : 1 })}
+              style={{
+                flex: 1,
+                padding: '10px 0',
+                borderRadius: 10,
+                border: `1px solid ${form.type === t.value ? COLORS.purple : COLORS.border}`,
+                background: form.type === t.value ? `${COLORS.purple}20` : COLORS.surface,
+                color: form.type === t.value ? COLORS.purple : COLORS.textDim,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <Input
+            label="Дата"
+            type="date"
+            value={form.date}
+            onChange={(v) => setForm({ ...form, date: v })}
+            style={{ flex: 1 }}
+          />
+          <Input
+            label="Время"
+            type="time"
+            value={form.time}
+            onChange={(v) => setForm({ ...form, time: v })}
+            style={{ flex: 1 }}
+          />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <Input
+            label="Длительность (мин)"
+            type="number"
+            value={String(form.durationMin)}
+            onChange={(v) => setForm({ ...form, durationMin: v })}
+            style={{ flex: 1 }}
+          />
+          <Input
+            label="Цена (BYN)"
+            type="number"
+            value={form.price}
+            onChange={(v) => setForm({ ...form, price: v })}
+            placeholder="0"
+            style={{ flex: 1 }}
+          />
+        </div>
+
+        {form.type === 'GROUP' && (
+          <Input
+            label="Макс. учеников"
+            type="number"
+            value={String(form.maxStudents)}
+            onChange={(v) => setForm({ ...form, maxStudents: v })}
+          />
+        )}
+
+        {venues.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 4, fontWeight: 500 }}>Площадка</p>
+            <select
+              value={form.venueId}
+              onChange={(e) => setForm({ ...form, venueId: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: 10,
+                border: `1px solid ${COLORS.border}`,
+                background: COLORS.surface,
+                color: COLORS.text,
+                fontSize: 14,
+              }}
+            >
+              <option value="">Не указана</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <Input
+          label="Заметка"
+          value={form.notes}
+          onChange={(v) => setForm({ ...form, notes: v })}
+          placeholder="Что будем отрабатывать..."
+        />
+
+        {formError && (
+          <p style={{ color: COLORS.danger, fontSize: 13, marginTop: 4 }}>{formError}</p>
+        )}
+
+        <Button
+          fullWidth
+          onClick={handleCreate}
+          disabled={saving}
+          style={{ marginTop: 8 }}
+        >
+          {saving ? 'Создание...' : 'Создать тренировку'}
+        </Button>
+      </Modal>
     </div>
   );
 }

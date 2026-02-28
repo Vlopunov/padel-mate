@@ -146,4 +146,99 @@ router.get("/cohort-stats", authMiddleware, coachMiddleware, async (req, res) =>
   }
 });
 
+// ─── Training Sessions ───
+
+const { notifyTrainingBooked, notifyTrainingCancelled, notifyTrainingCancelledByCoach } = require("../services/notifications");
+
+// GET /api/coach/sessions — list sessions
+router.get("/sessions", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const sessions = await coachData.getCoachSchedule(req.userId, { from, to });
+    res.json(sessions);
+  } catch (err) {
+    console.error("Coach sessions error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// GET /api/coach/sessions/:id — session detail
+router.get("/sessions/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const session = await coachData.getSessionDetail(req.userId, parseInt(req.params.id));
+    if (!session) return res.status(404).json({ error: "Не найдено" });
+    res.json(session);
+  } catch (err) {
+    console.error("Coach session detail error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// POST /api/coach/sessions — create session
+router.post("/sessions", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const session = await coachData.createSession(req.userId, req.body);
+    res.json(session);
+  } catch (err) {
+    console.error("Coach create session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// PATCH /api/coach/sessions/:id — update session
+router.patch("/sessions/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const session = await coachData.updateSession(req.userId, parseInt(req.params.id), req.body);
+    res.json(session);
+  } catch (err) {
+    console.error("Coach update session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// DELETE /api/coach/sessions/:id — delete session (no bookings)
+router.delete("/sessions/:id", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const result = await coachData.deleteSession(req.userId, parseInt(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error("Coach delete session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// POST /api/coach/sessions/:id/cancel — cancel session (notifies students)
+router.post("/sessions/:id/cancel", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { session, affectedStudents } = await coachData.cancelSession(req.userId, parseInt(req.params.id));
+
+    // Notify students
+    for (const student of affectedStudents) {
+      try {
+        await notifyTrainingCancelledByCoach(
+          student.telegramId.toString(),
+          session,
+          session.coach?.firstName || "Тренер"
+        );
+      } catch (e) { /* notification failed — not critical */ }
+    }
+
+    res.json({ success: true, cancelled: affectedStudents.length });
+  } catch (err) {
+    console.error("Coach cancel session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// POST /api/coach/sessions/:id/complete — mark session as completed
+router.post("/sessions/:id/complete", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const result = await coachData.completeSession(req.userId, parseInt(req.params.id));
+    res.json(result);
+  } catch (err) {
+    console.error("Coach complete session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
 module.exports = router;

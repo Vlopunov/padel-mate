@@ -323,6 +323,343 @@ async function getCohortStats(coachId) {
   };
 }
 
+// ─── Training Sessions ───
+
+// Create a training session
+async function createSession(coachId, data) {
+  const { type, date, durationMin, maxStudents, price, venueId, notes } = data;
+
+  if (!date || !durationMin) {
+    throw new Error("Укажите дату и длительность");
+  }
+
+  const sessionDate = new Date(date);
+  if (sessionDate <= new Date()) {
+    throw new Error("Дата должна быть в будущем");
+  }
+
+  const session = await prisma.trainingSession.create({
+    data: {
+      coachId,
+      type: type || "INDIVIDUAL",
+      date: sessionDate,
+      durationMin: durationMin || 60,
+      maxStudents: type === "GROUP" ? (maxStudents || 4) : 1,
+      price: price || 0,
+      venueId: venueId || null,
+      notes: notes || null,
+      status: "OPEN",
+    },
+    include: {
+      venue: true,
+      bookings: { include: { student: { select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true } } } },
+    },
+  });
+
+  return session;
+}
+
+// Update a training session
+async function updateSession(coachId, sessionId, data) {
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, coachId },
+  });
+  if (!session) throw new Error("Тренировка не найдена");
+  if (session.status === "COMPLETED" || session.status === "CANCELLED") {
+    throw new Error("Нельзя редактировать завершённую/отменённую тренировку");
+  }
+
+  const updateData = {};
+  if (data.date) updateData.date = new Date(data.date);
+  if (data.durationMin) updateData.durationMin = data.durationMin;
+  if (data.maxStudents !== undefined) updateData.maxStudents = data.maxStudents;
+  if (data.price !== undefined) updateData.price = data.price;
+  if (data.venueId !== undefined) updateData.venueId = data.venueId || null;
+  if (data.notes !== undefined) updateData.notes = data.notes || null;
+  if (data.type) updateData.type = data.type;
+
+  const updated = await prisma.trainingSession.update({
+    where: { id: sessionId },
+    data: updateData,
+    include: {
+      venue: true,
+      bookings: { include: { student: { select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true } } } },
+    },
+  });
+
+  return updated;
+}
+
+// Cancel a training session (notifies booked students)
+async function cancelSession(coachId, sessionId) {
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, coachId },
+    include: {
+      bookings: {
+        where: { status: { in: ["PENDING", "CONFIRMED"] } },
+        include: { student: { select: { id: true, firstName: true, telegramId: true } } },
+      },
+      venue: true,
+      coach: { select: { firstName: true } },
+    },
+  });
+  if (!session) throw new Error("Тренировка не найдена");
+
+  await prisma.trainingSession.update({
+    where: { id: sessionId },
+    data: { status: "CANCELLED" },
+  });
+
+  // Cancel all active bookings
+  await prisma.sessionBooking.updateMany({
+    where: { sessionId, status: { in: ["PENDING", "CONFIRMED"] } },
+    data: { status: "CANCELLED" },
+  });
+
+  // Return affected students for notification
+  return {
+    session,
+    affectedStudents: session.bookings.map((b) => b.student),
+  };
+}
+
+// Delete a session (only if no confirmed bookings)
+async function deleteSession(coachId, sessionId) {
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, coachId },
+    include: { bookings: { where: { status: { in: ["CONFIRMED", "PENDING"] } } } },
+  });
+  if (!session) throw new Error("Тренировка не найдена");
+  if (session.bookings.length > 0) {
+    throw new Error("Нельзя удалить тренировку с записанными учениками. Отмените сначала.");
+  }
+
+  await prisma.trainingSession.delete({ where: { id: sessionId } });
+  return { success: true };
+}
+
+// Get coach schedule (sessions in a date range)
+async function getCoachSchedule(coachId, { from, to } = {}) {
+  const where = { coachId };
+  if (from || to) {
+    where.date = {};
+    if (from) where.date.gte = new Date(from);
+    if (to) where.date.lte = new Date(to);
+  }
+
+  const sessions = await prisma.trainingSession.findMany({
+    where,
+    include: {
+      venue: true,
+      bookings: {
+        include: {
+          student: {
+            select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true },
+          },
+        },
+      },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  return sessions.map((s) => ({
+    ...s,
+    bookedCount: s.bookings.filter((b) => b.status === "CONFIRMED" || b.status === "PENDING").length,
+  }));
+}
+
+// Get session detail with bookings
+async function getSessionDetail(coachId, sessionId) {
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, coachId },
+    include: {
+      venue: true,
+      bookings: {
+        include: {
+          student: {
+            select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true, telegramId: true },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+  if (!session) return null;
+  return session;
+}
+
+// Complete a session
+async function completeSession(coachId, sessionId) {
+  const session = await prisma.trainingSession.findFirst({
+    where: { id: sessionId, coachId },
+  });
+  if (!session) throw new Error("Тренировка не найдена");
+
+  await prisma.trainingSession.update({
+    where: { id: sessionId },
+    data: { status: "COMPLETED" },
+  });
+
+  // Mark all confirmed bookings as completed (no separate status, just keep CONFIRMED)
+  // Mark no-shows if needed later
+  return { success: true };
+}
+
+// ─── Student Booking ───
+
+// Book a session (student side)
+async function bookSession(studentId, sessionId) {
+  const session = await prisma.trainingSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      bookings: { where: { status: { in: ["PENDING", "CONFIRMED"] } } },
+      coach: { select: { id: true, firstName: true, telegramId: true } },
+    },
+  });
+  if (!session) throw new Error("Тренировка не найдена");
+  if (session.status === "CANCELLED" || session.status === "COMPLETED") {
+    throw new Error("Тренировка недоступна");
+  }
+  if (session.date <= new Date()) {
+    throw new Error("Тренировка уже прошла");
+  }
+
+  // Check if already booked
+  const existing = await prisma.sessionBooking.findUnique({
+    where: { sessionId_studentId: { sessionId, studentId } },
+  });
+  if (existing && (existing.status === "PENDING" || existing.status === "CONFIRMED")) {
+    throw new Error("Вы уже записаны");
+  }
+
+  // Check capacity
+  if (session.bookings.length >= session.maxStudents) {
+    throw new Error("Нет свободных мест");
+  }
+
+  // Verify the student is linked to this coach
+  const link = await prisma.coachStudent.findUnique({
+    where: { coachId_studentId: { coachId: session.coachId, studentId } },
+  });
+  if (!link || !link.active) {
+    throw new Error("Вы не являетесь учеником этого тренера");
+  }
+
+  // Upsert booking (re-book after cancellation)
+  const booking = await prisma.sessionBooking.upsert({
+    where: { sessionId_studentId: { sessionId, studentId } },
+    update: { status: "CONFIRMED" },
+    create: { sessionId, studentId, status: "CONFIRMED" },
+    include: {
+      student: { select: { id: true, firstName: true, lastName: true } },
+    },
+  });
+
+  // Update session status if full
+  const activeBookings = session.bookings.length + 1;
+  if (activeBookings >= session.maxStudents) {
+    await prisma.trainingSession.update({
+      where: { id: sessionId },
+      data: { status: "FULL" },
+    });
+  }
+
+  return { booking, session };
+}
+
+// Cancel booking (student side)
+async function cancelBooking(studentId, sessionId) {
+  const booking = await prisma.sessionBooking.findUnique({
+    where: { sessionId_studentId: { sessionId, studentId } },
+    include: {
+      session: {
+        include: { coach: { select: { id: true, firstName: true, telegramId: true } } },
+      },
+    },
+  });
+  if (!booking) throw new Error("Бронирование не найдено");
+  if (booking.status === "CANCELLED") throw new Error("Уже отменено");
+
+  await prisma.sessionBooking.update({
+    where: { id: booking.id },
+    data: { status: "CANCELLED" },
+  });
+
+  // Re-open session if it was FULL
+  if (booking.session.status === "FULL") {
+    await prisma.trainingSession.update({
+      where: { id: sessionId },
+      data: { status: "OPEN" },
+    });
+  }
+
+  return { booking, session: booking.session };
+}
+
+// Get available sessions for a student
+async function getAvailableSessions(studentId) {
+  // Find all coaches this student is linked to
+  const links = await prisma.coachStudent.findMany({
+    where: { studentId, active: true },
+    select: { coachId: true },
+  });
+  const coachIds = links.map((l) => l.coachId);
+
+  if (coachIds.length === 0) return [];
+
+  const sessions = await prisma.trainingSession.findMany({
+    where: {
+      coachId: { in: coachIds },
+      status: { in: ["OPEN", "CONFIRMED"] },
+      date: { gt: new Date() },
+    },
+    include: {
+      venue: true,
+      coach: { select: { id: true, firstName: true, lastName: true, photoUrl: true, coachHourlyRate: true } },
+      bookings: {
+        where: { status: { in: ["PENDING", "CONFIRMED"] } },
+        select: { studentId: true },
+      },
+    },
+    orderBy: { date: "asc" },
+  });
+
+  return sessions.map((s) => ({
+    ...s,
+    bookedCount: s.bookings.length,
+    isBooked: s.bookings.some((b) => b.studentId === studentId),
+  }));
+}
+
+// Get student's booked sessions
+async function getStudentSessions(studentId) {
+  const bookings = await prisma.sessionBooking.findMany({
+    where: {
+      studentId,
+      status: { in: ["PENDING", "CONFIRMED"] },
+    },
+    include: {
+      session: {
+        include: {
+          venue: true,
+          coach: { select: { id: true, firstName: true, lastName: true, photoUrl: true } },
+        },
+      },
+    },
+    orderBy: { session: { date: "asc" } },
+  });
+
+  // Only show upcoming
+  const now = new Date();
+  return bookings
+    .filter((b) => b.session.date > now)
+    .map((b) => ({
+      bookingId: b.id,
+      bookingStatus: b.status,
+      ...b.session,
+    }));
+}
+
 module.exports = {
   getCoachStudents,
   getStudentAnalytics,
@@ -330,4 +667,16 @@ module.exports = {
   removeStudent,
   getCohortStats,
   MAX_FREE_STUDENTS,
+  // Training Sessions
+  createSession,
+  updateSession,
+  cancelSession,
+  deleteSession,
+  getCoachSchedule,
+  getSessionDetail,
+  completeSession,
+  bookSession,
+  cancelBooking,
+  getAvailableSessions,
+  getStudentSessions,
 };

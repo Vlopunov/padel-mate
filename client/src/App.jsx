@@ -18,6 +18,7 @@ import { PlayerProfile } from './screens/PlayerProfile';
 import { FAQ } from './screens/FAQ';
 import { CoachPanel } from './screens/CoachPanel';
 import { CoachStudentDetail } from './screens/CoachStudentDetail';
+import { CoachSessionDetail } from './screens/CoachSessionDetail';
 
 export default function App() {
   const { user: tgUser, initData, hapticFeedback } = useTelegram();
@@ -116,7 +117,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'coachPanel', 'coachStudentDetail'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'coachPanel', 'coachStudentDetail', 'coachSessionDetail'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -251,6 +252,16 @@ export default function App() {
           <div style={containerStyle}>
             <CoachStudentDetail
               studentId={subScreen.params?.studentId}
+              onBack={() => setSubScreen({ name: 'coachPanel', params: {} })}
+              onNavigate={handleNavigate}
+            />
+          </div>
+        );
+      case 'coachSessionDetail':
+        return (
+          <div style={containerStyle}>
+            <CoachSessionDetail
+              sessionId={subScreen.params?.sessionId}
               onBack={() => setSubScreen({ name: 'coachPanel', params: {} })}
               onNavigate={handleNavigate}
             />

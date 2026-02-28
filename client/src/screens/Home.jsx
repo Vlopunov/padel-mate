@@ -13,6 +13,7 @@ export function Home({ user, onNavigate }) {
   const [matches, setMatches] = useState([]);
   const [pendingMatches, setPendingMatches] = useState([]);
   const [tournament, setTournament] = useState(null);
+  const [trainingSessions, setTrainingSessions] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -34,6 +35,14 @@ export function Home({ user, onNavigate }) {
       setPendingMatches(pending);
 
       if (tournaments.length > 0) setTournament(tournaments[0]);
+
+      // Load upcoming training sessions (if student has a coach)
+      try {
+        const mySessions = await api.training.my();
+        setTrainingSessions(mySessions.slice(0, 3));
+      } catch (e) {
+        // Not critical — may not have training sessions
+      }
     } catch (err) {
       console.error('Home load error:', err);
     }
@@ -196,6 +205,39 @@ export function Home({ user, onNavigate }) {
           <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
         </div>
       </Card>
+
+      {/* Upcoming training sessions */}
+      {trainingSessions.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+            {'\u{1F3BE}'} Ближайшие тренировки
+          </h3>
+          {trainingSessions.map((s) => {
+            const d = new Date(s.date);
+            const dateStr = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            return (
+              <Card key={s.id} style={{ marginBottom: 8, border: `1px solid ${COLORS.purple}30` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Avatar src={s.coach?.photoUrl} name={s.coach?.firstName} size={36} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, margin: 0 }}>
+                      {dateStr}, {timeStr}
+                    </p>
+                    <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
+                      {s.coach?.firstName} {s.coach?.lastName || ''} · {s.type === 'GROUP' ? 'Групповая' : 'Индивид.'} · {s.durationMin} мин
+                    </p>
+                  </div>
+                  {s.venue && (
+                    <span style={{ fontSize: 11, color: COLORS.textDim }}>{s.venue.name}</span>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+          <div style={{ marginBottom: 16 }} />
+        </>
+      )}
 
       {/* Upcoming match */}
       {matches.length > 0 && (

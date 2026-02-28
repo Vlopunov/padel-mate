@@ -134,6 +134,25 @@ export const api = {
     removeStudent: (studentId) => api.fetch(`/coach/students/${studentId}`, { method: 'DELETE' }),
     studentDetail: (studentId) => api.fetch(`/coach/students/${studentId}`),
     cohortStats: () => api.fetch('/coach/cohort-stats'),
+    // Sessions
+    sessions: (params = {}) => {
+      const qs = new URLSearchParams(params).toString();
+      return api.fetch(`/coach/sessions${qs ? `?${qs}` : ''}`);
+    },
+    sessionDetail: (id) => api.fetch(`/coach/sessions/${id}`),
+    createSession: (data) => api.fetch('/coach/sessions', { method: 'POST', body: JSON.stringify(data) }),
+    updateSession: (id, data) => api.fetch(`/coach/sessions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteSession: (id) => api.fetch(`/coach/sessions/${id}`, { method: 'DELETE' }),
+    cancelSession: (id) => api.fetch(`/coach/sessions/${id}/cancel`, { method: 'POST' }),
+    completeSession: (id) => api.fetch(`/coach/sessions/${id}/complete`, { method: 'POST' }),
+  },
+
+  // Training (student-facing)
+  training: {
+    available: () => api.fetch('/training/available'),
+    my: () => api.fetch('/training/my'),
+    book: (sessionId) => api.fetch(`/training/book/${sessionId}`, { method: 'POST' }),
+    cancelBooking: (sessionId) => api.fetch(`/training/book/${sessionId}`, { method: 'DELETE' }),
   },
 
   // Admin
