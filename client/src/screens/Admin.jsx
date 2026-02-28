@@ -183,6 +183,15 @@ export function Admin({ onBack }) {
     }
   }
 
+  async function handleToggleCoach(userId, currentCoach) {
+    try {
+      await api.admin.editUser(userId, { isCoach: !currentCoach });
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   async function handleDeleteUser(userId, name) {
     if (!confirm(`Удалить ${name}?`)) return;
     try {
@@ -519,7 +528,15 @@ export function Admin({ onBack }) {
                           fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
                           background: `${COLORS.gold}25`, color: COLORS.gold,
                         }}>
-                          ⭐ VIP
+                          {'\u2B50'} VIP
+                        </span>
+                      )}
+                      {u.isCoach && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                          background: `${COLORS.purple}20`, color: COLORS.purple,
+                        }}>
+                          {'\u{1F3BE}'} ТРЕНЕР
                         </span>
                       )}
                     </div>
@@ -574,7 +591,18 @@ export function Admin({ onBack }) {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {u.isVip ? '🚫 Убрать VIP' : '⭐ VIP'}
+                    {u.isVip ? '\u{1F6AB} VIP' : '\u2B50 VIP'}
+                  </button>
+                  <button
+                    onClick={() => handleToggleCoach(u.id, u.isCoach)}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 10, border: `1px solid ${COLORS.border}`,
+                      background: u.isCoach ? `${COLORS.purple}15` : 'transparent',
+                      color: u.isCoach ? COLORS.warning : COLORS.purple,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                    }}
+                  >
+                    {u.isCoach ? '\u{1F6AB} Тренер' : '\u{1F3BE} Тренер'}
                   </button>
                   <button
                     onClick={() => handleDeleteUser(u.id, u.firstName)}
