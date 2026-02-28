@@ -213,5 +213,7 @@ export const api = {
     analytics: (days = 30) => api.fetch(`/admin/analytics?days=${days}`),
     createTestUsers: (count = 16) => api.fetch('/admin/test-users', { method: 'POST', body: JSON.stringify({ count }) }),
     deleteTestUsers: () => api.fetch('/admin/test-users', { method: 'DELETE' }),
+    seedTournaments: () => api.fetch('/admin/seed-tournaments', { method: 'POST' }),
+    deleteSeedTournaments: () => api.fetch('/admin/seed-tournaments', { method: 'DELETE' }),
   },
 };

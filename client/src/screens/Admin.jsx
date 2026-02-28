@@ -825,11 +825,51 @@ export function Admin({ onBack }) {
             style={{
               width: '100%', padding: '14px 0', borderRadius: 14, border: 'none',
               background: COLORS.accent, color: '#000', fontSize: 15, fontWeight: 700,
-              cursor: 'pointer', marginBottom: 16,
+              cursor: 'pointer', marginBottom: 10,
             }}
           >
             {'\u2795'} Создать турнир
           </button>
+
+          {/* Test seed buttons */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm('Создать 4 тестовых турнира (24 тест-юзера)?')) return;
+                try {
+                  const res = await api.admin.seedTournaments();
+                  alert(`Создано ${res.created} турниров, ${res.testUsers} тест-юзеров`);
+                  loadData();
+                } catch (e) { alert('Ошибка: ' + e.message); }
+              }}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, border: `1px solid ${COLORS.purple}40`,
+                background: `${COLORS.purple}15`, color: COLORS.purple,
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {'\uD83E\uDDEA'} Создать тестовые
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm('Удалить ВСЕ тестовые турниры и тест-юзеров?')) return;
+                try {
+                  const res = await api.admin.deleteSeedTournaments();
+                  alert(`Удалено: ${res.deleted.tournaments} турниров, ${res.deleted.users} юзеров`);
+                  loadData();
+                } catch (e) { alert('Ошибка: ' + e.message); }
+              }}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, border: `1px solid ${COLORS.danger}40`,
+                background: `${COLORS.danger}15`, color: COLORS.danger,
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {'\uD83D\uDDD1'} Удалить тестовые
+            </button>
+          </div>
 
           {tournaments.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: COLORS.textDim }}>

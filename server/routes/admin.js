@@ -107,6 +107,216 @@ router.delete("/test-users", authMiddleware, adminMiddleware, async (req, res) =
   }
 });
 
+// Seed test tournaments with test users (all-in-one)
+router.post("/seed-tournaments", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const TEST_NAMES = [
+      "Алексей", "Дмитрий", "Сергей", "Андрей", "Михаил",
+      "Николай", "Павел", "Артём", "Кирилл", "Егор",
+      "Максим", "Иван", "Роман", "Виктор", "Олег",
+      "Антон", "Даниил", "Тимур", "Марк", "Лев",
+      "Анна", "Мария", "Елена", "Ольга",
+    ];
+    const TEST_LASTNAMES = [
+      "Иванов", "Петров", "Сидоров", "Козлов", "Новиков",
+      "Морозов", "Волков", "Зайцев", "Соловьёв", "Васильев",
+      "Попов", "Кузнецов", "Лебедев", "Смирнов", "Фёдоров",
+      "Егоров", "Макаров", "Орлов", "Андреев", "Павлов",
+      "Белова", "Соколова", "Титова", "Крылова",
+    ];
+    const POSITIONS = ["DERECHA", "REVES", "BOTH"];
+    const HANDS = ["RIGHT", "LEFT"];
+    const EXPERIENCES = ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"];
+
+    // Find venue
+    let venue = await prisma.venue.findFirst({ where: { city: "MINSK" } });
+    if (!venue) {
+      venue = await prisma.venue.create({
+        data: { name: "Test Padel Club", address: "ул. Тестовая 1", city: "MINSK", courts: 4 },
+      });
+    }
+
+    // Create 24 test users
+    const existing = await prisma.user.findMany({
+      where: { telegramId: { gte: 9000000001n } },
+      select: { telegramId: true },
+      orderBy: { telegramId: "desc" },
+      take: 1,
+    });
+    let nextTgId = existing.length > 0 ? Number(existing[0].telegramId) + 1 : 9000000001;
+
+    const testUsers = [];
+    for (let i = 0; i < 24; i++) {
+      const rating = 1200 + Math.floor(Math.random() * 600);
+      const user = await prisma.user.create({
+        data: {
+          telegramId: BigInt(nextTgId + i),
+          firstName: TEST_NAMES[i],
+          lastName: TEST_LASTNAMES[i],
+          username: `test_${nextTgId + i}`,
+          city: "MINSK",
+          hand: HANDS[Math.floor(Math.random() * 2)],
+          position: POSITIONS[Math.floor(Math.random() * 3)],
+          experience: EXPERIENCES[Math.floor(Math.random() * 4)],
+          rating,
+          onboarded: true,
+        },
+      });
+      testUsers.push(user);
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(10, 0, 0, 0);
+
+    // Tournament configs: 4 different tournaments
+    const configs = [
+      {
+        name: "🎾 Americano Open 16",
+        description: "Тестовый Americano турнир на 16 игроков, 2 корта",
+        format: "americano",
+        playerCount: 16,
+        pointsPerMatch: 24,
+        courtsCount: 2,
+        hours: 0,
+      },
+      {
+        name: "🌮 Mexicano Classic 16",
+        description: "Тестовый Mexicano турнир на 16 игроков, 2 корта",
+        format: "mexicano",
+        playerCount: 16,
+        pointsPerMatch: 24,
+        courtsCount: 2,
+        hours: 3,
+      },
+      {
+        name: "⚡ Americano Sprint 20",
+        description: "Тестовый Americano турнир на 20 игроков, 3 корта",
+        format: "americano",
+        playerCount: 20,
+        pointsPerMatch: 32,
+        courtsCount: 3,
+        hours: 6,
+      },
+      {
+        name: "🔥 Mexicano Pro 24",
+        description: "Тестовый Mexicano турнир на 24 игрока, 3 корта",
+        format: "mexicano",
+        playerCount: 24,
+        pointsPerMatch: 32,
+        courtsCount: 3,
+        hours: 9,
+      },
+    ];
+
+    const created = [];
+
+    for (const cfg of configs) {
+      const date = new Date(tomorrow);
+      date.setHours(date.getHours() + cfg.hours);
+
+      const tournament = await prisma.tournament.create({
+        data: {
+          name: cfg.name,
+          description: cfg.description,
+          date,
+          city: "MINSK",
+          venueId: venue.id,
+          format: cfg.format,
+          levelMin: 1.0,
+          levelMax: 4.0,
+          maxTeams: cfg.playerCount,
+          pointsPerMatch: cfg.pointsPerMatch,
+          courtsCount: cfg.courtsCount,
+          registrationMode: "INDIVIDUAL",
+          status: "REGISTRATION",
+        },
+      });
+
+      // Register players
+      const players = testUsers.slice(0, cfg.playerCount);
+      for (const player of players) {
+        await prisma.tournamentRegistration.create({
+          data: { tournamentId: tournament.id, player1Id: player.id },
+        });
+      }
+
+      created.push({
+        id: tournament.id,
+        name: cfg.name,
+        format: cfg.format,
+        players: cfg.playerCount,
+        courts: cfg.courtsCount,
+        pointsPerMatch: cfg.pointsPerMatch,
+      });
+    }
+
+    res.json({ created: created.length, tournaments: created, testUsers: testUsers.length });
+  } catch (err) {
+    console.error("Seed tournaments error:", err);
+    res.status(500).json({ error: "Ошибка создания тестовых турниров: " + err.message });
+  }
+});
+
+// Delete all test data (test users + their tournaments)
+router.delete("/seed-tournaments", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const testUsers = await prisma.user.findMany({
+      where: { telegramId: { gte: 9000000001n } },
+      select: { id: true },
+    });
+    const userIds = testUsers.map(u => u.id);
+
+    if (userIds.length === 0) return res.json({ deleted: { users: 0, tournaments: 0 } });
+
+    // Find tournaments that ONLY have test-user registrations
+    const regs = await prisma.tournamentRegistration.findMany({
+      where: { player1Id: { in: userIds } },
+      select: { tournamentId: true },
+    });
+    const tournamentIds = [...new Set(regs.map(r => r.tournamentId))];
+
+    // For each tournament, check if it has any non-test registrations
+    const testOnlyTournaments = [];
+    for (const tid of tournamentIds) {
+      const nonTestRegs = await prisma.tournamentRegistration.count({
+        where: { tournamentId: tid, player1Id: { notIn: userIds } },
+      });
+      if (nonTestRegs === 0) testOnlyTournaments.push(tid);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Delete tournament data for test-only tournaments
+      if (testOnlyTournaments.length > 0) {
+        await tx.tournamentRatingChange.deleteMany({ where: { tournamentId: { in: testOnlyTournaments } } });
+        await tx.tournamentStanding.deleteMany({ where: { tournamentId: { in: testOnlyTournaments } } });
+        await tx.tournamentMatch.deleteMany({ where: { tournamentId: { in: testOnlyTournaments } } });
+        await tx.tournamentRound.deleteMany({ where: { tournamentId: { in: testOnlyTournaments } } });
+        await tx.tournamentRegistration.deleteMany({ where: { tournamentId: { in: testOnlyTournaments } } });
+        await tx.tournament.deleteMany({ where: { id: { in: testOnlyTournaments } } });
+      }
+
+      // Delete test users and their data
+      await tx.matchComment.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.matchPlayer.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.scoreConfirmation.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.ratingHistory.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.userAchievement.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.tournamentRegistration.deleteMany({
+        where: { OR: [{ player1Id: { in: userIds } }, { player2Id: { in: userIds } }] },
+      });
+      await tx.tournamentRatingChange.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.tournamentStanding.deleteMany({ where: { userId: { in: userIds } } });
+      await tx.user.deleteMany({ where: { id: { in: userIds } } });
+    });
+
+    res.json({ deleted: { users: userIds.length, tournaments: testOnlyTournaments.length } });
+  } catch (err) {
+    console.error("Delete seed tournaments error:", err);
+    res.status(500).json({ error: "Ошибка удаления" });
+  }
+});
+
 // Stats overview (enhanced with daily analytics)
 router.get("/stats", authMiddleware, adminMiddleware, async (req, res) => {
   try {
