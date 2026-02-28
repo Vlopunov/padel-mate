@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS } from '../config';
+import { COLORS, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Avatar } from '../components/ui/Avatar';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { MiniChart } from '../components/ui/MiniChart';
 import { api } from '../services/api';
 
 export function CoachPanel({ user, onBack, onNavigate }) {
@@ -99,7 +103,7 @@ export function CoachPanel({ user, onBack, onNavigate }) {
 
       {/* Tab content */}
       {activeTab === 'overview' && <OverviewTab dashboard={dashboard} />}
-      {activeTab === 'students' && <StudentsTab dashboard={dashboard} />}
+      {activeTab === 'students' && <StudentsTab dashboard={dashboard} onNavigate={onNavigate} />}
       {activeTab === 'schedule' && <ScheduleTab dashboard={dashboard} />}
       {activeTab === 'payments' && <PaymentsTab dashboard={dashboard} />}
     </div>
@@ -203,20 +207,207 @@ function OverviewTab({ dashboard }) {
   );
 }
 
-// === Students Tab (placeholder) ===
-function StudentsTab({ dashboard }) {
+// === Students Tab ===
+function StudentsTab({ dashboard, onNavigate }) {
+  const [students, setStudents] = useState([]);
+  const [cohort, setCohort] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  async function loadStudents() {
+    try {
+      const [studentsList, cohortStats] = await Promise.all([
+        api.coach.students(),
+        api.coach.cohortStats(),
+      ]);
+      setStudents(studentsList);
+      setCohort(cohortStats);
+    } catch (err) {
+      console.error('Load students error:', err);
+    }
+    setLoading(false);
+  }
+
+  async function handleSearch(q) {
+    setSearchQuery(q);
+    setAddError('');
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await api.users.search(q);
+      // Filter out already-added students
+      const studentIds = students.map((s) => s.id);
+      setSearchResults(results.filter((r) => !studentIds.includes(r.id)));
+    } catch (err) {
+      console.error('Search error:', err);
+    }
+    setSearching(false);
+  }
+
+  async function handleAddStudent(userId) {
+    setAddError('');
+    try {
+      await api.coach.addStudent(userId);
+      setShowAddModal(false);
+      setSearchQuery('');
+      setSearchResults([]);
+      await loadStudents();
+    } catch (err) {
+      setAddError(err.message || 'Ошибка добавления');
+    }
+  }
+
+  async function handleRemoveStudent(studentId) {
+    if (!confirm('Убрать ученика?')) return;
+    try {
+      await api.coach.removeStudent(studentId);
+      await loadStudents();
+    } catch (err) {
+      console.error('Remove student error:', err);
+    }
+  }
+
+  if (loading) {
+    return <p style={{ color: COLORS.textDim, textAlign: 'center', padding: 20 }}>Загрузка...</p>;
+  }
+
   return (
     <div>
-      <Card style={{ textAlign: 'center', padding: 32 }}>
-        <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F393}'}</span>
-        <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
-          Управление учениками
-        </p>
-        <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 16 }}>
-          Добавляйте учеников, отслеживайте их прогресс, рейтинг и статистику матчей
-        </p>
-        <Badge variant="accent">Скоро</Badge>
-      </Card>
+      {/* Cohort summary */}
+      {cohort && cohort.totalStudents > 0 && (
+        <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}08, ${COLORS.purple}08)` }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, textAlign: 'center' }}>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: COLORS.accent, margin: 0 }}>{cohort.avgRating}</p>
+              <p style={{ fontSize: 11, color: COLORS.textDim, margin: 0 }}>Средний рейтинг</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: cohort.avgRatingGrowth >= 0 ? COLORS.accent : COLORS.danger, margin: 0 }}>
+                {cohort.avgRatingGrowth >= 0 ? '+' : ''}{cohort.avgRatingGrowth}
+              </p>
+              <p style={{ fontSize: 11, color: COLORS.textDim, margin: 0 }}>Рост рейтинга</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: COLORS.purple, margin: 0 }}>{cohort.avgWinRate}%</p>
+              <p style={{ fontSize: 11, color: COLORS.textDim, margin: 0 }}>Win rate</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Add student button */}
+      {!dashboard.isLimited && (
+        <Button fullWidth variant="secondary" onClick={() => setShowAddModal(true)} style={{ marginBottom: 12 }}>
+          {'\u2795'} Добавить ученика
+        </Button>
+      )}
+
+      {/* Student list */}
+      {students.length === 0 ? (
+        <Card style={{ textAlign: 'center', padding: 32 }}>
+          <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F393}'}</span>
+          <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
+            Нет учеников
+          </p>
+          <p style={{ fontSize: 13, color: COLORS.textDim }}>
+            Добавьте первого ученика, чтобы начать отслеживать его прогресс
+          </p>
+        </Card>
+      ) : (
+        students.map((s) => (
+          <Card
+            key={s.id}
+            onClick={() => onNavigate('coachStudentDetail', { studentId: s.id })}
+            style={{ marginBottom: 8, cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar src={s.photoUrl} name={s.firstName} size={42} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+                    {s.firstName} {s.lastName || ''}
+                  </span>
+                  <Badge variant="accent" style={{ fontSize: 11 }}>
+                    {s.levelCategory}
+                  </Badge>
+                </div>
+                <div style={{ display: 'flex', gap: 10, fontSize: 12, color: COLORS.textDim }}>
+                  <span>{s.rating} ELO</span>
+                  <span style={{ color: s.ratingGrowth >= 0 ? COLORS.accent : COLORS.danger }}>
+                    {s.ratingGrowth >= 0 ? '+' : ''}{s.ratingGrowth}
+                  </span>
+                  <span>{s.winRate}% побед</span>
+                  <span>{s.matchesPlayed} матчей</span>
+                </div>
+              </div>
+              {/* Mini sparkline */}
+              {s.recentHistory && s.recentHistory.length > 1 && (
+                <div style={{ width: 50, height: 24 }}>
+                  <MiniChart data={s.recentHistory.map((h) => h.newRating)} color={COLORS.accent} />
+                </div>
+              )}
+              <span style={{ color: COLORS.textDim, fontSize: 14 }}>{'\u2192'}</span>
+            </div>
+          </Card>
+        ))
+      )}
+
+      {/* Add student modal */}
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); setSearchQuery(''); setSearchResults([]); setAddError(''); }} title="Добавить ученика">
+        <Input
+          label="Поиск по имени или @username"
+          value={searchQuery}
+          onChange={(v) => handleSearch(v)}
+          placeholder="Введите имя..."
+        />
+        {addError && (
+          <p style={{ color: COLORS.danger, fontSize: 13, marginTop: 4 }}>{addError}</p>
+        )}
+        {searching && <p style={{ color: COLORS.textDim, fontSize: 13, marginTop: 8 }}>Поиск...</p>}
+        <div style={{ marginTop: 8, maxHeight: 300, overflowY: 'auto' }}>
+          {searchResults.map((u) => (
+            <div
+              key={u.id}
+              onClick={() => handleAddStudent(u.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 0',
+                borderBottom: `1px solid ${COLORS.border}`,
+                cursor: 'pointer',
+              }}
+            >
+              <Avatar src={u.photoUrl} name={u.firstName} size={36} />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: COLORS.text, margin: 0 }}>
+                  {u.firstName} {u.lastName || ''}
+                </p>
+                <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
+                  {u.rating} ELO {u.username ? `· @${u.username}` : ''}
+                </p>
+              </div>
+              <span style={{ color: COLORS.accent, fontSize: 18 }}>{'\u2795'}</span>
+            </div>
+          ))}
+          {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+            <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 16 }}>
+              Никого не найдено
+            </p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

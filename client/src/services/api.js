@@ -129,6 +129,11 @@ export const api = {
   // Coach
   coach: {
     dashboard: () => api.fetch('/coach/dashboard'),
+    students: () => api.fetch('/coach/students'),
+    addStudent: (userId) => api.fetch('/coach/students', { method: 'POST', body: JSON.stringify({ userId }) }),
+    removeStudent: (studentId) => api.fetch(`/coach/students/${studentId}`, { method: 'DELETE' }),
+    studentDetail: (studentId) => api.fetch(`/coach/students/${studentId}`),
+    cohortStats: () => api.fetch('/coach/cohort-stats'),
   },
 
   // Admin

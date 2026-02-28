@@ -81,4 +81,69 @@ router.get("/dashboard", authMiddleware, coachMiddleware, async (req, res) => {
   }
 });
 
+// ─── Student Management ───
+
+const coachData = require("../services/coachData");
+
+// GET /api/coach/students — list all students with stats
+router.get("/students", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const students = await coachData.getCoachStudents(req.userId);
+    res.json(students);
+  } catch (err) {
+    console.error("Coach students error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// POST /api/coach/students — add student by userId
+router.post("/students", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "Укажите userId" });
+
+    const link = await coachData.addStudent(req.userId, parseInt(userId));
+    res.json(link);
+  } catch (err) {
+    console.error("Coach add student error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// DELETE /api/coach/students/:studentId — remove student
+router.delete("/students/:studentId", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const result = await coachData.removeStudent(req.userId, studentId);
+    res.json(result);
+  } catch (err) {
+    console.error("Coach remove student error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// GET /api/coach/students/:studentId — detailed student analytics
+router.get("/students/:studentId", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const analytics = await coachData.getStudentAnalytics(req.userId, studentId);
+    if (!analytics) return res.status(404).json({ error: "Ученик не найден" });
+    res.json(analytics);
+  } catch (err) {
+    console.error("Coach student detail error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
+// GET /api/coach/cohort-stats — aggregate stats across all students
+router.get("/cohort-stats", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const stats = await coachData.getCohortStats(req.userId);
+    res.json(stats);
+  } catch (err) {
+    console.error("Coach cohort stats error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 module.exports = router;
