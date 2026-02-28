@@ -182,6 +182,21 @@ export function Home({ user, onNavigate }) {
         ))}
       </div>
 
+      {/* FAQ link */}
+      <Card
+        onClick={() => onNavigate('faq')}
+        style={{ marginBottom: 16, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.accent}08, ${COLORS.purple}08)` }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>{'\u2753'}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>FAQ — Частые вопросы</p>
+            <p style={{ fontSize: 12, color: COLORS.textDim }}>Рейтинг, матчи, достижения и другое</p>
+          </div>
+          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+        </div>
+      </Card>
+
       {/* Upcoming match */}
       {matches.length > 0 && (
         <>
