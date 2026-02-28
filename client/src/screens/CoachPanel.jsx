@@ -6,9 +6,26 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
 import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { MiniChart } from '../components/ui/MiniChart';
 import { api } from '../services/api';
+
+// Generate time slots every 30 min from 06:00 to 23:30
+const TIME_SLOTS = [];
+for (let h = 6; h <= 23; h++) {
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:00`, label: `${String(h).padStart(2, '0')}:00` });
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${String(h).padStart(2, '0')}:30` });
+}
+
+const DURATION_OPTIONS = [
+  { value: '30', label: '30 мин' },
+  { value: '60', label: '1 час' },
+  { value: '90', label: '1.5 часа' },
+  { value: '120', label: '2 часа' },
+  { value: '150', label: '2.5 часа' },
+  { value: '180', label: '3 часа' },
+];
 
 export function CoachPanel({ user, onBack, onNavigate }) {
   const [dashboard, setDashboard] = useState(null);
@@ -773,38 +790,43 @@ function ScheduleTab({ dashboard, onNavigate }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Input
-            label="Дата"
-            type="date"
-            value={form.date}
-            onChange={(v) => setForm({ ...form, date: v })}
-            style={{ flex: 1 }}
-          />
-          <Input
-            label="Время"
-            type="time"
-            value={form.time}
-            onChange={(v) => setForm({ ...form, time: v })}
-            style={{ flex: 1 }}
-          />
+          <div style={{ flex: 1 }}>
+            <Input
+              label="Дата"
+              type="date"
+              value={form.date}
+              onChange={(v) => setForm({ ...form, date: v })}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Select
+              label="Время"
+              value={form.time}
+              onChange={(v) => setForm({ ...form, time: v })}
+              placeholder="Выберите"
+              options={TIME_SLOTS}
+            />
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <Input
-            label="Длительность (мин)"
-            type="number"
-            value={String(form.durationMin)}
-            onChange={(v) => setForm({ ...form, durationMin: v })}
-            style={{ flex: 1 }}
-          />
-          <Input
-            label="Цена (BYN)"
-            type="number"
-            value={form.price}
-            onChange={(v) => setForm({ ...form, price: v })}
-            placeholder="0"
-            style={{ flex: 1 }}
-          />
+          <div style={{ flex: 1 }}>
+            <Select
+              label="Длительность"
+              value={String(form.durationMin)}
+              onChange={(v) => setForm({ ...form, durationMin: v })}
+              options={DURATION_OPTIONS}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Input
+              label="Цена (BYN)"
+              type="number"
+              value={form.price}
+              onChange={(v) => setForm({ ...form, price: v })}
+              placeholder="0"
+            />
+          </div>
         </div>
 
         {form.type === 'GROUP' && (
