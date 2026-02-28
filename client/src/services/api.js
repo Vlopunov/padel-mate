@@ -204,6 +204,7 @@ export const api = {
     updateTournament: (id, data) => api.fetch(`/admin/tournaments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     deleteTournament: (id) => api.fetch(`/admin/tournaments/${id}`, { method: 'DELETE' }),
     deleteRegistration: (tournamentId, regId) => api.fetch(`/admin/tournaments/${tournamentId}/registration/${regId}`, { method: 'DELETE' }),
+    addPlayerToTournament: (tournamentId, userId) => api.fetch(`/admin/tournaments/${tournamentId}/add-player`, { method: 'POST', body: JSON.stringify({ userId }) }),
     // Tournament live engine (admin)
     startTournament: (id) => api.fetch(`/admin/tournaments/${id}/start`, { method: 'POST' }),
     submitTournamentScore: (id, matchId, team1Score, team2Score) => api.fetch(`/admin/tournaments/${id}/score`, { method: 'POST', body: JSON.stringify({ matchId, team1Score, team2Score }) }),

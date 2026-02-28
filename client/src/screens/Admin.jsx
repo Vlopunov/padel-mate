@@ -157,8 +157,12 @@ export function Admin({ onBack }) {
         const data = await api.admin.matches();
         setMatches(data);
       } else if (tab === 'tournaments') {
-        const data = await api.admin.tournaments();
-        setTournaments(data);
+        const [tournamentsData, usersData] = await Promise.all([
+          api.admin.tournaments(),
+          api.admin.users(),
+        ]);
+        setTournaments(tournamentsData);
+        setUsers(usersData);
       }
     } catch (err) {
       console.error('Admin load error:', err);
@@ -328,6 +332,18 @@ export function Admin({ onBack }) {
     if (!confirm('Удалить регистрацию?')) return;
     try {
       await api.admin.deleteRegistration(tournamentId, regId);
+      const data = await api.admin.tournaments();
+      setTournaments(data);
+      const updated = data.find((t) => t.id === selectedTournament?.id);
+      if (updated) setSelectedTournament(updated);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleAddPlayer(tournamentId, userId) {
+    try {
+      await api.admin.addPlayerToTournament(tournamentId, userId);
       const data = await api.admin.tournaments();
       setTournaments(data);
       const updated = data.find((t) => t.id === selectedTournament?.id);
@@ -825,10 +841,12 @@ export function Admin({ onBack }) {
       {!loading && tab === 'tournaments' && selectedTournament && !showTournamentForm && (
         <TournamentDetail
           tournament={selectedTournament}
+          allUsers={users}
           onBack={() => setSelectedTournament(null)}
           onEdit={() => openEditTournament(selectedTournament)}
           onDelete={() => handleDeleteTournament(selectedTournament.id, selectedTournament.name)}
           onDeleteReg={handleDeleteRegistration}
+          onAddPlayer={handleAddPlayer}
           onChangeStatus={handleChangeStatus}
         />
       )}
@@ -1678,7 +1696,7 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
 
 // ─── Tournament Detail View (Enhanced with Live Controls) ───
 
-function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, onChangeStatus }) {
+function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDeleteReg, onAddPlayer, onChangeStatus }) {
   const t = tournament;
   const date = new Date(t.date);
   const statusColor = T_STATUS_COLORS[t.status] || COLORS.textDim;
@@ -1690,6 +1708,8 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
   const [scores, setScores] = useState({}); // matchId -> { team1: '', team2: '' }
   const [submittingScore, setSubmittingScore] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState('');
+  const [addingPlayer, setAddingPlayer] = useState(false);
 
   const isLiveFormat = ['americano', 'mexicano'].includes(t.format?.toLowerCase());
   const isInProgress = t.status === 'IN_PROGRESS';
@@ -2217,6 +2237,79 @@ function TournamentDetail({ tournament, onBack, onEdit, onDelete, onDeleteReg, o
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
           {'\uD83D\uDC65'} {isIndividual ? 'Участники' : 'Зарегистрированные пары'} ({t.registrations?.length || 0})
         </p>
+
+        {/* Add player (admin) */}
+        {isRegistration && allUsers && (
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="text"
+              placeholder="Поиск игрока по имени..."
+              value={playerSearch}
+              onChange={(e) => setPlayerSearch(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 12px', borderRadius: 12,
+                border: `1px solid ${COLORS.border}`, background: COLORS.surface,
+                color: COLORS.text, fontSize: 13, outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+            {playerSearch.length >= 2 && (() => {
+              const registeredIds = new Set();
+              (t.registrations || []).forEach(r => {
+                if (r.player1?.id) registeredIds.add(r.player1.id);
+                if (r.player2?.id) registeredIds.add(r.player2.id);
+              });
+              const filtered = allUsers
+                .filter(u => !registeredIds.has(u.id))
+                .filter(u => {
+                  const q = playerSearch.toLowerCase();
+                  return (u.firstName || '').toLowerCase().includes(q) ||
+                    (u.lastName || '').toLowerCase().includes(q) ||
+                    (u.username || '').toLowerCase().includes(q);
+                })
+                .slice(0, 6);
+              if (filtered.length === 0) return (
+                <p style={{ fontSize: 12, color: COLORS.textDim, padding: '8px 0', textAlign: 'center' }}>
+                  Никого не найдено
+                </p>
+              );
+              return (
+                <div style={{
+                  marginTop: 6, borderRadius: 12, border: `1px solid ${COLORS.border}`,
+                  background: COLORS.card, overflow: 'hidden',
+                }}>
+                  {filtered.map(u => (
+                    <button
+                      key={u.id}
+                      disabled={addingPlayer}
+                      onClick={async () => {
+                        setAddingPlayer(true);
+                        await onAddPlayer(t.id, u.id);
+                        setPlayerSearch('');
+                        setAddingPlayer(false);
+                      }}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        width: '100%', padding: '10px 12px', border: 'none',
+                        borderBottom: `1px solid ${COLORS.border}20`,
+                        background: 'transparent', color: COLORS.text,
+                        fontSize: 13, cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <span>
+                        {u.firstName} {u.lastName || ''}
+                        {u.username && <span style={{ color: COLORS.textDim, marginLeft: 6, fontSize: 11 }}>@{u.username}</span>}
+                      </span>
+                      <span style={{ color: COLORS.accent, fontSize: 12, fontWeight: 600 }}>
+                        {u.rating} +
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+          </div>
+        )}
 
         {(!t.registrations || t.registrations.length === 0) && (
           <p style={{ fontSize: 13, color: COLORS.textDim, textAlign: 'center', padding: 20 }}>

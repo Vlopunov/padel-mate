@@ -391,6 +391,45 @@ router.delete("/tournaments/:id", authMiddleware, adminMiddleware, async (req, r
   }
 });
 
+// Add player to tournament (admin)
+router.post("/tournaments/:id/add-player", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const tournamentId = parseInt(req.params.id);
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId обязателен" });
+
+    const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+    if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
+    if (tournament.status !== "REGISTRATION") return res.status(400).json({ error: "Регистрация закрыта" });
+
+    // Check not already registered
+    const existing = await prisma.tournamentRegistration.findFirst({
+      where: {
+        tournamentId,
+        OR: [{ player1Id: parseInt(userId) }, { player2Id: parseInt(userId) }],
+      },
+    });
+    if (existing) return res.status(400).json({ error: "Игрок уже зарегистрирован" });
+
+    // Check max capacity
+    const regCount = await prisma.tournamentRegistration.count({ where: { tournamentId } });
+    if (regCount >= tournament.maxTeams) return res.status(400).json({ error: "Турнир заполнен" });
+
+    const reg = await prisma.tournamentRegistration.create({
+      data: { tournamentId, player1Id: parseInt(userId) },
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
+        player2: { select: { id: true, firstName: true, lastName: true, rating: true } },
+      },
+    });
+
+    res.json(reg);
+  } catch (err) {
+    console.error("Admin add player to tournament error:", err);
+    res.status(500).json({ error: "Ошибка добавления игрока" });
+  }
+});
+
 // Remove registration from tournament
 router.delete("/tournaments/:id/registration/:regId", authMiddleware, adminMiddleware, async (req, res) => {
   try {
