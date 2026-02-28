@@ -205,6 +205,11 @@ bot.on("callback_query", async (query) => {
     }
     return;
   }
+
+  // Catch-all: answer unknown callbacks to stop loading spinner
+  try {
+    await bot.answerCallbackQuery(query.id);
+  } catch (_) {}
 });
 
 // ─── Set bot commands menu ─────────────────────────

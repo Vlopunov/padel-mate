@@ -115,31 +115,31 @@ router.delete("/users/:id", authMiddleware, adminMiddleware, async (req, res) =>
   try {
     const userId = parseInt(req.params.id);
 
-    // Delete all related records to avoid FK constraint errors
-    await prisma.matchComment.deleteMany({ where: { userId } });
-    await prisma.matchPlayer.deleteMany({ where: { userId } });
-    await prisma.scoreConfirmation.deleteMany({ where: { userId } });
-    await prisma.ratingHistory.deleteMany({ where: { userId } });
-    await prisma.userAchievement.deleteMany({ where: { userId } });
-    await prisma.tournamentRegistration.deleteMany({
-      where: { OR: [{ player1Id: userId }, { player2Id: userId }] },
+    // Delete all related records in a single transaction for atomicity
+    await prisma.$transaction(async (tx) => {
+      await tx.matchComment.deleteMany({ where: { userId } });
+      await tx.matchPlayer.deleteMany({ where: { userId } });
+      await tx.scoreConfirmation.deleteMany({ where: { userId } });
+      await tx.ratingHistory.deleteMany({ where: { userId } });
+      await tx.userAchievement.deleteMany({ where: { userId } });
+      await tx.tournamentRegistration.deleteMany({
+        where: { OR: [{ player1Id: userId }, { player2Id: userId }] },
+      });
+      await tx.tournamentRatingChange.deleteMany({ where: { userId } });
+      await tx.tournamentStanding.deleteMany({ where: { userId } });
+
+      const createdMatches = await tx.match.findMany({ where: { creatorId: userId }, select: { id: true } });
+      const createdMatchIds = createdMatches.map((m) => m.id);
+      if (createdMatchIds.length > 0) {
+        await tx.matchComment.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+        await tx.scoreConfirmation.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+        await tx.matchSet.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+        await tx.matchPlayer.deleteMany({ where: { matchId: { in: createdMatchIds } } });
+        await tx.match.deleteMany({ where: { id: { in: createdMatchIds } } });
+      }
+
+      await tx.user.delete({ where: { id: userId } });
     });
-    await prisma.tournamentRatingChange.deleteMany({ where: { userId } });
-    await prisma.tournamentStanding.deleteMany({ where: { userId } });
-    // Note: TournamentMatch has cascading deletes via Tournament
-
-    // Handle matches created by this user: delete all their data first, then the matches
-    const createdMatches = await prisma.match.findMany({ where: { creatorId: userId }, select: { id: true } });
-    const createdMatchIds = createdMatches.map((m) => m.id);
-    if (createdMatchIds.length > 0) {
-      await prisma.matchComment.deleteMany({ where: { matchId: { in: createdMatchIds } } });
-      await prisma.scoreConfirmation.deleteMany({ where: { matchId: { in: createdMatchIds } } });
-      await prisma.matchSet.deleteMany({ where: { matchId: { in: createdMatchIds } } });
-      await prisma.matchPlayer.deleteMany({ where: { matchId: { in: createdMatchIds } } });
-      await prisma.match.deleteMany({ where: { id: { in: createdMatchIds } } });
-    }
-
-    await prisma.user.delete({ where: { id: userId } });
     res.json({ success: true });
   } catch (err) {
     console.error("Admin delete user error:", err);

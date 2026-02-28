@@ -355,7 +355,7 @@ async function checkWeeklySummaries(now) {
       });
 
       for (const admin of admins) {
-        sendTelegramMessage(admin.telegramId.toString(), message).catch(() => {});
+        sendTelegramMessage(admin.telegramId.toString(), message).catch((e) => console.error("[Reminder] notify error:", e.message));
       }
       console.log(`[Weekly] Admin report sent to ${admins.length} admin(s)`);
     } catch (err) {
@@ -419,7 +419,7 @@ async function checkPlatformMilestones(now) {
 
     for (const milestone of milestones) {
       for (const admin of admins) {
-        notifyMilestone(admin.telegramId.toString(), milestone).catch(() => {});
+        notifyMilestone(admin.telegramId.toString(), milestone).catch((e) => console.error("[Reminder] notify error:", e.message));
       }
     }
     console.log(`[Milestone] Sent ${milestones.length} milestone(s)`);

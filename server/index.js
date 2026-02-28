@@ -18,7 +18,12 @@ const coachesRoutes = require("./routes/coaches");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes
@@ -85,11 +90,13 @@ app.post("/api/seed-venues", async (req, res) => {
     ];
     const results = [];
     for (const v of venues) {
-      const venue = await prisma.venue.upsert({
-        where: { id: (await prisma.venue.findFirst({ where: { name: v.name } }))?.id || 0 },
-        update: { courts: v.courts },
-        create: v,
-      });
+      const existing = await prisma.venue.findFirst({ where: { name: v.name } });
+      let venue;
+      if (existing) {
+        venue = await prisma.venue.update({ where: { id: existing.id }, data: { courts: v.courts } });
+      } else {
+        venue = await prisma.venue.create({ data: v });
+      }
       results.push({ id: venue.id, name: venue.name, courts: venue.courts });
     }
     res.json({ ok: true, venues: results });

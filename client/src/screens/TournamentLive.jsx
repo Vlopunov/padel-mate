@@ -41,26 +41,32 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
       }
 
       setTournament(data);
-      if (selectedRound === null && data.currentRound > 0) {
-        setSelectedRound(data.currentRound);
-      }
+      setSelectedRound((prev) => prev === null && data.currentRound > 0 ? data.currentRound : prev);
     } catch (err) {
       console.error('Live data error:', err);
     }
     setLoading(false);
-  }, [tournamentId, selectedRound, user?.id, hapticFeedback]);
+  }, [tournamentId, user?.id, hapticFeedback]);
 
+  // Reset on tournament change
   useEffect(() => {
+    prevStandingsRef.current = null;
+    setSelectedRound(null);
+    setLoading(true);
     loadData();
-  }, []);
+  }, [tournamentId]);
 
-  // Polling for live updates
+  // Polling for live updates — stable ref to avoid interval churn
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
+
   useEffect(() => {
     if (tournament?.status === 'IN_PROGRESS') {
-      pollRef.current = setInterval(loadData, POLL_INTERVAL);
+      pollRef.current = setInterval(() => loadDataRef.current(), POLL_INTERVAL);
       return () => clearInterval(pollRef.current);
     }
-  }, [tournament?.status, loadData]);
+    return () => clearInterval(pollRef.current);
+  }, [tournament?.status]);
 
   const isAdmin = user?.isAdmin;
   const isCompleted = tournament?.status === 'COMPLETED';

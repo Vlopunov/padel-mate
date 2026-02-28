@@ -85,7 +85,6 @@ router.post("/:id/register-individual", authMiddleware, async (req, res) => {
 
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { registrations: true },
     });
 
     if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
@@ -95,29 +94,34 @@ router.post("/:id/register-individual", authMiddleware, async (req, res) => {
     if (tournament.registrationMode !== "INDIVIDUAL") {
       return res.status(400).json({ error: "Этот турнир с парной регистрацией" });
     }
-    if (tournament.registrations.length >= tournament.maxTeams) {
-      return res.status(400).json({ error: "Все места заняты" });
-    }
 
-    // Check if already registered
-    const existing = tournament.registrations.find((r) => r.player1Id === userIdInt);
-    if (existing) {
-      return res.status(400).json({ error: "Вы уже зарегистрированы" });
-    }
+    // Use transaction to prevent race conditions
+    const reg = await prisma.$transaction(async (tx) => {
+      const regCount = await tx.tournamentRegistration.count({ where: { tournamentId } });
+      if (regCount >= tournament.maxTeams) {
+        throw new Error("Все места заняты");
+      }
 
-    const reg = await prisma.tournamentRegistration.create({
-      data: {
-        tournamentId,
-        player1Id: userIdInt,
-        // player2Id is null for individual registration
-      },
-      include: {
-        player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
-      },
+      const existing = await tx.tournamentRegistration.findFirst({
+        where: { tournamentId, player1Id: userIdInt },
+      });
+      if (existing) {
+        throw new Error("Вы уже зарегистрированы");
+      }
+
+      return tx.tournamentRegistration.create({
+        data: { tournamentId, player1Id: userIdInt },
+        include: {
+          player1: { select: { id: true, firstName: true, lastName: true, rating: true } },
+        },
+      });
     });
 
     res.json(reg);
   } catch (err) {
+    if (err.message === "Все места заняты" || err.message === "Вы уже зарегистрированы") {
+      return res.status(400).json({ error: err.message });
+    }
     console.error("Tournament individual register error:", err);
     res.status(500).json({ error: "Ошибка регистрации" });
   }

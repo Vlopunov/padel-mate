@@ -28,8 +28,8 @@ router.post("/", authMiddleware, async (req, res) => {
         venueId: parseInt(venueId),
         date: new Date(date),
         durationMin: parseInt(durationMin),
-        levelMin: parseFloat(levelMin) || 1.0,
-        levelMax: parseFloat(levelMax) || 4.0,
+        levelMin: isNaN(parseFloat(levelMin)) ? 1.0 : parseFloat(levelMin),
+        levelMax: isNaN(parseFloat(levelMax)) ? 4.0 : parseFloat(levelMax),
         courtBooked: courtBooked || false,
         courtNumber: courtNumber ? parseInt(courtNumber) : null,
         matchType: matchType || "RATED",
@@ -254,7 +254,7 @@ async function approvePlayerLogic(matchId, userId) {
       });
       const playerNames = fullMatch.players.map((p) => p.user.firstName);
       for (const p of fullMatch.players) {
-        notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch(() => {});
+        notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch((e) => console.error("[Notify] error:", e.message));
       }
     } catch (e) { console.error("[MatchFull] notify error:", e.message); }
   }
@@ -631,8 +631,8 @@ router.patch("/:id", authMiddleware, async (req, res) => {
     if (venueId !== undefined) data.venueId = parseInt(venueId);
     if (date !== undefined) data.date = new Date(date);
     if (durationMin !== undefined) data.durationMin = parseInt(durationMin);
-    if (levelMin !== undefined) data.levelMin = parseFloat(levelMin);
-    if (levelMax !== undefined) data.levelMax = parseFloat(levelMax);
+    if (levelMin !== undefined && !isNaN(parseFloat(levelMin))) data.levelMin = parseFloat(levelMin);
+    if (levelMax !== undefined && !isNaN(parseFloat(levelMax))) data.levelMax = parseFloat(levelMax);
     if (courtBooked !== undefined) data.courtBooked = courtBooked;
     if (courtNumber !== undefined) data.courtNumber = courtNumber ? parseInt(courtNumber) : null;
     if (matchType !== undefined) data.matchType = matchType;
@@ -701,8 +701,8 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
     const matchId = parseInt(req.params.id);
     const { sets, teams } = req.body;
 
-    if (!sets || !Array.isArray(sets) || sets.length < 1 || sets.length > 10) {
-      return res.status(400).json({ error: "Укажите от 1 до 10 сетов" });
+    if (!sets || !Array.isArray(sets) || sets.length < 1 || sets.length > 3) {
+      return res.status(400).json({ error: "Укажите от 1 до 3 сетов" });
     }
 
     if (!teams || !Array.isArray(teams) || teams.length !== 4) {
@@ -739,53 +739,65 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "В каждой команде должно быть по 2 игрока" });
     }
 
-    // Update team assignments from frontend
-    for (const t of teams) {
-      await prisma.matchPlayer.updateMany({
-        where: { matchId, userId: t.userId },
-        data: { team: t.team },
-      });
-    }
-
-    // Delete existing sets & confirmations if re-submitting
-    await prisma.matchSet.deleteMany({ where: { matchId } });
-    await prisma.scoreConfirmation.deleteMany({ where: { matchId } });
-
-    // Create sets (with optional tiebreak scores)
-    for (let i = 0; i < sets.length; i++) {
-      const s = sets[i];
+    // Validate set scores
+    for (const s of sets) {
       const t1 = parseInt(s.team1Score);
       const t2 = parseInt(s.team2Score);
-      const isTiebreak = (t1 === 7 && t2 === 6) || (t1 === 6 && t2 === 7);
-      await prisma.matchSet.create({
-        data: {
-          matchId,
-          setNumber: i + 1,
-          team1Score: t1,
-          team2Score: t2,
-          team1Tiebreak: isTiebreak && s.team1Tiebreak != null ? parseInt(s.team1Tiebreak) : null,
-          team2Tiebreak: isTiebreak && s.team2Tiebreak != null ? parseInt(s.team2Tiebreak) : null,
-        },
-      });
+      if (isNaN(t1) || isNaN(t2) || t1 < 0 || t2 < 0 || t1 > 10 || t2 > 10) {
+        return res.status(400).json({ error: "Некорректный счёт сета (0-10)" });
+      }
     }
 
-    // Find submitter's team
+    // All score operations in a single transaction to prevent race conditions
+    await prisma.$transaction(async (tx) => {
+      // Update team assignments
+      for (const t of teams) {
+        await tx.matchPlayer.updateMany({
+          where: { matchId, userId: t.userId },
+          data: { team: t.team },
+        });
+      }
+
+      // Delete existing sets & confirmations if re-submitting
+      await tx.matchSet.deleteMany({ where: { matchId } });
+      await tx.scoreConfirmation.deleteMany({ where: { matchId } });
+
+      // Create sets
+      for (let i = 0; i < sets.length; i++) {
+        const s = sets[i];
+        const t1 = parseInt(s.team1Score);
+        const t2 = parseInt(s.team2Score);
+        const isTiebreak = (t1 === 7 && t2 === 6) || (t1 === 6 && t2 === 7);
+        await tx.matchSet.create({
+          data: {
+            matchId,
+            setNumber: i + 1,
+            team1Score: t1,
+            team2Score: t2,
+            team1Tiebreak: isTiebreak && s.team1Tiebreak != null ? parseInt(s.team1Tiebreak) : null,
+            team2Tiebreak: isTiebreak && s.team2Tiebreak != null ? parseInt(s.team2Tiebreak) : null,
+          },
+        });
+      }
+
+      // Update match status + who submitted and when
+      await tx.match.update({
+        where: { id: matchId },
+        data: {
+          status: "PENDING_CONFIRMATION",
+          scoreSubmittedAt: new Date(),
+          scoreSubmitterId: req.userId,
+        },
+      });
+
+      // Create score confirmation for submitter (auto-confirmed)
+      await tx.scoreConfirmation.create({
+        data: { matchId, userId: req.userId, confirmed: true },
+      });
+    });
+
+    // Find submitter's team (for notifications, outside transaction)
     const submitterTeam = teams.find((t) => t.userId === req.userId)?.team;
-
-    // Update match status + who submitted and when
-    await prisma.match.update({
-      where: { id: matchId },
-      data: {
-        status: "PENDING_CONFIRMATION",
-        scoreSubmittedAt: new Date(),
-        scoreSubmitterId: req.userId,
-      },
-    });
-
-    // Create score confirmation for submitter (auto-confirmed)
-    await prisma.scoreConfirmation.create({
-      data: { matchId, userId: req.userId, confirmed: true },
-    });
 
     // Notify only opponents (other team) for confirmation
     const submitterUser = approvedInMatch.find((p) => p.userId === req.userId)?.user;
@@ -1252,7 +1264,7 @@ router.post("/:id/accept-invite", authMiddleware, async (req, res) => {
         });
         const playerNames = fullMatch.players.map((p) => p.user.firstName);
         for (const p of fullMatch.players) {
-          notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch(() => {});
+          notifyMatchFull(p.user.telegramId.toString(), fullMatch, playerNames).catch((e) => console.error("[Notify] error:", e.message));
         }
       } catch (e) { console.error("[MatchFull] notify error:", e.message); }
     }

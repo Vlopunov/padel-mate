@@ -16,9 +16,7 @@ const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Min
 const TIME_SLOTS = [];
 for (let h = 6; h <= 23; h++) {
   TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:00`, label: `${String(h).padStart(2, '0')}:00` });
-  if (h < 23 || true) {
-    TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${String(h).padStart(2, '0')}:30` });
-  }
+  TIME_SLOTS.push({ value: `${String(h).padStart(2, '0')}:30`, label: `${String(h).padStart(2, '0')}:30` });
 }
 
 export function CreateMatch({ user, onBack, onCreated }) {
