@@ -56,7 +56,8 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
       select: {
         id: true, telegramId: true, firstName: true, lastName: true, username: true,
         city: true, rating: true, matchesPlayed: true, wins: true, losses: true,
-        isAdmin: true, isVip: true, onboarded: true, createdAt: true, xp: true,
+        isAdmin: true, isVip: true, isCoach: true, coachSubscriptionTier: true,
+        onboarded: true, createdAt: true, xp: true,
       },
     });
     res.json(users.map((u) => ({ ...u, telegramId: u.telegramId.toString() })));
@@ -70,11 +71,13 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
 router.patch("/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const { rating, isAdmin, isVip, city } = req.body;
+    const { rating, isAdmin, isVip, isCoach, coachSubscriptionTier, city } = req.body;
     const data = {};
     if (rating !== undefined) data.rating = parseInt(rating);
     if (isAdmin !== undefined) data.isAdmin = isAdmin;
     if (isVip !== undefined) data.isVip = isVip;
+    if (isCoach !== undefined) data.isCoach = isCoach;
+    if (coachSubscriptionTier !== undefined) data.coachSubscriptionTier = coachSubscriptionTier || null;
     if (city !== undefined) data.city = city;
 
     // Get old rating BEFORE update for correct history

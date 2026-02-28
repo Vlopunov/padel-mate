@@ -126,6 +126,11 @@ export const api = {
     my: () => api.fetch('/achievements/my'),
   },
 
+  // Coach
+  coach: {
+    dashboard: () => api.fetch('/coach/dashboard'),
+  },
+
   // Admin
   admin: {
     stats: () => api.fetch('/admin/stats'),

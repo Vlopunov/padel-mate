@@ -60,6 +60,44 @@ enum TournamentStatus {
   COMPLETED
 }
 
+// === Coach Panel enums ===
+
+enum CoachSubscriptionTier {
+  FREE
+  PAID
+}
+
+enum TrainingSessionType {
+  INDIVIDUAL
+  GROUP
+}
+
+enum TrainingSessionStatus {
+  OPEN
+  FULL
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentType {
+  SINGLE
+  PACKAGE
+}
+
+enum PaymentStatus {
+  AWAITING
+  PAID
+  REFUNDED
+}
+
 model User {
   id              Int       @id @default(autoincrement())
   telegramId      BigInt    @unique
@@ -89,6 +127,18 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Coach fields
+  isCoach               Boolean                @default(false)
+  coachSubscriptionTier CoachSubscriptionTier?
+  coachSubscriptionEnd  DateTime?
+  coachBio              String?
+  coachExperience       String?
+  coachCertificates     String?
+  coachHourlyRate       Int?
+  coachSpecialization   String?
+  coachRating           Float?
+  coachReviewCount      Int                    @default(0)
+
   matchPlayers    MatchPlayer[]
   ratingHistory   RatingHistory[]
   createdMatches  Match[]              @relation("MatchCreator")
@@ -97,6 +147,20 @@ model User {
   matchComments   MatchComment[]
   tournamentRegs1 TournamentRegistration[] @relation("TournamentPlayer1")
   tournamentRegs2 TournamentRegistration[] @relation("TournamentPlayer2")
+
+  // Coach relations
+  coachStudents         CoachStudent[]         @relation("CoachRelation")
+  studentOfCoaches      CoachStudent[]         @relation("StudentRelation")
+  coachSessions         TrainingSession[]      @relation("CoachSessions")
+  sessionBookings       SessionBooking[]
+  coachNotesWritten     CoachNote[]            @relation("CoachNoteAuthor")
+  coachNotesAboutMe     CoachNote[]            @relation("CoachNoteSubject")
+  coachPaymentsReceived CoachPayment[]         @relation("PaymentCoach")
+  coachPaymentsSent     CoachPayment[]         @relation("PaymentStudent")
+  coachPackagesSold     CoachPackage[]         @relation("PackageCoach")
+  coachPackagesBought   CoachPackage[]         @relation("PackageStudent")
+  coachReviewsReceived  CoachReview[]          @relation("ReviewSubject")
+  coachReviewsGiven     CoachReview[]          @relation("ReviewAuthor")
 }
 
 model Venue {
@@ -107,8 +171,9 @@ model Venue {
   courts      Int     @default(1)
   phone       String?
   website     String?
-  matches     Match[]
-  tournaments Tournament[]
+  matches          Match[]
+  tournaments      Tournament[]
+  trainingSessions TrainingSession[]
 }
 
 model Match {
@@ -268,4 +333,105 @@ model DailyStats {
   topRatingUserId  Int?
   cityCounts       Json     @default("{}")
   createdAt        DateTime @default(now())
+}
+
+// === Coach Panel models ===
+
+model CoachStudent {
+  id        Int      @id @default(autoincrement())
+  coachId   Int
+  coach     User     @relation("CoachRelation", fields: [coachId], references: [id])
+  studentId Int
+  student   User     @relation("StudentRelation", fields: [studentId], references: [id])
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([coachId, studentId])
+}
+
+model TrainingSession {
+  id          Int                   @id @default(autoincrement())
+  coachId     Int
+  coach       User                  @relation("CoachSessions", fields: [coachId], references: [id])
+  venueId     Int?
+  venue       Venue?                @relation(fields: [venueId], references: [id])
+  type        TrainingSessionType
+  date        DateTime
+  durationMin Int                   @default(60)
+  maxStudents Int                   @default(1)
+  price       Int?
+  notes       String?
+  status      TrainingSessionStatus @default(OPEN)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  bookings    SessionBooking[]
+}
+
+model SessionBooking {
+  id           Int             @id @default(autoincrement())
+  sessionId    Int
+  session      TrainingSession @relation(fields: [sessionId], references: [id])
+  studentId    Int
+  student      User            @relation(fields: [studentId], references: [id])
+  status       BookingStatus   @default(PENDING)
+  reminderSent Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+
+  @@unique([sessionId, studentId])
+}
+
+model CoachNote {
+  id         Int      @id @default(autoincrement())
+  coachId    Int
+  coach      User     @relation("CoachNoteAuthor", fields: [coachId], references: [id])
+  studentId  Int
+  student    User     @relation("CoachNoteSubject", fields: [studentId], references: [id])
+  text       String
+  isHomework Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model CoachPayment {
+  id        Int           @id @default(autoincrement())
+  coachId   Int
+  coach     User          @relation("PaymentCoach", fields: [coachId], references: [id])
+  studentId Int
+  student   User          @relation("PaymentStudent", fields: [studentId], references: [id])
+  amount    Int
+  type      PaymentType   @default(SINGLE)
+  packageId Int?
+  package   CoachPackage? @relation(fields: [packageId], references: [id])
+  status    PaymentStatus @default(AWAITING)
+  note      String?
+  paidAt    DateTime?
+  createdAt DateTime      @default(now())
+}
+
+model CoachPackage {
+  id            Int      @id @default(autoincrement())
+  coachId       Int
+  coach         User     @relation("PackageCoach", fields: [coachId], references: [id])
+  studentId     Int
+  student       User     @relation("PackageStudent", fields: [studentId], references: [id])
+  totalSessions Int
+  usedSessions  Int      @default(0)
+  priceTotal    Int
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  payments      CoachPayment[]
+}
+
+model CoachReview {
+  id        Int      @id @default(autoincrement())
+  coachId   Int
+  coach     User     @relation("ReviewSubject", fields: [coachId], references: [id])
+  authorId  Int
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  rating    Int
+  text      String?
+  createdAt DateTime @default(now())
+
+  @@unique([coachId, authorId])
 }

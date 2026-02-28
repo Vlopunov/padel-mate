@@ -163,6 +163,19 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         </div>
       </Card>
 
+      {/* Coach panel link */}
+      {user.isCoach && (
+        <Card onClick={() => onNavigate('coachPanel')} style={{ marginBottom: 12, cursor: 'pointer', border: `1px solid ${COLORS.purple}40` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>{'\u{1F3BE}'}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.purple }}>Панель тренера</span>
+            </div>
+            <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          </div>
+        </Card>
+      )}
+
       {/* Admin link */}
       {user.isAdmin && (
         <Card onClick={() => onNavigate('admin')} style={{ marginBottom: 12, cursor: 'pointer', border: `1px solid ${COLORS.accent}40` }}>

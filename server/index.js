@@ -11,6 +11,7 @@ const venueRoutes = require("./routes/venues");
 const tournamentRoutes = require("./routes/tournaments");
 const achievementRoutes = require("./routes/achievements");
 const adminRoutes = require("./routes/admin");
+const coachRoutes = require("./routes/coach");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +28,7 @@ app.use("/api/venues", venueRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/achievements", achievementRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/coach", coachRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
