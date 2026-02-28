@@ -14,6 +14,99 @@ async function adminMiddleware(req, res, next) {
   next();
 }
 
+// Create test users for tournament testing
+router.post("/test-users", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const count = Math.min(parseInt(req.body.count) || 16, 30);
+
+    const TEST_NAMES = [
+      "Алексей", "Дмитрий", "Сергей", "Андрей", "Михаил",
+      "Николай", "Павел", "Артём", "Кирилл", "Егор",
+      "Максим", "Иван", "Роман", "Виктор", "Олег",
+      "Антон", "Даниил", "Тимур", "Марк", "Лев",
+      "Анна", "Мария", "Елена", "Ольга", "Наталья",
+      "Татьяна", "Юлия", "Екатерина", "Дарья", "Алина",
+    ];
+    const TEST_LASTNAMES = [
+      "Иванов", "Петров", "Сидоров", "Козлов", "Новиков",
+      "Морозов", "Волков", "Зайцев", "Соловьёв", "Васильев",
+      "Попов", "Кузнецов", "Лебедев", "Смирнов", "Фёдоров",
+      "Егоров", "Макаров", "Орлов", "Андреев", "Павлов",
+      "Белова", "Соколова", "Титова", "Крылова", "Климова",
+      "Громова", "Панова", "Медведева", "Жукова", "Борисова",
+    ];
+    const POSITIONS = ["DERECHA", "REVES", "BOTH"];
+    const HANDS = ["RIGHT", "LEFT"];
+    const EXPERIENCES = ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"];
+
+    // Use telegramId range 9000000001+ for test users
+    const existing = await prisma.user.findMany({
+      where: { telegramId: { gte: 9000000001n } },
+      select: { telegramId: true },
+      orderBy: { telegramId: "desc" },
+      take: 1,
+    });
+    let nextTgId = existing.length > 0 ? Number(existing[0].telegramId) + 1 : 9000000001;
+
+    const created = [];
+    for (let i = 0; i < count; i++) {
+      const rating = 1200 + Math.floor(Math.random() * 600); // 1200-1800
+      const user = await prisma.user.create({
+        data: {
+          telegramId: BigInt(nextTgId + i),
+          firstName: TEST_NAMES[i % TEST_NAMES.length],
+          lastName: TEST_LASTNAMES[i % TEST_LASTNAMES.length],
+          username: `test_player_${nextTgId + i}`,
+          city: "MINSK",
+          hand: HANDS[Math.floor(Math.random() * 2)],
+          position: POSITIONS[Math.floor(Math.random() * 3)],
+          experience: EXPERIENCES[Math.floor(Math.random() * 4)],
+          rating,
+          onboarded: true,
+        },
+      });
+      created.push({ id: user.id, name: `${user.firstName} ${user.lastName}`, rating });
+    }
+
+    res.json({ created: created.length, users: created });
+  } catch (err) {
+    console.error("Admin create test users error:", err);
+    res.status(500).json({ error: "Ошибка создания тестовых юзеров" });
+  }
+});
+
+// Delete all test users (telegramId >= 9000000001)
+router.delete("/test-users", authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const testUsers = await prisma.user.findMany({
+      where: { telegramId: { gte: 9000000001n } },
+      select: { id: true },
+    });
+    const ids = testUsers.map(u => u.id);
+
+    if (ids.length === 0) return res.json({ deleted: 0 });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.matchComment.deleteMany({ where: { userId: { in: ids } } });
+      await tx.matchPlayer.deleteMany({ where: { userId: { in: ids } } });
+      await tx.scoreConfirmation.deleteMany({ where: { userId: { in: ids } } });
+      await tx.ratingHistory.deleteMany({ where: { userId: { in: ids } } });
+      await tx.userAchievement.deleteMany({ where: { userId: { in: ids } } });
+      await tx.tournamentRegistration.deleteMany({
+        where: { OR: [{ player1Id: { in: ids } }, { player2Id: { in: ids } }] },
+      });
+      await tx.tournamentRatingChange.deleteMany({ where: { userId: { in: ids } } });
+      await tx.tournamentStanding.deleteMany({ where: { userId: { in: ids } } });
+      await tx.user.deleteMany({ where: { id: { in: ids } } });
+    });
+
+    res.json({ deleted: ids.length });
+  } catch (err) {
+    console.error("Admin delete test users error:", err);
+    res.status(500).json({ error: "Ошибка удаления тестовых юзеров" });
+  }
+});
+
 // Stats overview (enhanced with daily analytics)
 router.get("/stats", authMiddleware, adminMiddleware, async (req, res) => {
   try {

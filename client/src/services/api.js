@@ -211,5 +211,7 @@ export const api = {
     nextTournamentRound: (id) => api.fetch(`/admin/tournaments/${id}/next-round`, { method: 'POST' }),
     completeTournament: (id) => api.fetch(`/admin/tournaments/${id}/complete`, { method: 'POST' }),
     analytics: (days = 30) => api.fetch(`/admin/analytics?days=${days}`),
+    createTestUsers: (count = 16) => api.fetch('/admin/test-users', { method: 'POST', body: JSON.stringify({ count }) }),
+    deleteTestUsers: () => api.fetch('/admin/test-users', { method: 'DELETE' }),
   },
 };

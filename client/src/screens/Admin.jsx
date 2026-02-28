@@ -536,9 +536,48 @@ export function Admin({ onBack }) {
         <div>
           <div style={{
             fontSize: 13, color: COLORS.textDim, marginBottom: 12,
-            display: 'flex', justifyContent: 'space-between',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
             <span>{'\uD83D\uDC65'} Всего: {users.length}</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const count = prompt('Сколько тестовых юзеров создать?', '16');
+                  if (!count) return;
+                  try {
+                    const res = await api.admin.createTestUsers(parseInt(count));
+                    alert(`Создано ${res.created} тестовых юзеров`);
+                    loadData();
+                  } catch (e) { alert('Ошибка: ' + e.message); }
+                }}
+                style={{
+                  padding: '6px 10px', borderRadius: 8, border: `1px solid ${COLORS.accent}40`,
+                  background: `${COLORS.accent}15`, color: COLORS.accent,
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                + Тест юзеры
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!confirm('Удалить ВСЕ тестовые аккаунты?')) return;
+                  try {
+                    const res = await api.admin.deleteTestUsers();
+                    alert(`Удалено ${res.deleted} тестовых юзеров`);
+                    loadData();
+                  } catch (e) { alert('Ошибка: ' + e.message); }
+                }}
+                style={{
+                  padding: '6px 10px', borderRadius: 8, border: `1px solid ${COLORS.danger}40`,
+                  background: `${COLORS.danger}15`, color: COLORS.danger,
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                {'\uD83D\uDDD1'} Удалить тест
+              </button>
+            </div>
           </div>
           {users.map((u) => {
             const level = getLevel(u.rating);
