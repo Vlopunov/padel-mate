@@ -15,6 +15,36 @@ async function coachMiddleware(req, res, next) {
   next();
 }
 
+// PATCH /api/coach/profile — edit public coach profile
+router.patch("/profile", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const { bio, experience, specialization, hourlyRate, certificates } = req.body;
+    const updateData = {};
+    if (bio !== undefined) updateData.coachBio = bio || null;
+    if (experience !== undefined) updateData.coachExperience = experience || null;
+    if (specialization !== undefined) updateData.coachSpecialization = specialization || null;
+    if (hourlyRate !== undefined) updateData.coachHourlyRate = hourlyRate ? parseInt(hourlyRate) : null;
+    if (certificates !== undefined) updateData.coachCertificates = certificates || null;
+
+    const updated = await prisma.user.update({
+      where: { id: req.userId },
+      data: updateData,
+      select: {
+        coachBio: true,
+        coachExperience: true,
+        coachSpecialization: true,
+        coachHourlyRate: true,
+        coachCertificates: true,
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Coach update profile error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
 // GET /api/coach/dashboard — basic stats
 router.get("/dashboard", authMiddleware, coachMiddleware, async (req, res) => {
   try {

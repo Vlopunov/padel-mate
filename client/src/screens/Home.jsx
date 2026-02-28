@@ -196,6 +196,21 @@ export function Home({ user, onNavigate }) {
         ))}
       </div>
 
+      {/* Find a coach banner */}
+      <Card
+        onClick={() => onNavigate('findCoach')}
+        style={{ marginBottom: 12, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.purple}15, ${COLORS.accent}10)` }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 24 }}>{'\u{1F3BE}'}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.purple }}>Найти тренера</p>
+            <p style={{ fontSize: 12, color: COLORS.textDim }}>Индивидуальные и групповые тренировки</p>
+          </div>
+          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+        </div>
+      </Card>
+
       {/* FAQ link */}
       <Card
         onClick={() => onNavigate('faq')}

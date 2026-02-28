@@ -102,7 +102,7 @@ export function CoachPanel({ user, onBack, onNavigate }) {
       </div>
 
       {/* Tab content */}
-      {activeTab === 'overview' && <OverviewTab dashboard={dashboard} />}
+      {activeTab === 'overview' && <OverviewTab dashboard={dashboard} onReloadDashboard={loadDashboard} />}
       {activeTab === 'students' && <StudentsTab dashboard={dashboard} onNavigate={onNavigate} />}
       {activeTab === 'schedule' && <ScheduleTab dashboard={dashboard} onNavigate={onNavigate} />}
       {activeTab === 'payments' && <PaymentsTab dashboard={dashboard} />}
@@ -111,7 +111,35 @@ export function CoachPanel({ user, onBack, onNavigate }) {
 }
 
 // === Overview Tab ===
-function OverviewTab({ dashboard }) {
+function OverviewTab({ dashboard, onReloadDashboard }) {
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    bio: dashboard.coach.bio || '',
+    experience: dashboard.coach.experience || '',
+    specialization: dashboard.coach.specialization || '',
+    hourlyRate: dashboard.coach.hourlyRate ? (dashboard.coach.hourlyRate / 100).toString() : '',
+    certificates: dashboard.coach.certificates || '',
+  });
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  async function handleSaveProfile() {
+    setSavingProfile(true);
+    try {
+      await api.coach.updateProfile({
+        bio: profileForm.bio || null,
+        experience: profileForm.experience || null,
+        specialization: profileForm.specialization || null,
+        hourlyRate: profileForm.hourlyRate ? Math.round(parseFloat(profileForm.hourlyRate) * 100) : null,
+        certificates: profileForm.certificates || null,
+      });
+      setShowEditProfile(false);
+      if (onReloadDashboard) onReloadDashboard();
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+    setSavingProfile(false);
+  }
+
   return (
     <div>
       {/* Stats grid */}
@@ -161,10 +189,16 @@ function OverviewTab({ dashboard }) {
       )}
 
       {/* Coach profile summary */}
-      <Card style={{ marginBottom: 12 }}>
-        <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, marginBottom: 10 }}>
-          Профиль тренера
-        </h4>
+      <Card
+        style={{ marginBottom: 12, cursor: 'pointer' }}
+        onClick={() => setShowEditProfile(true)}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, margin: 0 }}>
+            Публичный профиль
+          </h4>
+          <span style={{ fontSize: 13, color: COLORS.accent }}>{'\u270F\uFE0F'} Редактировать</span>
+        </div>
         {dashboard.coach.bio ? (
           <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 8 }}>{dashboard.coach.bio}</p>
         ) : (
@@ -203,6 +237,53 @@ function OverviewTab({ dashboard }) {
           </div>
         </Card>
       )}
+
+      {/* Edit profile modal */}
+      <Modal
+        isOpen={showEditProfile}
+        onClose={() => setShowEditProfile(false)}
+        title="Редактировать профиль"
+      >
+        <Input
+          label="О себе"
+          value={profileForm.bio}
+          onChange={(v) => setProfileForm({ ...profileForm, bio: v })}
+          placeholder="Расскажите о себе как о тренере..."
+        />
+        <Input
+          label="Специализация"
+          value={profileForm.specialization}
+          onChange={(v) => setProfileForm({ ...profileForm, specialization: v })}
+          placeholder="Групповые тренировки, дети, продвинутые..."
+        />
+        <Input
+          label="Опыт"
+          value={profileForm.experience}
+          onChange={(v) => setProfileForm({ ...profileForm, experience: v })}
+          placeholder="3 года, сертификат FPP..."
+        />
+        <Input
+          label="Цена за час (BYN)"
+          type="number"
+          value={profileForm.hourlyRate}
+          onChange={(v) => setProfileForm({ ...profileForm, hourlyRate: v })}
+          placeholder="30"
+        />
+        <Input
+          label="Сертификаты"
+          value={profileForm.certificates}
+          onChange={(v) => setProfileForm({ ...profileForm, certificates: v })}
+          placeholder="FPP Level 1, WPT Coach..."
+        />
+        <Button
+          fullWidth
+          onClick={handleSaveProfile}
+          disabled={savingProfile}
+          style={{ marginTop: 8 }}
+        >
+          {savingProfile ? 'Сохранение...' : 'Сохранить'}
+        </Button>
+      </Modal>
     </div>
   );
 }

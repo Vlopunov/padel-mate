@@ -167,6 +167,15 @@ export const api = {
     updatePackage: (id, data) => api.fetch(`/coach/packages/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     usePackageSession: (id) => api.fetch(`/coach/packages/${id}/use`, { method: 'POST' }),
     paymentSummary: () => api.fetch('/coach/payment-summary'),
+    updateProfile: (data) => api.fetch('/coach/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+
+  // Coaches (public)
+  coaches: {
+    list: (city) => api.fetch(`/coaches${city ? `?city=${city}` : ''}`),
+    getById: (id) => api.fetch(`/coaches/${id}`),
+    reviews: (id) => api.fetch(`/coaches/${id}/reviews`),
+    writeReview: (id, data) => api.fetch(`/coaches/${id}/reviews`, { method: 'POST', body: JSON.stringify(data) }),
   },
 
   // Training (student-facing)
