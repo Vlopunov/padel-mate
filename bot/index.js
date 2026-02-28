@@ -10,6 +10,8 @@ const findCommand = require("./commands/find");
 const cancelCommand = require("./commands/cancel");
 const { startCreate, handleCreateCallback } = require("./commands/create");
 const { faqCommand, handleFaqCallback, handleFaqBack } = require("./commands/faq");
+const studentsCommand = require("./commands/students");
+const scheduleCommand = require("./commands/schedule");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || "https://your-domain.com";
@@ -45,6 +47,8 @@ bot.onText(/\/find/, (msg) => findCommand(bot, msg));
 bot.onText(/\/create/, (msg) => startCreate(bot, msg));
 bot.onText(/\/cancel/, (msg) => cancelCommand(bot, msg));
 bot.onText(/\/faq/, (msg) => faqCommand(bot, msg));
+bot.onText(/\/students/, (msg) => studentsCommand(bot, msg));
+bot.onText(/\/schedule/, (msg) => scheduleCommand(bot, msg));
 
 // ─── Callback Queries ──────────────────────────────
 bot.on("callback_query", async (query) => {
@@ -212,6 +216,8 @@ bot.setMyCommands([
   { command: "find", description: "🔍 Найти матч" },
   { command: "create", description: "➕ Создать матч" },
   { command: "cancel", description: "❌ Выйти из матча" },
+  { command: "schedule", description: "📅 Расписание тренировок" },
+  { command: "students", description: "👨‍🏫 Мои ученики (тренер)" },
   { command: "faq", description: "❓ Частые вопросы" },
   { command: "stats", description: "📊 Статистика (админ)" },
   { command: "help", description: "📋 Помощь" },

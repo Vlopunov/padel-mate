@@ -14,6 +14,7 @@ export function Home({ user, onNavigate }) {
   const [pendingMatches, setPendingMatches] = useState([]);
   const [tournament, setTournament] = useState(null);
   const [trainingSessions, setTrainingSessions] = useState([]);
+  const [homework, setHomework] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -36,10 +37,14 @@ export function Home({ user, onNavigate }) {
 
       if (tournaments.length > 0) setTournament(tournaments[0]);
 
-      // Load upcoming training sessions (if student has a coach)
+      // Load upcoming training sessions and homework (if student has a coach)
       try {
-        const mySessions = await api.training.my();
+        const [mySessions, myHomework] = await Promise.all([
+          api.training.my(),
+          api.training.homework(),
+        ]);
         setTrainingSessions(mySessions.slice(0, 3));
+        setHomework(myHomework.slice(0, 3));
       } catch (e) {
         // Not critical — may not have training sessions
       }
@@ -235,6 +240,29 @@ export function Home({ user, onNavigate }) {
               </Card>
             );
           })}
+          <div style={{ marginBottom: 16 }} />
+        </>
+      )}
+
+      {/* Homework from coach */}
+      {homework.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
+            {'\u{1F4DD}'} Домашние задания
+          </h3>
+          {homework.map((hw) => (
+            <Card key={hw.id} style={{ marginBottom: 8, border: `1px solid ${COLORS.warning}30` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: COLORS.textDim }}>
+                  {hw.coach?.firstName} {hw.coach?.lastName || ''} · {new Date(hw.createdAt).toLocaleDateString('ru-RU')}
+                </span>
+                <Badge variant="warning" style={{ fontSize: 10 }}>{'\u{1F4DD}'}</Badge>
+              </div>
+              <p style={{ fontSize: 13, color: COLORS.text, margin: 0, whiteSpace: 'pre-wrap' }}>
+                {hw.text.length > 120 ? hw.text.substring(0, 120) + '...' : hw.text}
+              </p>
+            </Card>
+          ))}
           <div style={{ marginBottom: 16 }} />
         </>
       )}

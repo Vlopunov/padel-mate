@@ -5,6 +5,17 @@ const { notifyTrainingBooked, notifyTrainingCancelledByStudent } = require("../s
 
 const router = express.Router();
 
+// GET /api/training/homework — student's homework from coaches
+router.get("/homework", authMiddleware, async (req, res) => {
+  try {
+    const homework = await coachData.getStudentHomework(req.userId);
+    res.json(homework);
+  } catch (err) {
+    console.error("Training homework error:", err);
+    res.status(500).json({ error: "Ошибка" });
+  }
+});
+
 // GET /api/training/available — available sessions for the student
 router.get("/available", authMiddleware, async (req, res) => {
   try {

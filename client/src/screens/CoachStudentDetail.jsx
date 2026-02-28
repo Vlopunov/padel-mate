@@ -5,6 +5,8 @@ import { Header } from '../components/ui/Header';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Avatar } from '../components/ui/Avatar';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { RatingChart } from '../components/ui/RatingChart';
 import { api } from '../services/api';
 
@@ -240,31 +242,151 @@ export function CoachStudentDetail({ studentId, onBack, onNavigate }) {
 
       {/* Notes */}
       {activeSection === 'notes' && (
-        <div>
-          {data.notes && data.notes.length > 0 ? (
-            data.notes.map((note) => (
-              <Card key={note.id} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: COLORS.textDim }}>
-                    {new Date(note.createdAt).toLocaleDateString('ru-RU')}
-                  </span>
-                  {note.isHomework && (
-                    <Badge variant="warning" style={{ fontSize: 11 }}>{'\u{1F4DD}'} Домашка</Badge>
-                  )}
-                </div>
-                <p style={{ fontSize: 13, color: COLORS.text, margin: 0, whiteSpace: 'pre-wrap' }}>
-                  {note.text}
-                </p>
-              </Card>
-            ))
-          ) : (
-            <Card style={{ textAlign: 'center', padding: 24 }}>
-              <p style={{ color: COLORS.textDim, fontSize: 13 }}>Нет заметок</p>
-              <p style={{ color: COLORS.textMuted, fontSize: 12 }}>Заметки появятся в Фазе 4</p>
-            </Card>
-          )}
-        </div>
+        <NotesSection studentId={studentId} notes={data.notes || []} onRefresh={loadData} />
       )}
+    </div>
+  );
+}
+
+// === Notes Section ===
+function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
+  const [notes, setNotes] = useState(initialNotes);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [isHomework, setIsHomework] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function handleAddNote() {
+    if (!noteText.trim()) return;
+    setSaving(true);
+    try {
+      await api.coach.addNote(studentId, { text: noteText, isHomework });
+      setShowAddModal(false);
+      setNoteText('');
+      setIsHomework(false);
+      // Reload notes
+      const fresh = await api.coach.getNotes(studentId);
+      setNotes(fresh);
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+    setSaving(false);
+  }
+
+  async function handleDeleteNote(noteId) {
+    if (!confirm('Удалить заметку?')) return;
+    try {
+      await api.coach.deleteNote(noteId);
+      setNotes(notes.filter((n) => n.id !== noteId));
+    } catch (err) {
+      alert(err.message || 'Ошибка');
+    }
+  }
+
+  return (
+    <div>
+      <Button fullWidth variant="secondary" onClick={() => setShowAddModal(true)} style={{ marginBottom: 12 }}>
+        {'\u2795'} Добавить заметку
+      </Button>
+
+      {notes.length > 0 ? (
+        notes.map((note) => (
+          <Card key={note.id} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <span style={{ fontSize: 12, color: COLORS.textDim }}>
+                {new Date(note.createdAt).toLocaleDateString('ru-RU')}
+              </span>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {note.isHomework && (
+                  <Badge variant="warning" style={{ fontSize: 11 }}>{'\u{1F4DD}'} Домашка</Badge>
+                )}
+                <button
+                  onClick={() => handleDeleteNote(note.id)}
+                  style={{ background: 'none', border: 'none', color: COLORS.textDim, fontSize: 14, cursor: 'pointer', padding: 2 }}
+                >
+                  {'\u{1F5D1}'}
+                </button>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: COLORS.text, margin: 0, whiteSpace: 'pre-wrap' }}>
+              {note.text}
+            </p>
+          </Card>
+        ))
+      ) : (
+        <Card style={{ textAlign: 'center', padding: 24 }}>
+          <span style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>{'\u{1F4DD}'}</span>
+          <p style={{ color: COLORS.textDim, fontSize: 13 }}>Нет заметок</p>
+          <p style={{ color: COLORS.textDim, fontSize: 12 }}>
+            Добавьте заметку или домашнее задание для ученика
+          </p>
+        </Card>
+      )}
+
+      <Modal
+        isOpen={showAddModal}
+        onClose={() => { setShowAddModal(false); setNoteText(''); setIsHomework(false); }}
+        title="Новая заметка"
+      >
+        <textarea
+          value={noteText}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder="Текст заметки..."
+          rows={4}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            color: COLORS.text,
+            fontSize: 14,
+            resize: 'vertical',
+            fontFamily: 'inherit',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        <div
+          onClick={() => setIsHomework(!isHomework)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 0',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            border: `2px solid ${isHomework ? COLORS.warning : COLORS.border}`,
+            background: isHomework ? `${COLORS.warning}30` : 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+          }}>
+            {isHomework ? '\u2705' : ''}
+          </div>
+          <span style={{ fontSize: 14, color: COLORS.text }}>
+            {'\u{1F4DD}'} Домашнее задание
+          </span>
+          <span style={{ fontSize: 12, color: COLORS.textDim }}>
+            (ученик получит уведомление)
+          </span>
+        </div>
+
+        <Button
+          fullWidth
+          onClick={handleAddNote}
+          disabled={saving || !noteText.trim()}
+          style={{ marginTop: 8 }}
+        >
+          {saving ? 'Сохранение...' : 'Добавить'}
+        </Button>
+      </Modal>
     </div>
   );
 }

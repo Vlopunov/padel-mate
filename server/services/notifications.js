@@ -285,6 +285,32 @@ async function notifyTrainingCancelledByStudent(telegramId, session, student) {
   await sendTelegramMessage(telegramId, text);
 }
 
+// ─── Notes & Homework Notifications ───
+
+async function notifyHomework(telegramId, coachName, text) {
+  const preview = text.length > 100 ? text.substring(0, 100) + "..." : text;
+  const msg =
+    `📝 <b>Новое домашнее задание</b>\n\n` +
+    `👨‍🏫 Тренер: ${coachName}\n` +
+    `📋 ${preview}`;
+  await sendTelegramMessage(telegramId, msg, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📱 Открыть приложение", web_app: { url: MINI_APP_URL } }],
+      ],
+    },
+  });
+}
+
+async function notifyCoachNote(telegramId, coachName, text) {
+  const preview = text.length > 100 ? text.substring(0, 100) + "..." : text;
+  const msg =
+    `📌 <b>Заметка от тренера</b>\n\n` +
+    `👨‍🏫 ${coachName}\n` +
+    `💬 ${preview}`;
+  await sendTelegramMessage(telegramId, msg);
+}
+
 module.exports = {
   sendTelegramMessage,
   notifyScoreConfirmation,
@@ -304,4 +330,7 @@ module.exports = {
   notifyTrainingBooked,
   notifyTrainingCancelledByCoach,
   notifyTrainingCancelledByStudent,
+  // Notes
+  notifyHomework,
+  notifyCoachNote,
 };

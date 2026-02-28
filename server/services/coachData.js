@@ -660,6 +660,75 @@ async function getStudentSessions(studentId) {
     }));
 }
 
+// ─── Notes & Homework ───
+
+// Get notes for a student
+async function getNotes(coachId, studentId) {
+  // Verify link
+  const link = await prisma.coachStudent.findUnique({
+    where: { coachId_studentId: { coachId, studentId } },
+  });
+  if (!link || !link.active) throw new Error("Ученик не найден");
+
+  return prisma.coachNote.findMany({
+    where: { coachId, studentId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+}
+
+// Add a note/homework
+async function addNote(coachId, studentId, { text, isHomework }) {
+  if (!text || text.trim().length === 0) throw new Error("Текст не может быть пустым");
+
+  // Verify link
+  const link = await prisma.coachStudent.findUnique({
+    where: { coachId_studentId: { coachId, studentId } },
+  });
+  if (!link || !link.active) throw new Error("Ученик не найден");
+
+  const note = await prisma.coachNote.create({
+    data: {
+      coachId,
+      studentId,
+      text: text.trim(),
+      isHomework: isHomework || false,
+    },
+  });
+
+  return note;
+}
+
+// Delete a note
+async function deleteNote(coachId, noteId) {
+  const note = await prisma.coachNote.findFirst({
+    where: { id: noteId, coachId },
+  });
+  if (!note) throw new Error("Заметка не найдена");
+
+  await prisma.coachNote.delete({ where: { id: noteId } });
+  return { success: true };
+}
+
+// Get homework for a student (from all coaches)
+async function getStudentHomework(studentId) {
+  const homework = await prisma.coachNote.findMany({
+    where: {
+      studentId,
+      isHomework: true,
+    },
+    include: {
+      coach: {
+        select: { id: true, firstName: true, lastName: true, photoUrl: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+
+  return homework;
+}
+
 module.exports = {
   getCoachStudents,
   getStudentAnalytics,
@@ -679,4 +748,9 @@ module.exports = {
   cancelBooking,
   getAvailableSessions,
   getStudentSessions,
+  // Notes
+  getNotes,
+  addNote,
+  deleteNote,
+  getStudentHomework,
 };

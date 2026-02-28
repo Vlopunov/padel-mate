@@ -145,6 +145,10 @@ export const api = {
     deleteSession: (id) => api.fetch(`/coach/sessions/${id}`, { method: 'DELETE' }),
     cancelSession: (id) => api.fetch(`/coach/sessions/${id}/cancel`, { method: 'POST' }),
     completeSession: (id) => api.fetch(`/coach/sessions/${id}/complete`, { method: 'POST' }),
+    // Notes
+    getNotes: (studentId) => api.fetch(`/coach/students/${studentId}/notes`),
+    addNote: (studentId, data) => api.fetch(`/coach/students/${studentId}/notes`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteNote: (noteId) => api.fetch(`/coach/notes/${noteId}`, { method: 'DELETE' }),
   },
 
   // Training (student-facing)
@@ -153,6 +157,7 @@ export const api = {
     my: () => api.fetch('/training/my'),
     book: (sessionId) => api.fetch(`/training/book/${sessionId}`, { method: 'POST' }),
     cancelBooking: (sessionId) => api.fetch(`/training/book/${sessionId}`, { method: 'DELETE' }),
+    homework: () => api.fetch('/training/homework'),
   },
 
   // Admin

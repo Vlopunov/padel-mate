@@ -148,7 +148,7 @@ router.get("/cohort-stats", authMiddleware, coachMiddleware, async (req, res) =>
 
 // ─── Training Sessions ───
 
-const { notifyTrainingBooked, notifyTrainingCancelled, notifyTrainingCancelledByCoach } = require("../services/notifications");
+const { notifyTrainingBooked, notifyTrainingCancelled, notifyTrainingCancelledByCoach, notifyHomework, notifyCoachNote } = require("../services/notifications");
 
 // GET /api/coach/sessions — list sessions
 router.get("/sessions", authMiddleware, coachMiddleware, async (req, res) => {
@@ -237,6 +237,69 @@ router.post("/sessions/:id/complete", authMiddleware, coachMiddleware, async (re
     res.json(result);
   } catch (err) {
     console.error("Coach complete session error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// ─── Notes & Homework ───
+
+// GET /api/coach/students/:studentId/notes — list notes for student
+router.get("/students/:studentId/notes", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const notes = await coachData.getNotes(req.userId, studentId);
+    res.json(notes);
+  } catch (err) {
+    console.error("Coach get notes error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// POST /api/coach/students/:studentId/notes — add note
+router.post("/students/:studentId/notes", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const studentId = parseInt(req.params.studentId);
+    const { text, isHomework } = req.body;
+    const note = await coachData.addNote(req.userId, studentId, { text, isHomework });
+
+    // Notify student
+    try {
+      const student = await prisma.user.findUnique({
+        where: { id: studentId },
+        select: { telegramId: true, firstName: true },
+      });
+      if (student && student.telegramId) {
+        if (isHomework) {
+          await notifyHomework(
+            student.telegramId.toString(),
+            req.coachUser.firstName,
+            text
+          );
+        } else {
+          await notifyCoachNote(
+            student.telegramId.toString(),
+            req.coachUser.firstName,
+            text
+          );
+        }
+      }
+    } catch (e) { /* notification failed — not critical */ }
+
+    res.json(note);
+  } catch (err) {
+    console.error("Coach add note error:", err);
+    res.status(400).json({ error: err.message || "Ошибка" });
+  }
+});
+
+// DELETE /api/coach/notes/:noteId — delete note
+router.delete("/notes/:noteId", authMiddleware, coachMiddleware, async (req, res) => {
+  try {
+    const noteId = parseInt(req.params.noteId);
+    const result = await coachData.deleteNote(req.userId, noteId);
+    res.json(result);
+  } catch (err) {
+    console.error("Coach delete note error:", err);
     res.status(400).json({ error: err.message || "Ошибка" });
   }
 });
