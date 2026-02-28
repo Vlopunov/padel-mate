@@ -9,6 +9,7 @@ const topCommand = require("./commands/top");
 const findCommand = require("./commands/find");
 const cancelCommand = require("./commands/cancel");
 const { startCreate, handleCreateCallback } = require("./commands/create");
+const { faqCommand, handleFaqCallback, handleFaqBack } = require("./commands/faq");
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || "https://your-domain.com";
@@ -43,10 +44,19 @@ bot.onText(/\/top/, (msg) => topCommand(bot, msg));
 bot.onText(/\/find/, (msg) => findCommand(bot, msg));
 bot.onText(/\/create/, (msg) => startCreate(bot, msg));
 bot.onText(/\/cancel/, (msg) => cancelCommand(bot, msg));
+bot.onText(/\/faq/, (msg) => faqCommand(bot, msg));
 
 // ─── Callback Queries ──────────────────────────────
 bot.on("callback_query", async (query) => {
   const data = query.data;
+
+  // ── FAQ navigation ──
+  if (data.startsWith("faq_") && data !== "faq_back") {
+    return handleFaqCallback(bot, query);
+  }
+  if (data === "faq_back") {
+    return handleFaqBack(bot, query);
+  }
 
   // ── Create match flow (multi-step) ──
   if (data.startsWith("cr_")) {
@@ -202,6 +212,7 @@ bot.setMyCommands([
   { command: "find", description: "🔍 Найти матч" },
   { command: "create", description: "➕ Создать матч" },
   { command: "cancel", description: "❌ Выйти из матча" },
+  { command: "faq", description: "❓ Частые вопросы" },
   { command: "stats", description: "📊 Статистика (админ)" },
-  { command: "help", description: "❓ Помощь" },
+  { command: "help", description: "📋 Помощь" },
 ]);

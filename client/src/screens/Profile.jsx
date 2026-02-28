@@ -152,6 +152,17 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         </div>
       </Card>
 
+      {/* FAQ link */}
+      <Card onClick={() => onNavigate('faq')} style={{ marginBottom: 12, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>{'\u2753'}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>FAQ — Частые вопросы</span>
+          </div>
+          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+        </div>
+      </Card>
+
       {/* Admin link */}
       {user.isAdmin && (
         <Card onClick={() => onNavigate('admin')} style={{ marginBottom: 12, cursor: 'pointer', border: `1px solid ${COLORS.accent}40` }}>

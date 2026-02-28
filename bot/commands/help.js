@@ -13,6 +13,7 @@ module.exports = async function helpCommand(bot, msg, miniAppUrl) {
       `/create — Создать новый матч\n` +
       `/cancel — Выйти из матча\n\n` +
       `<b>Прочее:</b>\n` +
+      `/faq — Частые вопросы\n` +
       `/stats — Статистика платформы (админ)\n` +
       `/help — Эта справка\n\n` +
       `<b>Как это работает:</b>\n` +
