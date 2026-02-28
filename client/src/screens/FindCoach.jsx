@@ -18,9 +18,7 @@ export function FindCoach({ onBack, onNavigate }) {
   async function loadCoaches() {
     setLoading(true);
     try {
-      const params = {};
-      if (cityFilter) params.city = cityFilter;
-      const data = await api.coaches.list(params);
+      const data = await api.coaches.list(cityFilter || undefined);
       setCoaches(data);
     } catch (err) {
       console.error('Load coaches error:', err);
