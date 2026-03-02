@@ -1,0 +1,19 @@
+{
+  "name": "Padel GO",
+  "short_name": "Padel GO",
+  "description": "Падел-сообщество Беларуси — матчи, рейтинг, турниры",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E1A",
+  "theme_color": "#0A0E1A",
+  "orientation": "portrait",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
