@@ -93,25 +93,6 @@ export function Home({ user, onNavigate }) {
         </button>
       </div>
 
-      {/* Community banner */}
-      <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}10, ${COLORS.purple}10)` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 24 }}>{'\u{1F3BE}'}</span>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>{APP_NAME} Community</p>
-            <p style={{ fontSize: 12, color: COLORS.textDim }}>Новости, анонсы, общение</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHANNEL)} style={{ flex: 1 }}>
-            {'\u{1F4E2}'} Канал
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHAT)} style={{ flex: 1 }}>
-            {'\u{1F4AC}'} Общий чат
-          </Button>
-        </div>
-      </Card>
-
       {/* Rating card */}
       <Card glow style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
