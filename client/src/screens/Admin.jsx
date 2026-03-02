@@ -613,6 +613,22 @@ export function Admin({ onBack }) {
                           {'\u{1F3BE}'} ТРЕНЕР
                         </span>
                       )}
+                      {!u.onboarded && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                          background: `${COLORS.warning}20`, color: COLORS.warning,
+                        }}>
+                          НЕ ОНБОРДЁН
+                        </span>
+                      )}
+                      {u.isVisible === false && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                          background: `${COLORS.danger}20`, color: COLORS.danger,
+                        }}>
+                          {'\uD83D\uDEAB'} СКРЫТ
+                        </span>
+                      )}
                     </div>
                     {u.username && (
                       <div style={{ fontSize: 12, color: COLORS.textDim, marginTop: 2 }}>@{u.username}</div>

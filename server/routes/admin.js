@@ -360,7 +360,7 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
         id: true, telegramId: true, firstName: true, lastName: true, username: true,
         city: true, rating: true, matchesPlayed: true, wins: true, losses: true,
         isAdmin: true, isVip: true, isCoach: true, coachSubscriptionTier: true,
-        onboarded: true, createdAt: true, xp: true,
+        onboarded: true, isVisible: true, createdAt: true, xp: true,
       },
     });
     res.json(users.map((u) => ({ ...u, telegramId: u.telegramId.toString() })));
