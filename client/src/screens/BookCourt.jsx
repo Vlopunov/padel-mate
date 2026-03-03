@@ -15,8 +15,7 @@ const VENUE_EXTRA = {
     schedule: 'Пн-Вс: 8:00 — 23:00',
     mapUrl: 'https://yandex.by/maps/-/CDxCrG~v',
     courts: [
-      { name: 'Стандартные корты', count: 6, type: '2 на 2', icon: '\uD83C\uDFBE' },
-      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+      { name: 'Стандартные корты', count: 7, type: '2 на 2', icon: '\uD83C\uDFBE' },
     ],
     features: ['Раздевалки', 'Душевые', 'Прокат ракеток', 'Кафе', 'Парковка', 'Wi-Fi'],
     priceDetails: [
