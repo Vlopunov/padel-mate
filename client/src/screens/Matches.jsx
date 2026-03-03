@@ -157,7 +157,8 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   async function loadMatches() {
     setLoading(true);
     try {
-      const data = await api.matches.list({ status: filter === 'all' ? '' : filter });
+      const cityFilter = user?.city || '';
+      const data = await api.matches.list({ status: filter === 'all' ? '' : filter, ...(cityFilter && { city: cityFilter }) });
       setMatches(data);
     } catch (err) {
       console.error('Load matches error:', err);

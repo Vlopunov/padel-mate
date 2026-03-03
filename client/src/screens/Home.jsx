@@ -22,14 +22,15 @@ export function Home({ user, onNavigate }) {
 
   async function loadData() {
     try {
+      const cityFilter = user?.city || '';
       const [allMatches, tournaments] = await Promise.all([
-        api.matches.list({ status: 'recruiting' }),
+        api.matches.list({ status: 'recruiting', ...(cityFilter && { city: cityFilter }) }),
         api.tournaments.list({ status: 'registration' }),
       ]);
       setMatches(allMatches.slice(0, 2));
 
       // Find pending score matches for this user
-      const full = await api.matches.list({ status: 'full' });
+      const full = await api.matches.list({ status: 'full', ...(cityFilter && { city: cityFilter }) });
       const pending = full.filter(
         (m) => ['FULL', 'PENDING_SCORE'].includes(m.status) && m.players.some((p) => p.user.id === user?.id)
       );
