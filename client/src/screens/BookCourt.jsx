@@ -180,7 +180,7 @@ export function BookCourt({ venueId, onBack }) {
       await Promise.all(
         bookableStaff.map(async (s) => {
           try {
-            const times = await api.venues.bookingTimes(venueId, s.id, day, filteredServiceIds);
+            const times = await api.venues.bookingTimes(venueId, s.id, day);
             results[s.id] = Array.isArray(times) ? times : [];
           } catch { results[s.id] = []; }
         })
