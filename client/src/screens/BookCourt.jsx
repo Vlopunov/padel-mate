@@ -284,6 +284,106 @@ export function BookCourt({ venueId, onBack }) {
         </div>
       </Card>
 
+      {/* Booking section */}
+      {hasApiSlots && (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Свободное время</p>
+
+          {/* Duration */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {DURATIONS.map(d => (
+              <button key={d.value} onClick={() => setDuration(d.value)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 12,
+                border: `1px solid ${duration === d.value ? COLORS.accent : COLORS.border}`,
+                background: duration === d.value ? COLORS.accentGlow : COLORS.surface,
+                color: duration === d.value ? COLORS.accent : COLORS.textDim,
+                fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                WebkitTapHighlightColor: 'transparent',
+              }}>{d.label}</button>
+            ))}
+          </div>
+
+          {/* Dates */}
+          <div style={{
+            display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
+          }} className="hide-scrollbar">
+            {dates.map(d => {
+              const active = selectedDate && formatDate(selectedDate) === formatDate(d);
+              const isToday = formatDate(d) === formatDate(new Date());
+              return (
+                <button key={formatDate(d)} onClick={() => setSelectedDate(d)} style={{
+                  minWidth: 60, padding: '8px 4px', borderRadius: 12,
+                  border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                  background: active ? COLORS.accentGlow : COLORS.surface,
+                  color: active ? COLORS.accent : COLORS.text,
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', flexShrink: 0,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: active ? COLORS.accent : COLORS.textDim }}>
+                    {isToday ? 'Сегодня' : DAYS_RU[d.getDay()]}
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0' }}>{d.getDate()}</div>
+                  <div style={{ fontSize: 11, color: active ? COLORS.accent : COLORS.textDim }}>{MONTHS_RU[d.getMonth()]}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Time slots */}
+          {selectedDate && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>
+                Время {loadingTimes && '...'}
+              </p>
+              {loadingTimes ? (
+                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Загрузка слотов...</p>
+              ) : mergedSlots.length === 0 ? (
+                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Нет свободных слотов</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {mergedSlots.map(slot => {
+                    const active = selectedTime === slot.time;
+                    return (
+                      <button key={slot.time} onClick={() => { setSelectedTime(slot.time); setSelectedStaffId(null); }} style={{
+                        padding: '10px 0', borderRadius: 10,
+                        border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                        background: active ? COLORS.accentGlow : COLORS.surface,
+                        color: active ? COLORS.accent : COLORS.text,
+                        fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}>{slot.time}</button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Court selector */}
+          {selectedTime && availableCourts.length > 0 && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>Выберите корт</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {availableCourts.map(court => {
+                  const active = selectedStaffId === String(court.staffId);
+                  return (
+                    <button key={court.staffId} onClick={() => setSelectedStaffId(String(court.staffId))} style={{
+                      padding: '14px 8px', borderRadius: 12,
+                      border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                      background: active ? COLORS.accentGlow : COLORS.surface,
+                      color: active ? COLORS.accent : COLORS.text,
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      textAlign: 'center', WebkitTapHighlightColor: 'transparent',
+                    }}>{court.name}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
       {/* Courts info */}
       {extra.courts && extra.courts.length > 0 && (
         <>
@@ -390,106 +490,6 @@ export function BookCourt({ venueId, onBack }) {
               <Badge key={i} variant="accent">{'\u2713'} {f}</Badge>
             ))}
           </div>
-        </>
-      )}
-
-      {/* Booking section */}
-      {hasApiSlots && (
-        <>
-          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10, color: COLORS.text }}>Свободное время</p>
-
-          {/* Duration */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            {DURATIONS.map(d => (
-              <button key={d.value} onClick={() => setDuration(d.value)} style={{
-                flex: 1, padding: '10px 0', borderRadius: 12,
-                border: `1px solid ${duration === d.value ? COLORS.accent : COLORS.border}`,
-                background: duration === d.value ? COLORS.accentGlow : COLORS.surface,
-                color: duration === d.value ? COLORS.accent : COLORS.textDim,
-                fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                WebkitTapHighlightColor: 'transparent',
-              }}>{d.label}</button>
-            ))}
-          </div>
-
-          {/* Dates */}
-          <div style={{
-            display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
-            scrollbarWidth: 'none', msOverflowStyle: 'none',
-          }} className="hide-scrollbar">
-            {dates.map(d => {
-              const active = selectedDate && formatDate(selectedDate) === formatDate(d);
-              const isToday = formatDate(d) === formatDate(new Date());
-              return (
-                <button key={formatDate(d)} onClick={() => setSelectedDate(d)} style={{
-                  minWidth: 60, padding: '8px 4px', borderRadius: 12,
-                  border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                  background: active ? COLORS.accentGlow : COLORS.surface,
-                  color: active ? COLORS.accent : COLORS.text,
-                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', flexShrink: 0,
-                  WebkitTapHighlightColor: 'transparent',
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: active ? COLORS.accent : COLORS.textDim }}>
-                    {isToday ? 'Сегодня' : DAYS_RU[d.getDay()]}
-                  </div>
-                  <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0' }}>{d.getDate()}</div>
-                  <div style={{ fontSize: 11, color: active ? COLORS.accent : COLORS.textDim }}>{MONTHS_RU[d.getMonth()]}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Time slots */}
-          {selectedDate && (
-            <>
-              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>
-                Время {loadingTimes && '...'}
-              </p>
-              {loadingTimes ? (
-                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Загрузка слотов...</p>
-              ) : mergedSlots.length === 0 ? (
-                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Нет свободных слотов</p>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                  {mergedSlots.map(slot => {
-                    const active = selectedTime === slot.time;
-                    return (
-                      <button key={slot.time} onClick={() => { setSelectedTime(slot.time); setSelectedStaffId(null); }} style={{
-                        padding: '10px 0', borderRadius: 10,
-                        border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                        background: active ? COLORS.accentGlow : COLORS.surface,
-                        color: active ? COLORS.accent : COLORS.text,
-                        fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                        WebkitTapHighlightColor: 'transparent',
-                      }}>{slot.time}</button>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Court selector */}
-          {selectedTime && availableCourts.length > 0 && (
-            <>
-              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>Выберите корт</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                {availableCourts.map(court => {
-                  const active = selectedStaffId === String(court.staffId);
-                  return (
-                    <button key={court.staffId} onClick={() => setSelectedStaffId(String(court.staffId))} style={{
-                      padding: '14px 8px', borderRadius: 12,
-                      border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                      background: active ? COLORS.accentGlow : COLORS.surface,
-                      color: active ? COLORS.accent : COLORS.text,
-                      fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                      textAlign: 'center', WebkitTapHighlightColor: 'transparent',
-                    }}>{court.name}</button>
-                  );
-                })}
-              </div>
-            </>
-          )}
         </>
       )}
 
