@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -90,6 +90,7 @@ export function BookCourt({ venueId, onBack }) {
   const [loadingTimes, setLoadingTimes] = useState(false);
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState(null);
+  const loadIdRef = useRef(0); // prevent race conditions in loadTimes
 
   const extra = venue ? (VENUE_EXTRA[venue.name] || {}) : {};
 
@@ -176,6 +177,7 @@ export function BookCourt({ venueId, onBack }) {
   }, [selectedDate, duration, courtStaff.length]);
 
   async function loadTimes() {
+    const myLoadId = ++loadIdRef.current; // track this request
     setLoadingTimes(true);
     setSelectedTime(null);
     setSelectedStaffId(null);
@@ -196,8 +198,10 @@ export function BookCourt({ venueId, onBack }) {
     }
 
     if (tariffQueries.length === 0) {
-      setTimeSlots({});
-      setLoadingTimes(false);
+      if (myLoadId === loadIdRef.current) {
+        setTimeSlots({});
+        setLoadingTimes(false);
+      }
       return;
     }
 
@@ -217,11 +221,16 @@ export function BookCourt({ venueId, onBack }) {
           results[court.id] = courtSlots;
         })
       );
-      setTimeSlots(results);
+      // Only update state if this is still the latest request (prevents race conditions)
+      if (myLoadId === loadIdRef.current) {
+        setTimeSlots(results);
+      }
     } catch (err) {
       console.error('Load times error:', err);
     } finally {
-      setLoadingTimes(false);
+      if (myLoadId === loadIdRef.current) {
+        setLoadingTimes(false);
+      }
     }
   }
 
@@ -290,8 +299,19 @@ export function BookCourt({ venueId, onBack }) {
     const [hh, mi] = selectedTime.split(':');
     const dateCode = `${yy}${dd}${mo}${hh.padStart(2, '0')}${mi.padStart(2, '0')}`;
 
-    const base = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}`;
-    openExternal(`${base}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`);
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`;
+
+    console.log('[BookCourt] openBooking:', {
+      date: selectedDate.toISOString(),
+      time: selectedTime,
+      staffId: selectedStaffId,
+      serviceId: courtEntry.serviceId,
+      duration,
+      dateCode,
+      url,
+    });
+
+    openExternal(url);
   }
 
   // ── RENDER ──
