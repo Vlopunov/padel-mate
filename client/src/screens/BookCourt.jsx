@@ -6,6 +6,53 @@ import { Badge } from '../components/ui/Badge';
 import { Header } from '../components/ui/Header';
 import { api } from '../services/api';
 
+// Extended venue info (static for now — will move to DB later)
+const VENUE_EXTRA = {
+  '360 Padel Arena': {
+    description: 'Крупнейший падел-клуб Беларуси. 7 кортов с профессиональным покрытием, раздевалки, кафе-зона, прокат ракеток и мячей.',
+    phone: '+375 (29) 360-00-00',
+    instagram: 'https://instagram.com/360padelarena',
+    schedule: 'Пн-Вс: 8:00 — 23:00',
+    mapUrl: 'https://yandex.by/maps/-/CDxCrG~v',
+    courts: [
+      { name: 'Стандартные корты', count: 6, type: '2 на 2', icon: '\uD83C\uDFBE' },
+      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+    ],
+    features: ['Раздевалки', 'Душевые', 'Прокат ракеток', 'Кафе', 'Парковка', 'Wi-Fi'],
+    priceDetails: [
+      { label: 'Будни (8:00-17:00)', price: '120 BYN/час' },
+      { label: 'Будни (17:00-23:00)', price: '160 BYN/час' },
+      { label: 'Выходные', price: '160 BYN/час' },
+    ],
+  },
+  'Meta Padel': {
+    description: 'Падел-клуб в Гродно. 3 корта: 2 стандартных для игры 2 на 2 и 1 корт для игры 1 на 1.',
+    phone: null,
+    instagram: null,
+    schedule: null,
+    mapUrl: null,
+    courts: [
+      { name: 'Стандартные корты', count: 2, type: '2 на 2', icon: '\uD83C\uDFBE' },
+      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+    ],
+    features: [],
+    priceDetails: [],
+  },
+  'PADEL BAZA': {
+    description: 'Падел-клуб в Бресте. 2 корта для игры 1 на 1 и 2 на 2.',
+    phone: null,
+    instagram: null,
+    schedule: null,
+    mapUrl: null,
+    courts: [
+      { name: 'Стандартный корт', count: 1, type: '2 на 2', icon: '\uD83C\uDFBE' },
+      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+    ],
+    features: [],
+    priceDetails: [],
+  },
+};
+
 const DAYS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS_RU = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
 
@@ -19,6 +66,23 @@ function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function InfoRow({ icon, label, value, onClick }) {
+  const content = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0' }}>
+      <span style={{ fontSize: 18, width: 28, textAlign: 'center' }}>{icon}</span>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 12, color: COLORS.textDim }}>{label}</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: onClick ? COLORS.accent : COLORS.text }}>{value}</p>
+      </div>
+      {onClick && <span style={{ color: COLORS.textDim, fontSize: 16 }}>{'\u2197'}</span>}
+    </div>
+  );
+  if (onClick) {
+    return <button onClick={onClick} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', WebkitTapHighlightColor: 'transparent' }}>{content}</button>;
+  }
+  return content;
+}
+
 export function BookCourt({ venueId, onBack }) {
   const tg = window.Telegram?.WebApp;
 
@@ -27,6 +91,7 @@ export function BookCourt({ venueId, onBack }) {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fallbackUrl, setFallbackUrl] = useState(null);
+  const [showSlots, setShowSlots] = useState(false);
 
   const [duration, setDuration] = useState(60);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -35,7 +100,8 @@ export function BookCourt({ venueId, onBack }) {
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaffId, setSelectedStaffId] = useState(null);
 
-  // Generate next 7 days
+  const extra = venue ? (VENUE_EXTRA[venue.name] || {}) : {};
+
   const dates = useMemo(() => {
     const result = [];
     for (let i = 0; i < 7; i++) {
@@ -46,10 +112,7 @@ export function BookCourt({ venueId, onBack }) {
     return result;
   }, []);
 
-  // Load venue + services + staff
-  useEffect(() => {
-    loadInitialData();
-  }, [venueId]);
+  useEffect(() => { loadInitialData(); }, [venueId]);
 
   async function loadInitialData() {
     try {
@@ -58,24 +121,19 @@ export function BookCourt({ venueId, onBack }) {
       setVenue(venueData);
 
       if (!venueData.yclientsCompanyId) {
-        setFallbackUrl(null);
         setLoading(false);
         return;
       }
 
       const [servicesData, staffData] = await Promise.all([
-        api.venues.bookingServices(venueId).catch(e => { setFallbackUrl(e.fallbackUrl); return []; }),
-        api.venues.bookingStaff(venueId).catch(e => { setFallbackUrl(e.fallbackUrl); return []; }),
+        api.venues.bookingServices(venueId).catch(() => []),
+        api.venues.bookingStaff(venueId).catch(() => []),
       ]);
       setServices(Array.isArray(servicesData) ? servicesData : []);
       setStaff(Array.isArray(staffData) ? staffData : []);
-
-      if ((!servicesData || !servicesData.length) && (!staffData || !staffData.length)) {
-        setFallbackUrl(buildFallback(venueData));
-      }
+      setFallbackUrl(buildFallback(venueData));
     } catch (err) {
       console.error('BookCourt init error:', err);
-      setFallbackUrl(buildFallback(null));
     } finally {
       setLoading(false);
     }
@@ -87,14 +145,12 @@ export function BookCourt({ venueId, onBack }) {
     return `https://${ven.yclientsFormId}.yclients.com/company/${ven.yclientsCompanyId}/personal/select-time?o=`;
   }
 
-  // Filter services by duration
   const filteredServiceIds = useMemo(() => {
     return services
       .filter(s => (s.seance_length === duration * 60) || (s.duration === duration))
       .map(s => String(s.id));
   }, [services, duration]);
 
-  // Load times when date changes
   useEffect(() => {
     if (!selectedDate || staff.length === 0) return;
     loadTimes();
@@ -104,10 +160,8 @@ export function BookCourt({ venueId, onBack }) {
     setLoadingTimes(true);
     setSelectedTime(null);
     setSelectedStaffId(null);
-
     const day = formatDate(selectedDate);
     const bookableStaff = staff.filter(s => s.bookable !== false);
-
     try {
       const results = {};
       await Promise.all(
@@ -115,20 +169,14 @@ export function BookCourt({ venueId, onBack }) {
           try {
             const times = await api.venues.bookingTimes(venueId, s.id, day, filteredServiceIds);
             results[s.id] = Array.isArray(times) ? times : [];
-          } catch {
-            results[s.id] = [];
-          }
+          } catch { results[s.id] = []; }
         })
       );
       setTimeSlots(results);
-    } catch (err) {
-      console.error('Load times error:', err);
-    } finally {
-      setLoadingTimes(false);
-    }
+    } catch (err) { console.error('Load times error:', err); }
+    finally { setLoadingTimes(false); }
   }
 
-  // Merge times across all courts
   const mergedSlots = useMemo(() => {
     const timeMap = {};
     for (const [staffId, slots] of Object.entries(timeSlots)) {
@@ -144,7 +192,6 @@ export function BookCourt({ venueId, onBack }) {
       .map(([time, courts]) => ({ time, courts }));
   }, [timeSlots]);
 
-  // Courts available for selected time
   const availableCourts = useMemo(() => {
     if (!selectedTime) return [];
     const slot = mergedSlots.find(s => s.time === selectedTime);
@@ -155,30 +202,17 @@ export function BookCourt({ venueId, onBack }) {
     });
   }, [selectedTime, mergedSlots, staff]);
 
-  function openBooking() {
-    let url = buildFallback(venue);
-    if (url && selectedStaffId) {
-      url += `&s=${selectedStaffId}`;
-    }
-    if (url && selectedDate) {
-      url += `&d=${formatDate(selectedDate)}`;
-    }
+  function openExternal(url) {
     if (!url) return;
-    if (tg?.openLink) {
-      tg.openLink(url);
-    } else {
-      window.open(url, '_blank');
-    }
+    if (tg?.openLink) tg.openLink(url);
+    else window.open(url, '_blank');
   }
 
-  function openFallback() {
-    const url = fallbackUrl || buildFallback(venue);
-    if (!url) return;
-    if (tg?.openLink) {
-      tg.openLink(url);
-    } else {
-      window.open(url, '_blank');
-    }
+  function openBooking() {
+    let url = buildFallback(venue);
+    if (url && selectedStaffId) url += `&s=${selectedStaffId}`;
+    if (url && selectedDate) url += `&d=${formatDate(selectedDate)}`;
+    openExternal(url);
   }
 
   // --- RENDER ---
@@ -186,7 +220,7 @@ export function BookCourt({ venueId, onBack }) {
   if (loading) {
     return (
       <div style={{ padding: 20, textAlign: 'center' }}>
-        <Header title="Бронирование" onBack={onBack} />
+        <Header title="Площадка" onBack={onBack} />
         <p style={{ color: COLORS.textDim, marginTop: 60 }}>Загрузка...</p>
       </div>
     );
@@ -195,209 +229,259 @@ export function BookCourt({ venueId, onBack }) {
   if (!venue) {
     return (
       <div style={{ padding: 20 }}>
-        <Header title="Бронирование" onBack={onBack} />
+        <Header title="Площадка" onBack={onBack} />
         <p style={{ color: COLORS.textDim, marginTop: 40, textAlign: 'center' }}>Площадка не найдена</p>
       </div>
     );
   }
 
-  // Fallback mode — direct link
-  if (fallbackUrl && staff.length === 0) {
-    return (
-      <div style={{ padding: 20 }}>
-        <Header title="Бронирование" onBack={onBack} />
-        <Card style={{ marginTop: 16 }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{venue.name}</p>
-            <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 4 }}>{venue.address}</p>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 12 }}>
-              <Badge variant="accent">{venue.courts} {venue.courts === 1 ? 'корт' : 'кортов'}</Badge>
-              {venue.yclientsPriceLabel && <Badge>{venue.yclientsPriceLabel}</Badge>}
-            </div>
-          </div>
-        </Card>
-        <Button fullWidth style={{ marginTop: 20 }} onClick={openFallback}>
-          {'\uD83C\uDFBE'} Забронировать в YClients
-        </Button>
-      </div>
-    );
-  }
+  const hasApiSlots = staff.length > 0;
 
   return (
     <div style={{ padding: 20, paddingBottom: 100 }}>
-      <Header title="Бронирование" onBack={onBack} />
+      <Header title="Площадка" onBack={onBack} />
 
-      {/* Venue card */}
-      <Card style={{ marginTop: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-          <div>
-            <p style={{ fontSize: 18, fontWeight: 700 }}>{venue.name}</p>
-            <p style={{ fontSize: 13, color: COLORS.textDim }}>{venue.address}</p>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <p style={{ fontSize: 12, color: COLORS.textDim }}>Кортов</p>
-            <p style={{ fontSize: 20, fontWeight: 700 }}>{venue.courts}</p>
+      {/* Hero card */}
+      <Card style={{
+        marginTop: 12,
+        background: `linear-gradient(135deg, ${COLORS.accent}12, ${COLORS.purple}08)`,
+        border: `1px solid ${COLORS.accent}25`,
+      }}>
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <p style={{ fontSize: 22, fontWeight: 800, color: COLORS.text }}>{venue.name}</p>
+          <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 4 }}>{venue.address}</p>
+
+          {/* Stats row */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 24, fontWeight: 800, color: COLORS.accent }}>{venue.courts}</p>
+              <p style={{ fontSize: 11, color: COLORS.textDim }}>кортов</p>
+            </div>
+            <div style={{ width: 1, background: COLORS.border }} />
+            {venue.yclientsPriceLabel && (
+              <>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 24, fontWeight: 800, color: COLORS.accent }}>{venue.yclientsPriceLabel.replace('от ', '')}</p>
+                  <p style={{ fontSize: 11, color: COLORS.textDim }}>от / час</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
-        {venue.yclientsPriceLabel && (
-          <Badge variant="accent" style={{ marginTop: 8 }}>{venue.yclientsPriceLabel}</Badge>
-        )}
       </Card>
 
-      {/* Duration picker */}
-      <p style={{ fontSize: 14, fontWeight: 600, marginTop: 20, marginBottom: 8, color: COLORS.textDim }}>Длительность</p>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {DURATIONS.map(d => (
-          <button
-            key={d.value}
-            onClick={() => setDuration(d.value)}
-            style={{
-              flex: 1,
-              padding: '10px 0',
-              borderRadius: 12,
-              border: `1px solid ${duration === d.value ? COLORS.accent : COLORS.border}`,
-              background: duration === d.value ? COLORS.accentGlow : COLORS.surface,
-              color: duration === d.value ? COLORS.accent : COLORS.textDim,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-          >
-            {d.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Date picker */}
-      <p style={{ fontSize: 14, fontWeight: 600, marginTop: 20, marginBottom: 8, color: COLORS.textDim }}>Дата</p>
-      <div style={{
-        display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
-        scrollbarWidth: 'none', msOverflowStyle: 'none',
-      }} className="hide-scrollbar">
-        {dates.map(d => {
-          const active = selectedDate && formatDate(selectedDate) === formatDate(d);
-          const isToday = formatDate(d) === formatDate(new Date());
-          return (
-            <button
-              key={formatDate(d)}
-              onClick={() => setSelectedDate(d)}
-              style={{
-                minWidth: 60,
-                padding: '8px 4px',
-                borderRadius: 12,
-                border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                background: active ? COLORS.accentGlow : COLORS.surface,
-                color: active ? COLORS.accent : COLORS.text,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                textAlign: 'center',
-                flexShrink: 0,
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              <div style={{ fontSize: 11, fontWeight: 600, color: active ? COLORS.accent : COLORS.textDim }}>
-                {isToday ? 'Сегодня' : DAYS_RU[d.getDay()]}
-              </div>
-              <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0' }}>{d.getDate()}</div>
-              <div style={{ fontSize: 11, color: active ? COLORS.accent : COLORS.textDim }}>{MONTHS_RU[d.getMonth()]}</div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Time slots */}
-      {selectedDate && (
+      {/* Courts info */}
+      {extra.courts && extra.courts.length > 0 && (
         <>
-          <p style={{ fontSize: 14, fontWeight: 600, marginTop: 20, marginBottom: 8, color: COLORS.textDim }}>
-            Время {loadingTimes && '...'}
-          </p>
-          {loadingTimes ? (
-            <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Загрузка слотов...</p>
-          ) : mergedSlots.length === 0 ? (
-            <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Нет свободных слотов на эту дату</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-              {mergedSlots.map(slot => {
-                const active = selectedTime === slot.time;
-                return (
-                  <button
-                    key={slot.time}
-                    onClick={() => {
-                      setSelectedTime(slot.time);
-                      setSelectedStaffId(null);
-                    }}
-                    style={{
-                      padding: '10px 0',
-                      borderRadius: 10,
-                      border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                      background: active ? COLORS.accentGlow : COLORS.surface,
-                      color: active ? COLORS.accent : COLORS.text,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      WebkitTapHighlightColor: 'transparent',
-                    }}
-                  >
-                    {slot.time}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Корты</p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {extra.courts.map((c, i) => (
+              <Card key={i} style={{ flex: 1, textAlign: 'center', padding: 12 }}>
+                <span style={{ fontSize: 28 }}>{c.icon}</span>
+                <p style={{ fontSize: 14, fontWeight: 700, marginTop: 6, color: COLORS.text }}>{c.count}x</p>
+                <p style={{ fontSize: 12, color: COLORS.textDim }}>{c.name}</p>
+                <Badge style={{ marginTop: 6 }}>{c.type}</Badge>
+              </Card>
+            ))}
+          </div>
         </>
       )}
 
-      {/* Court selector */}
-      {selectedTime && availableCourts.length > 0 && (
+      {/* Price details */}
+      {extra.priceDetails && extra.priceDetails.length > 0 && (
         <>
-          <p style={{ fontSize: 14, fontWeight: 600, marginTop: 20, marginBottom: 8, color: COLORS.textDim }}>Выберите корт</p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {availableCourts.map(court => {
-              const active = selectedStaffId === String(court.staffId);
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Цены</p>
+          <Card>
+            {extra.priceDetails.map((p, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: i < extra.priceDetails.length - 1 ? `1px solid ${COLORS.border}` : 'none',
+              }}>
+                <span style={{ fontSize: 13, color: COLORS.textDim }}>{p.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>{p.price}</span>
+              </div>
+            ))}
+          </Card>
+        </>
+      )}
+
+      {/* Description */}
+      {extra.description && (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>О площадке</p>
+          <Card>
+            <p style={{ fontSize: 13, lineHeight: 1.5, color: COLORS.textDim }}>{extra.description}</p>
+          </Card>
+        </>
+      )}
+
+      {/* Info rows */}
+      <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 6, color: COLORS.text }}>Информация</p>
+      <Card>
+        {extra.schedule && (
+          <InfoRow icon={'\uD83D\uDD52'} label="Режим работы" value={extra.schedule} />
+        )}
+        {extra.phone && (
+          <InfoRow
+            icon={'\uD83D\uDCDE'}
+            label="Телефон"
+            value={extra.phone}
+            onClick={() => openExternal(`tel:${extra.phone.replace(/[^+\d]/g, '')}`)}
+          />
+        )}
+        {extra.mapUrl && (
+          <InfoRow
+            icon={'\uD83D\uDCCD'}
+            label="На карте"
+            value="Открыть в Яндекс.Картах"
+            onClick={() => openExternal(extra.mapUrl)}
+          />
+        )}
+        {extra.instagram && (
+          <InfoRow
+            icon={'\uD83D\uDCF8'}
+            label="Instagram"
+            value="@360padelarena"
+            onClick={() => openExternal(extra.instagram)}
+          />
+        )}
+        {!extra.schedule && !extra.phone && !extra.mapUrl && (
+          <p style={{ fontSize: 13, color: COLORS.textDim, padding: '10px 0' }}>Подробная информация скоро появится</p>
+        )}
+      </Card>
+
+      {/* Amenities */}
+      {extra.features && extra.features.length > 0 && (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Удобства</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {extra.features.map((f, i) => (
+              <Badge key={i} variant="accent">{'\u2713'} {f}</Badge>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Booking section */}
+      {hasApiSlots && showSlots && (
+        <>
+          <p style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10, color: COLORS.text }}>Свободное время</p>
+
+          {/* Duration */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            {DURATIONS.map(d => (
+              <button key={d.value} onClick={() => setDuration(d.value)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 12,
+                border: `1px solid ${duration === d.value ? COLORS.accent : COLORS.border}`,
+                background: duration === d.value ? COLORS.accentGlow : COLORS.surface,
+                color: duration === d.value ? COLORS.accent : COLORS.textDim,
+                fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                WebkitTapHighlightColor: 'transparent',
+              }}>{d.label}</button>
+            ))}
+          </div>
+
+          {/* Dates */}
+          <div style={{
+            display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
+          }} className="hide-scrollbar">
+            {dates.map(d => {
+              const active = selectedDate && formatDate(selectedDate) === formatDate(d);
+              const isToday = formatDate(d) === formatDate(new Date());
               return (
-                <button
-                  key={court.staffId}
-                  onClick={() => setSelectedStaffId(String(court.staffId))}
-                  style={{
-                    padding: '14px 8px',
-                    borderRadius: 12,
-                    border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
-                    background: active ? COLORS.accentGlow : COLORS.surface,
-                    color: active ? COLORS.accent : COLORS.text,
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    textAlign: 'center',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}
-                >
-                  {court.name}
+                <button key={formatDate(d)} onClick={() => setSelectedDate(d)} style={{
+                  minWidth: 60, padding: '8px 4px', borderRadius: 12,
+                  border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                  background: active ? COLORS.accentGlow : COLORS.surface,
+                  color: active ? COLORS.accent : COLORS.text,
+                  cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', flexShrink: 0,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: active ? COLORS.accent : COLORS.textDim }}>
+                    {isToday ? 'Сегодня' : DAYS_RU[d.getDay()]}
+                  </div>
+                  <div style={{ fontSize: 20, fontWeight: 700, margin: '2px 0' }}>{d.getDate()}</div>
+                  <div style={{ fontSize: 11, color: active ? COLORS.accent : COLORS.textDim }}>{MONTHS_RU[d.getMonth()]}</div>
                 </button>
               );
             })}
           </div>
+
+          {/* Time slots */}
+          {selectedDate && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>
+                Время {loadingTimes && '...'}
+              </p>
+              {loadingTimes ? (
+                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Загрузка слотов...</p>
+              ) : mergedSlots.length === 0 ? (
+                <p style={{ color: COLORS.textDim, fontSize: 13, textAlign: 'center', padding: 20 }}>Нет свободных слотов</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  {mergedSlots.map(slot => {
+                    const active = selectedTime === slot.time;
+                    return (
+                      <button key={slot.time} onClick={() => { setSelectedTime(slot.time); setSelectedStaffId(null); }} style={{
+                        padding: '10px 0', borderRadius: 10,
+                        border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                        background: active ? COLORS.accentGlow : COLORS.surface,
+                        color: active ? COLORS.accent : COLORS.text,
+                        fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                        WebkitTapHighlightColor: 'transparent',
+                      }}>{slot.time}</button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Court selector */}
+          {selectedTime && availableCourts.length > 0 && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>Выберите корт</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {availableCourts.map(court => {
+                  const active = selectedStaffId === String(court.staffId);
+                  return (
+                    <button key={court.staffId} onClick={() => setSelectedStaffId(String(court.staffId))} style={{
+                      padding: '14px 8px', borderRadius: 12,
+                      border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                      background: active ? COLORS.accentGlow : COLORS.surface,
+                      color: active ? COLORS.accent : COLORS.text,
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      textAlign: 'center', WebkitTapHighlightColor: 'transparent',
+                    }}>{court.name}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </>
       )}
 
-      {/* Book button */}
+      {/* Bottom CTA */}
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
         background: `linear-gradient(transparent, ${COLORS.bg} 30%)`,
         pointerEvents: 'none',
       }}>
-        <Button
-          fullWidth
-          onClick={openBooking}
-          disabled={!selectedTime}
-          style={{ pointerEvents: 'auto' }}
-        >
-          {'\uD83C\uDFBE'} Забронировать в YClients
-        </Button>
+        {hasApiSlots && showSlots && selectedTime ? (
+          <Button fullWidth onClick={openBooking} style={{ pointerEvents: 'auto' }}>
+            {'\uD83C\uDFBE'} Забронировать в YClients
+          </Button>
+        ) : (
+          <Button fullWidth onClick={() => {
+            if (hasApiSlots) { setShowSlots(true); }
+            else { openExternal(fallbackUrl || buildFallback(venue)); }
+          }} style={{ pointerEvents: 'auto' }}>
+            {'\uD83C\uDFBE'} Забронировать корт
+          </Button>
+        )}
       </div>
     </div>
   );
