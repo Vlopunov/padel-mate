@@ -1,4 +1,4 @@
-const YCLIENTS_BEARER_TOKEN = process.env.YCLIENTS_BEARER_TOKEN || '';
+const YCLIENTS_BEARER_TOKEN = process.env.YCLIENTS_BEARER_TOKEN || 'padelgo';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
 const cache = new Map();
 
@@ -14,14 +14,13 @@ function setCache(key, data) {
 }
 
 async function ycFetch(formId, path) {
-  const url = `https://${formId}.yclients.com/api/v1${path}`;
+  // Use api.yclients.com — works with any Bearer token
+  const url = `https://api.yclients.com/api/v1${path}`;
   const headers = {
     'Accept': 'application/vnd.yclients.v2+json',
     'Accept-Language': 'ru',
+    'Authorization': `Bearer ${YCLIENTS_BEARER_TOKEN}`,
   };
-  if (YCLIENTS_BEARER_TOKEN) {
-    headers['Authorization'] = `Bearer ${YCLIENTS_BEARER_TOKEN}`;
-  }
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`YClients API ${res.status}`);
   const json = await res.json();

@@ -476,7 +476,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
           ))}
           {approvedPlayers.length < 4 && Array.from({ length: 4 - approvedPlayers.length }).map((_, i) => (
-            <EmptySlotBig key={`e-${i}`} />
+            <EmptySlotBig key={`e-${i}`} onClick={canJoin ? () => handleJoin(match.id) : undefined} />
           ))}
         </Card>
 
@@ -1120,19 +1120,30 @@ function PlayerRowBig({ player, isCreator, onPlayerClick }) {
   );
 }
 
-function EmptySlotBig() {
+function EmptySlotBig({ onClick }) {
+  const clickable = !!onClick;
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
-      padding: '8px 10px', borderRadius: 12, border: `2px dashed ${COLORS.border}`,
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8,
+        padding: '8px 10px', borderRadius: 12,
+        border: `2px dashed ${clickable ? COLORS.accent + '60' : COLORS.border}`,
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'all 0.15s',
+        WebkitTapHighlightColor: 'transparent',
+        background: clickable ? `${COLORS.accent}08` : 'transparent',
+      }}
+    >
       <div style={{
         width: 38, height: 38, borderRadius: 19,
-        border: `2px dashed ${COLORS.border}`,
+        border: `2px dashed ${clickable ? COLORS.accent + '60' : COLORS.border}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 18, color: COLORS.textMuted,
+        fontSize: 18, color: clickable ? COLORS.accent : COLORS.textMuted,
       }}>+</div>
-      <span style={{ fontSize: 14, color: COLORS.textMuted }}>Свободное место</span>
+      <span style={{ fontSize: 14, color: clickable ? COLORS.accent : COLORS.textMuted, fontWeight: clickable ? 600 : 400 }}>
+        {clickable ? 'Присоединиться' : 'Свободное место'}
+      </span>
     </div>
   );
 }

@@ -12,7 +12,7 @@ const VENUE_EXTRA = {
     description: '7 ультрапанорамных кортов международного уровня. Покрытие Mondo SuperCourt XN (как на турнирах WPT), профессиональное LED-освещение. СК «Триумф», Новая Боровая.',
     phone: '+375 29 378-04-00',
     telegram: 'https://t.me/padel360arena',
-    instagram: 'https://www.instagram.com/padel360.minsk',
+    instagram: 'https://www.instagram.com/padel360.minsk?igsh=MXV1aTI0N2c3andldQ%3D%3D',
     website: 'https://360padel.by',
     schedule: 'Ежедневно: 07:00 — 24:00',
     mapUrl: 'https://yandex.by/maps/?ll=27.709286%2C53.963323&mode=routes&rtext=~53.961714%2C27.700841&rtt=auto&ruri=~ymapsbm1%3A%2F%2Forg%3Foid%3D190799862155&z=16',
@@ -92,8 +92,6 @@ export function BookCourt({ venueId, onBack }) {
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fallbackUrl, setFallbackUrl] = useState(null);
-  const [showSlots, setShowSlots] = useState(false);
-
   const [duration, setDuration] = useState(60);
   const [selectedDate, setSelectedDate] = useState(null);
   const [timeSlots, setTimeSlots] = useState({});
@@ -130,7 +128,8 @@ export function BookCourt({ venueId, onBack }) {
         api.venues.bookingServices(venueId).catch(() => []),
         api.venues.bookingStaff(venueId).catch(() => []),
       ]);
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      const svcList = Array.isArray(servicesData) ? servicesData : (servicesData?.services || []);
+      setServices(svcList.filter(s => /корт/i.test(s.title || '')));
       setStaff(Array.isArray(staffData) ? staffData : []);
       setFallbackUrl(buildFallback(venueData));
     } catch (err) {
@@ -148,7 +147,20 @@ export function BookCourt({ venueId, onBack }) {
 
   const filteredServiceIds = useMemo(() => {
     return services
-      .filter(s => (s.seance_length === duration * 60) || (s.duration === duration))
+      .filter(s => {
+        // Parse from comment: "Аренда корта на 60 минут"
+        const comment = s.comment || '';
+        const m = comment.match(/(\d+)\s*минут/);
+        if (m && parseInt(m[1]) === duration) return true;
+        // Fallback: parse from title ("Корт 1 час", "Корт 1.5 часа", "Корт 2 часа")
+        const title = (s.title || '').toLowerCase();
+        if (duration === 120 && /\b2\s*час/.test(title)) return true;
+        if (duration === 90 && /1[.,]5\s*час/.test(title)) return true;
+        if (duration === 60 && /\b1\s*час/.test(title) && !/1[.,]5/.test(title)) return true;
+        // Fallback: seance_length
+        if (s.seance_length === duration * 60) return true;
+        return false;
+      })
       .map(s => String(s.id));
   }, [services, duration]);
 
@@ -162,7 +174,7 @@ export function BookCourt({ venueId, onBack }) {
     setSelectedTime(null);
     setSelectedStaffId(null);
     const day = formatDate(selectedDate);
-    const bookableStaff = staff.filter(s => s.bookable !== false);
+    const bookableStaff = staff.filter(s => s.bookable !== false && /корт/i.test(s.name || ''));
     try {
       const results = {};
       await Promise.all(
@@ -236,7 +248,8 @@ export function BookCourt({ venueId, onBack }) {
     );
   }
 
-  const hasApiSlots = staff.length > 0;
+  const courtStaff = staff.filter(s => s.bookable !== false && /корт/i.test(s.name || ''));
+  const hasApiSlots = courtStaff.length > 0;
 
   return (
     <div style={{ padding: 20, paddingBottom: 100 }}>
@@ -359,7 +372,7 @@ export function BookCourt({ venueId, onBack }) {
           <InfoRow
             icon={'\uD83D\uDCF8'}
             label="Instagram"
-            value={'@' + (extra.instagram.split('/').pop() || '')}
+            value={'@' + (extra.instagram.split('/').pop()?.split('?')[0] || '')}
             onClick={() => openExternal(extra.instagram)}
           />
         )}
@@ -381,7 +394,7 @@ export function BookCourt({ venueId, onBack }) {
       )}
 
       {/* Booking section */}
-      {hasApiSlots && showSlots && (
+      {hasApiSlots && (
         <>
           <p style={{ fontSize: 15, fontWeight: 700, marginTop: 24, marginBottom: 10, color: COLORS.text }}>Свободное время</p>
 
@@ -487,14 +500,13 @@ export function BookCourt({ venueId, onBack }) {
         background: `linear-gradient(transparent, ${COLORS.bg} 30%)`,
         pointerEvents: 'none',
       }}>
-        {hasApiSlots && showSlots && selectedTime ? (
+        {hasApiSlots && selectedTime ? (
           <Button fullWidth onClick={openBooking} style={{ pointerEvents: 'auto' }}>
             {'\uD83C\uDFBE'} Забронировать в YClients
           </Button>
         ) : (
           <Button fullWidth onClick={() => {
-            if (hasApiSlots) { setShowSlots(true); }
-            else { openExternal(fallbackUrl || buildFallback(venue)); }
+            openExternal(fallbackUrl || buildFallback(venue));
           }} style={{ pointerEvents: 'auto' }}>
             {'\uD83C\uDFBE'} Забронировать корт
           </Button>
