@@ -107,6 +107,24 @@ export const api = {
   // Venues
   venues: {
     list: (city) => api.fetch(`/venues${city ? `?city=${city}` : ''}`),
+    getById: (id) => api.fetch(`/venues/${id}`),
+    bookingServices: (id) => api.fetch(`/venues/${id}/booking/services`),
+    bookingStaff: (id, serviceIds = []) => {
+      const p = serviceIds.length ? `?service_ids=${serviceIds.join(',')}` : '';
+      return api.fetch(`/venues/${id}/booking/staff${p}`);
+    },
+    bookingDates: (id, staffId, serviceIds = []) => {
+      const p = new URLSearchParams();
+      if (staffId) p.set('staff_id', staffId);
+      if (serviceIds.length) p.set('service_ids', serviceIds.join(','));
+      const qs = p.toString();
+      return api.fetch(`/venues/${id}/booking/dates${qs ? '?' + qs : ''}`);
+    },
+    bookingTimes: (id, staffId, day, serviceIds = []) => {
+      const p = new URLSearchParams({ staff_id: staffId, day });
+      if (serviceIds.length) p.set('service_ids', serviceIds.join(','));
+      return api.fetch(`/venues/${id}/booking/times?${p.toString()}`);
+    },
   },
 
   // Tournaments

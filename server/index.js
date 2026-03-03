@@ -82,7 +82,7 @@ app.post("/api/seed-venues", async (req, res) => {
     }
     const venues = [
       // Минск
-      { name: "360 Padel Arena", address: "Минск", city: "MINSK", courts: 7 },
+      { name: "360 Padel Arena", address: "с/с Боровлянский, д. 308, этаж 2", city: "MINSK", courts: 7, yclientsCompanyId: "1073853", yclientsFormId: "n1170112", yclientsPriceLabel: "от 120 BYN/час" },
       { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 2 },
       { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", city: "MINSK", courts: 1 },
       { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", city: "MINSK", courts: 1 },
@@ -98,7 +98,8 @@ app.post("/api/seed-venues", async (req, res) => {
       const existing = await prisma.venue.findFirst({ where: { name: v.name } });
       let venue;
       if (existing) {
-        venue = await prisma.venue.update({ where: { id: existing.id }, data: { courts: v.courts } });
+        const { name: _n, ...updateData } = v;
+        venue = await prisma.venue.update({ where: { id: existing.id }, data: updateData });
       } else {
         venue = await prisma.venue.create({ data: v });
       }

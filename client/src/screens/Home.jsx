@@ -15,6 +15,7 @@ export function Home({ user, onNavigate }) {
   const [tournament, setTournament] = useState(null);
   const [trainingSessions, setTrainingSessions] = useState([]);
   const [homework, setHomework] = useState([]);
+  const [bookableVenue, setBookableVenue] = useState(null);
 
   useEffect(() => {
     loadData();
@@ -37,6 +38,13 @@ export function Home({ user, onNavigate }) {
       setPendingMatches(pending);
 
       if (tournaments.length > 0) setTournament(tournaments[0]);
+
+      // Find bookable venue (with YClients)
+      try {
+        const allVenues = await api.venues.list(cityFilter);
+        const bv = allVenues.find(v => v.yclientsCompanyId);
+        if (bv) setBookableVenue(bv);
+      } catch (e) { /* not critical */ }
 
       // HIDDEN: Coach features (training sessions & homework) — will enable later
       // try {
@@ -177,6 +185,23 @@ export function Home({ user, onNavigate }) {
           </Card>
         ))}
       </div>
+
+      {/* Booking banner */}
+      {bookableVenue && (
+        <Card
+          onClick={() => onNavigate('bookCourt', { venueId: bookableVenue.id })}
+          style={{ marginBottom: 12, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)` }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 24 }}>{'\uD83C\uDFBE'}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Забронировать корт</p>
+              <p style={{ fontSize: 12, color: COLORS.textDim }}>{bookableVenue.name} — посмотреть свободное время</p>
+            </div>
+            <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          </div>
+        </Card>
+      )}
 
       {/* HIDDEN: Find a coach banner — will enable later */}
 

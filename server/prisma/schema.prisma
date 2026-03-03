@@ -196,6 +196,9 @@ model Venue {
   courts      Int     @default(1)
   phone       String?
   website     String?
+  yclientsCompanyId  String?
+  yclientsFormId     String?
+  yclientsPriceLabel String?
   matches          Match[]
   tournaments      Tournament[]
   trainingSessions TrainingSession[]

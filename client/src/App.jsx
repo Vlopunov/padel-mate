@@ -17,6 +17,7 @@ import { Admin } from './screens/Admin';
 import { PlayerProfile } from './screens/PlayerProfile';
 import { FAQ } from './screens/FAQ';
 import { TournamentLive } from './screens/TournamentLive';
+import { BookCourt } from './screens/BookCourt';
 // HIDDEN: Coach features — will enable later
 // import { CoachPanel } from './screens/CoachPanel';
 // import { CoachStudentDetail } from './screens/CoachStudentDetail';
@@ -125,7 +126,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -253,6 +254,15 @@ export default function App() {
               user={user}
               onBack={() => setSubScreen(null)}
               onNavigate={handleNavigate}
+            />
+          </div>
+        );
+      case 'bookCourt':
+        return (
+          <div style={containerStyle}>
+            <BookCourt
+              venueId={subScreen.params?.venueId}
+              onBack={() => setSubScreen(null)}
             />
           </div>
         );
