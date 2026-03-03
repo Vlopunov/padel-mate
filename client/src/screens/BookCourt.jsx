@@ -104,6 +104,7 @@ export function BookCourt({ venueId, onBack }) {
   }, []);
 
   // ── Service mapping: { 60: { day: id, evening: id, weekend: id }, 90: {...}, 120: {...} }
+  // Also tracks is_chain per service — is_chain=true services don't work with /create-record/record URL
   const serviceMap = useMemo(() => {
     const map = {};
     for (const s of services) {
@@ -278,6 +279,17 @@ export function BookCourt({ venueId, onBack }) {
       return;
     }
 
+    // IMPORTANT: YClients /create-record/record URL only works with is_chain=false services.
+    // Day tariff services (is_chain=true) cause redirect to /personal/select-time and lose the date param.
+    // Always use evening (weekday) or weekend service ID in the URL — they have is_chain=false.
+    const durationServices = serviceMap[duration] || {};
+    const dayOfWeek = selectedDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    const bookingServiceId = isWeekend
+      ? (durationServices.weekend || durationServices.evening || courtEntry.serviceId)
+      : (durationServices.evening || durationServices.weekend || courtEntry.serviceId);
+
     // Build URL: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMI}0
     const yy = String(selectedDate.getFullYear()).slice(2);
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
@@ -285,7 +297,7 @@ export function BookCourt({ venueId, onBack }) {
     const [hh, mi] = selectedTime.split(':');
     const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}0`;
 
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`;
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`;
     openExternal(url);
   }
 
