@@ -233,7 +233,7 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
 
     // Notify partner via Telegram
     try {
-      const dateStr = new Date(tournament.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+      const dateStr = new Date(tournament.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long", timeZone: "Europe/Minsk" });
       const text =
         `🏆 <b>${reg.player1.firstName}</b> записал вас на турнир!\n\n` +
         `<b>${tournament.name}</b>\n` +

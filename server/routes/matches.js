@@ -120,7 +120,7 @@ router.post("/past", authMiddleware, async (req, res) => {
 
     // Notify other players about the recorded match (fetch telegramIds separately to avoid BigInt serialization)
     try {
-      const dateStr = new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+      const dateStr = new Date(date).toLocaleDateString("ru-RU", { day: "numeric", month: "long", timeZone: "Europe/Minsk" });
       const creator = players.find((p) => p.id === req.userId);
       const otherPlayerIds = allPlayerIds.filter((id) => id !== req.userId);
       const otherUsers = await prisma.user.findMany({
@@ -263,8 +263,8 @@ async function approvePlayerLogic(matchId, userId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (user && user.telegramId) {
     const venueName = match.venue?.name || '';
-    const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-    const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
+    const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' });
     const text = `✅ <b>Вас приняли в матч!</b>\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
     await sendTelegramMessage(user.telegramId.toString(), text);
   }
@@ -289,7 +289,7 @@ async function rejectPlayerLogic(matchId, userId) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (user && user.telegramId) {
     const venueName = match.venue?.name || '';
-    const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
     const text = `❌ <b>Заявка отклонена</b>\nМатч: ${venueName}, ${dateStr}`;
     await sendTelegramMessage(user.telegramId.toString(), text);
   }
@@ -332,8 +332,8 @@ router.post("/:id/join", authMiddleware, async (req, res) => {
     if (creator && creator.telegramId && creator.id !== req.userId) {
       const joinerName = joiner.firstName + (joiner.lastName ? ` ${joiner.lastName}` : '');
       const venueName = match.venue?.name || '';
-      const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-      const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
+      const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' });
       const text = `🎾 <b>Новая заявка на матч!</b>\n👤 ${joinerName} (рейтинг: ${joiner.rating})\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
       await sendTelegramMessage(creator.telegramId.toString(), text, {
         reply_markup: {
@@ -1205,8 +1205,8 @@ router.post("/:id/add-player/:userId", authMiddleware, async (req, res) => {
     if (targetUser && targetUser.telegramId) {
       const creatorName = creator.firstName + (creator.lastName ? ` ${creator.lastName}` : '');
       const venueName = match.venue?.name || '';
-      const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-      const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
+      const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' });
       const text = `🎾 <b>Вас пригласили в матч!</b>\n👤 От: ${creatorName}\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}\n\nОткройте приложение чтобы принять или отклонить.`;
       await sendTelegramMessage(targetUser.telegramId.toString(), text);
     }

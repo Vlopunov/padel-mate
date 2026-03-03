@@ -241,8 +241,9 @@ async function botJoinMatch(telegramId, matchId) {
   if (creator && creator.telegramId && creator.id !== user.id) {
     const joinerName = user.firstName + (user.lastName ? ` ${user.lastName}` : "");
     const venueName = match.venue?.name || "";
-    const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
-    const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+    const TZ = "Europe/Minsk";
+    const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short", timeZone: TZ });
+    const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
     const text = `🎾 <b>Новая заявка на матч!</b>\n👤 ${joinerName} (рейтинг: ${user.rating})\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
     await sendTelegramMessage(creator.telegramId.toString(), text, {
       reply_markup: {

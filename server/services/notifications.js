@@ -2,6 +2,11 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const MINI_APP_URL = process.env.MINI_APP_URL || "https://your-domain.com";
 const API_BASE = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
+const TZ = "Europe/Minsk";
+const fmtTime = (d) => new Date(d).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
+const fmtDateLong = (d) => new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "long", timeZone: TZ });
+const fmtDateShort = (d) => new Date(d).toLocaleDateString("ru-RU", { day: "numeric", month: "short", timeZone: TZ });
+
 async function sendTelegramMessage(chatId, text, options = {}) {
   if (!BOT_TOKEN) {
     console.log(`[Notification] Would send to ${chatId}: ${text}`);
@@ -68,9 +73,8 @@ async function notifyNewAchievement(telegramId, achievement) {
 }
 
 async function notifyMatchReminder(telegramId, match, minutesBefore) {
-  const matchDate = new Date(match.date);
-  const timeStr = matchDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = matchDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = fmtTime(match.date);
+  const dateStr = fmtDateLong(match.date);
 
   let timeLabel;
   if (minutesBefore >= 60) {
@@ -97,8 +101,8 @@ async function notifyMatchReminder(telegramId, match, minutesBefore) {
 }
 
 async function notifyNewMatchInArea(telegramId, match) {
-  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
-  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = fmtDateShort(match.date);
+  const timeStr = fmtTime(match.date);
   const spots = 4 - (match.approvedCount || 0);
   const text =
     `🎾 Появился матч вашего уровня!\n` +
@@ -116,13 +120,13 @@ async function notifyNewMatchInArea(telegramId, match) {
 }
 
 async function notifyTournamentOpen(telegramId, tournament) {
-  const text = `🏆 <b>Открыта запись на турнир:</b> ${tournament.name}\n📅 ${new Date(tournament.date).toLocaleDateString("ru-RU")}`;
+  const text = `🏆 <b>Открыта запись на турнир:</b> ${tournament.name}\n📅 ${fmtDateLong(tournament.date)}`;
   await sendTelegramMessage(telegramId, text);
 }
 
 async function notifyMatchCancelled(telegramId, match) {
-  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = fmtDateLong(match.date);
+  const timeStr = fmtTime(match.date);
   const venue = match.venue?.name || "";
   const approvedCount = match.players?.filter((p) => p.status === "APPROVED").length || 0;
   const text = `❌ <b>Матч отменён</b>\n\n📅 ${dateStr}, ${timeStr}\n📍 ${venue}\n\nПричина: не набралось 4 игрока (было ${approvedCount}/4).`;
@@ -136,8 +140,8 @@ async function notifyMatchCancelled(telegramId, match) {
 }
 
 async function notifyMatchFull(telegramId, match, playerNames) {
-  const dateStr = new Date(match.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
-  const timeStr = new Date(match.date).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = fmtDateLong(match.date);
+  const timeStr = fmtTime(match.date);
   const venue = match.venue?.name || "";
   const text =
     `🎉 <b>Матч собран!</b> 4/4 игрока\n\n` +
@@ -220,9 +224,8 @@ async function notifyMilestone(telegramId, milestone) {
 // ─── Training Session Notifications ───
 
 async function notifyTrainingReminder(telegramId, session, minutesBefore) {
-  const sessionDate = new Date(session.date);
-  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = fmtTime(session.date);
+  const dateStr = fmtDateLong(session.date);
 
   let timeLabel;
   if (minutesBefore >= 60) {
@@ -251,9 +254,8 @@ async function notifyTrainingReminder(telegramId, session, minutesBefore) {
 }
 
 async function notifyTrainingBooked(telegramId, session, student) {
-  const sessionDate = new Date(session.date);
-  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = fmtTime(session.date);
+  const dateStr = fmtDateLong(session.date);
   const typeLabel = session.type === "GROUP" ? "групповую" : "индивидуальную";
   const text =
     `📝 <b>${student.firstName} ${student.lastName || ""}</b> записался на ${typeLabel} тренировку\n\n` +
@@ -263,9 +265,8 @@ async function notifyTrainingBooked(telegramId, session, student) {
 }
 
 async function notifyTrainingCancelledByCoach(telegramId, session, coachName) {
-  const sessionDate = new Date(session.date);
-  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = fmtTime(session.date);
+  const dateStr = fmtDateLong(session.date);
   const text =
     `❌ <b>Тренировка отменена</b>\n\n` +
     `Тренер ${coachName} отменил тренировку:\n` +
@@ -275,9 +276,8 @@ async function notifyTrainingCancelledByCoach(telegramId, session, coachName) {
 }
 
 async function notifyTrainingCancelledByStudent(telegramId, session, student) {
-  const sessionDate = new Date(session.date);
-  const timeStr = sessionDate.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-  const dateStr = sessionDate.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  const timeStr = fmtTime(session.date);
+  const dateStr = fmtDateLong(session.date);
   const text =
     `⚠️ <b>${student.firstName} ${student.lastName || ""}</b> отменил запись на тренировку\n\n` +
     `📅 ${dateStr}, ${timeStr}\n` +
