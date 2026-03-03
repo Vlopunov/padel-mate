@@ -9,19 +9,21 @@ import { api } from '../services/api';
 // Extended venue info (static for now — will move to DB later)
 const VENUE_EXTRA = {
   '360 Padel Arena': {
-    description: 'Крупнейший падел-клуб Беларуси. 7 кортов с профессиональным покрытием, раздевалки, кафе-зона, прокат ракеток и мячей.',
-    phone: '+375 (29) 360-00-00',
-    instagram: 'https://instagram.com/360padelarena',
-    schedule: 'Пн-Вс: 8:00 — 23:00',
-    mapUrl: 'https://yandex.by/maps/-/CDxCrG~v',
+    description: '7 ультрапанорамных кортов международного уровня. Покрытие Mondo SuperCourt XN (как на турнирах WPT), профессиональное LED-освещение. СК «Триумф», Новая Боровая.',
+    phone: '+375 29 378-04-00',
+    telegram: 'https://t.me/padel360arena',
+    instagram: 'https://www.instagram.com/padel360.minsk',
+    website: 'https://360padel.by',
+    schedule: 'Ежедневно: 07:00 — 24:00',
+    mapUrl: 'https://yandex.by/maps/?ll=27.709286%2C53.963323&mode=routes&rtext=~53.961714%2C27.700841&rtt=auto&ruri=~ymapsbm1%3A%2F%2Forg%3Foid%3D190799862155&z=16',
     courts: [
       { name: 'Стандартные корты', count: 7, type: '2 на 2', icon: '\uD83C\uDFBE' },
     ],
     features: ['Раздевалки', 'Душевые', 'Прокат ракеток', 'Кафе', 'Парковка', 'Wi-Fi'],
     priceDetails: [
-      { label: 'Будни (8:00-17:00)', price: '120 BYN/час' },
-      { label: 'Будни (17:00-23:00)', price: '160 BYN/час' },
-      { label: 'Выходные', price: '160 BYN/час' },
+      { label: 'Пн-Пт (07:00-17:00)', price: '120 BYN/час' },
+      { label: 'Пн-Пт (17:00-24:00)', price: '140 BYN/час' },
+      { label: 'Сб-Вс и праздники', price: '140 BYN/час' },
     ],
   },
   'Meta Padel': {
@@ -337,11 +339,27 @@ export function BookCourt({ venueId, onBack }) {
             onClick={() => openExternal(extra.mapUrl)}
           />
         )}
+        {extra.website && (
+          <InfoRow
+            icon={'\uD83C\uDF10'}
+            label="Сайт"
+            value={extra.website.replace('https://', '')}
+            onClick={() => openExternal(extra.website)}
+          />
+        )}
+        {extra.telegram && (
+          <InfoRow
+            icon={'\u2708\uFE0F'}
+            label="Telegram"
+            value={'@' + extra.telegram.split('/').pop()}
+            onClick={() => openExternal(extra.telegram)}
+          />
+        )}
         {extra.instagram && (
           <InfoRow
             icon={'\uD83D\uDCF8'}
             label="Instagram"
-            value="@360padelarena"
+            value={'@' + (extra.instagram.split('/').pop() || '')}
             onClick={() => openExternal(extra.instagram)}
           />
         )}
