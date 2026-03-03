@@ -17,7 +17,7 @@ const VENUE_EXTRA = {
     schedule: 'Ежедневно: 07:00 — 24:00',
     mapUrl: 'https://yandex.by/maps/?ll=27.709286%2C53.963323&mode=routes&rtext=~53.961714%2C27.700841&rtt=auto&ruri=~ymapsbm1%3A%2F%2Forg%3Foid%3D190799862155&z=16',
     courts: [
-      { name: 'Стандартные корты', count: 7, type: '2 на 2', icon: '\uD83C\uDFBE' },
+      { name: 'Стандартные корты', count: 7, type: '2 на 2', icon: '🎾' },
     ],
     features: ['Раздевалки', 'Душевые', 'Прокат ракеток', 'Кафе', 'Парковка', 'Wi-Fi'],
     priceDetails: [
@@ -28,29 +28,21 @@ const VENUE_EXTRA = {
   },
   'Meta Padel': {
     description: 'Падел-клуб в Гродно. 3 корта: 2 стандартных для игры 2 на 2 и 1 корт для игры 1 на 1.',
-    phone: null,
-    instagram: null,
-    schedule: null,
-    mapUrl: null,
+    phone: null, instagram: null, schedule: null, mapUrl: null,
     courts: [
-      { name: 'Стандартные корты', count: 2, type: '2 на 2', icon: '\uD83C\uDFBE' },
-      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+      { name: 'Стандартные корты', count: 2, type: '2 на 2', icon: '🎾' },
+      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '🥎' },
     ],
-    features: [],
-    priceDetails: [],
+    features: [], priceDetails: [],
   },
   'PADEL BAZA': {
     description: 'Падел-клуб в Бресте. 2 корта для игры 1 на 1 и 2 на 2.',
-    phone: null,
-    instagram: null,
-    schedule: null,
-    mapUrl: null,
+    phone: null, instagram: null, schedule: null, mapUrl: null,
     courts: [
-      { name: 'Стандартный корт', count: 1, type: '2 на 2', icon: '\uD83C\uDFBE' },
-      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '\uD83E\uDD4E' },
+      { name: 'Стандартный корт', count: 1, type: '2 на 2', icon: '🎾' },
+      { name: 'Сингл-корт', count: 1, type: '1 на 1', icon: '🥎' },
     ],
-    features: [],
-    priceDetails: [],
+    features: [], priceDetails: [],
   },
 };
 
@@ -91,7 +83,7 @@ export function BookCourt({ venueId, onBack }) {
   const [services, setServices] = useState([]);
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [fallbackUrl, setFallbackUrl] = useState(null);
+
   const [duration, setDuration] = useState(60);
   const [selectedDate, setSelectedDate] = useState(null);
   const [timeSlots, setTimeSlots] = useState({});
@@ -111,6 +103,33 @@ export function BookCourt({ venueId, onBack }) {
     return result;
   }, []);
 
+  // ── Service mapping: { 60: { day: id, evening: id, weekend: id }, 90: {...}, 120: {...} }
+  const serviceMap = useMemo(() => {
+    const map = {};
+    for (const s of services) {
+      const comment = (s.comment || '').toLowerCase();
+      const m = comment.match(/(\d+)\s*минут/);
+      if (!m) continue;
+      const dur = parseInt(m[1]);
+
+      let tariff = 'day';
+      if (comment.includes('вечерний')) tariff = 'evening';
+      else if (comment.includes('выходной')) tariff = 'weekend';
+
+      if (!map[dur]) map[dur] = {};
+      map[dur][tariff] = s.id;
+    }
+    return map;
+  }, [services]);
+
+  // ── Court staff only (no trainers)
+  const courtStaff = useMemo(
+    () => staff.filter(s => s.bookable !== false && /^корт/i.test((s.name || '').trim())),
+    [staff]
+  );
+  const hasApiSlots = courtStaff.length > 0;
+
+  // ── Init
   useEffect(() => { loadInitialData(); }, [venueId]);
 
   async function loadInitialData() {
@@ -128,10 +147,15 @@ export function BookCourt({ venueId, onBack }) {
         api.venues.bookingServices(venueId).catch(() => []),
         api.venues.bookingStaff(venueId).catch(() => []),
       ]);
+
+      // Parse services — only court rental ("Аренда корта на X минут")
       const svcList = Array.isArray(servicesData) ? servicesData : (servicesData?.services || []);
-      setServices(svcList.filter(s => /корт/i.test(s.title || '')));
+      setServices(svcList.filter(s => {
+        const comment = (s.comment || '').toLowerCase();
+        return comment.includes('аренда корта на');
+      }));
+
       setStaff(Array.isArray(staffData) ? staffData : []);
-      setFallbackUrl(buildFallback(venueData));
     } catch (err) {
       console.error('BookCourt init error:', err);
     } finally {
@@ -139,57 +163,68 @@ export function BookCourt({ venueId, onBack }) {
     }
   }
 
-  function buildFallback(v) {
-    const ven = v || venue;
-    if (!ven?.yclientsFormId || !ven?.yclientsCompanyId) return null;
-    return `https://${ven.yclientsFormId}.yclients.com/company/${ven.yclientsCompanyId}/personal/select-time?o=`;
+  function buildFallback() {
+    if (!venue?.yclientsFormId || !venue?.yclientsCompanyId) return null;
+    return `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/personal/select-time?o=`;
   }
 
-  const filteredServiceIds = useMemo(() => {
-    return services
-      .filter(s => {
-        // Parse from comment: "Аренда корта на 60 минут"
-        const comment = s.comment || '';
-        const m = comment.match(/(\d+)\s*минут/);
-        if (m && parseInt(m[1]) === duration) return true;
-        // Fallback: parse from title ("Корт 1 час", "Корт 1.5 часа", "Корт 2 часа")
-        const title = (s.title || '').toLowerCase();
-        if (duration === 120 && /\b2\s*час/.test(title)) return true;
-        if (duration === 90 && /1[.,]5\s*час/.test(title)) return true;
-        if (duration === 60 && /\b1\s*час/.test(title) && !/1[.,]5/.test(title)) return true;
-        // Fallback: seance_length
-        if (s.seance_length === duration * 60) return true;
-        return false;
-      })
-      .map(s => String(s.id));
-  }, [services, duration]);
-
+  // ── Load times — per tariff to get correct slots for selected duration
   useEffect(() => {
-    if (!selectedDate || staff.length === 0) return;
+    if (!selectedDate || courtStaff.length === 0) return;
     loadTimes();
-  }, [selectedDate, duration, staff]);
+  }, [selectedDate, duration, courtStaff.length]);
 
   async function loadTimes() {
     setLoadingTimes(true);
     setSelectedTime(null);
     setSelectedStaffId(null);
+
     const day = formatDate(selectedDate);
-    const bookableStaff = staff.filter(s => s.bookable !== false && /корт/i.test(s.name || ''));
+    const dayOfWeek = selectedDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    const durationServices = serviceMap[duration] || {};
+
+    // Build list of service_ids to query (each separately!)
+    const tariffQueries = [];
+    if (isWeekend) {
+      if (durationServices.weekend) tariffQueries.push(durationServices.weekend);
+    } else {
+      if (durationServices.day) tariffQueries.push(durationServices.day);
+      if (durationServices.evening) tariffQueries.push(durationServices.evening);
+    }
+
+    if (tariffQueries.length === 0) {
+      setTimeSlots({});
+      setLoadingTimes(false);
+      return;
+    }
+
     try {
       const results = {};
       await Promise.all(
-        bookableStaff.map(async (s) => {
-          try {
-            const times = await api.venues.bookingTimes(venueId, s.id, day);
-            results[s.id] = Array.isArray(times) ? times : [];
-          } catch { results[s.id] = []; }
+        courtStaff.map(async (court) => {
+          const courtSlots = [];
+          // Fetch each tariff separately (combining returns 0!)
+          for (const svcId of tariffQueries) {
+            try {
+              const times = await api.venues.bookingTimes(venueId, court.id, day, [String(svcId)]);
+              const timeList = Array.isArray(times) ? times : [];
+              courtSlots.push(...timeList.map(t => ({ ...t, serviceId: svcId })));
+            } catch { /* skip failed tariff */ }
+          }
+          results[court.id] = courtSlots;
         })
       );
       setTimeSlots(results);
-    } catch (err) { console.error('Load times error:', err); }
-    finally { setLoadingTimes(false); }
+    } catch (err) {
+      console.error('Load times error:', err);
+    } finally {
+      setLoadingTimes(false);
+    }
   }
 
+  // ── Merge slots across all courts, sorted by time
   const mergedSlots = useMemo(() => {
     const timeMap = {};
     for (const [staffId, slots] of Object.entries(timeSlots)) {
@@ -197,7 +232,7 @@ export function BookCourt({ venueId, onBack }) {
         const time = slot.time;
         if (!time) continue;
         if (!timeMap[time]) timeMap[time] = [];
-        timeMap[time].push({ staffId, ...slot });
+        timeMap[time].push({ staffId, serviceId: slot.serviceId });
       }
     }
     return Object.entries(timeMap)
@@ -205,60 +240,52 @@ export function BookCourt({ venueId, onBack }) {
       .map(([time, courts]) => ({ time, courts }));
   }, [timeSlots]);
 
+  // ── Courts available for selected time
   const availableCourts = useMemo(() => {
     if (!selectedTime) return [];
     const slot = mergedSlots.find(s => s.time === selectedTime);
     if (!slot) return [];
     return slot.courts.map(c => {
-      const s = staff.find(st => String(st.id) === String(c.staffId));
+      const s = courtStaff.find(st => String(st.id) === String(c.staffId));
       return { ...c, name: s?.name || `Корт ${c.staffId}` };
     });
-  }, [selectedTime, mergedSlots, staff]);
+  }, [selectedTime, mergedSlots, courtStaff]);
 
+  // ── Open external link
   function openExternal(url) {
     if (!url) return;
     if (tg?.openLink) tg.openLink(url);
     else window.open(url, '_blank');
   }
 
+  // ── Build YClients booking URL and open it
   function openBooking() {
-    if (!selectedTime || !selectedStaffId) {
-      openExternal(buildFallback(venue));
+    if (!selectedTime || !selectedStaffId || !selectedDate || !venue) {
+      openExternal(buildFallback());
       return;
     }
 
-    // Determine tariff by time and day of week
-    const hour = parseInt(selectedTime.split(':')[0]);
-    const dayOfWeek = selectedDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const tariffType = isWeekend ? 'выходной' : (hour < 17 ? 'дневной' : 'вечерний');
+    // Find the serviceId for this court at this time
+    const slot = mergedSlots.find(s => s.time === selectedTime);
+    const courtEntry = slot?.courts.find(c => String(c.staffId) === selectedStaffId);
 
-    // Find matching service for duration + tariff
-    const service = services.find(s => {
-      const comment = (s.comment || '').toLowerCase();
-      return comment.includes(`${duration} минут`) && comment.includes(tariffType);
-    }) || services.find(s => {
-      const comment = (s.comment || '').toLowerCase();
-      return comment.includes(`${duration} минут`);
-    });
-
-    if (!service) {
-      openExternal(buildFallback(venue));
+    if (!courtEntry?.serviceId) {
+      openExternal(buildFallback());
       return;
     }
 
-    // Build direct booking URL: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMI}0
+    // Build URL: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMI}0
     const yy = String(selectedDate.getFullYear()).slice(2);
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const dd = String(selectedDate.getDate()).padStart(2, '0');
     const [hh, mi] = selectedTime.split(':');
     const dateCode = `${yy}${mm}${dd}${hh}${mi}0`;
 
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${service.id}d${dateCode}&utm_source=padelgo`;
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`;
     openExternal(url);
   }
 
-  // --- RENDER ---
+  // ── RENDER ──
 
   if (loading) {
     return (
@@ -278,9 +305,6 @@ export function BookCourt({ venueId, onBack }) {
     );
   }
 
-  const courtStaff = staff.filter(s => s.bookable !== false && /корт/i.test(s.name || ''));
-  const hasApiSlots = courtStaff.length > 0;
-
   return (
     <div style={{ padding: 20, paddingBottom: 40 }}>
       <Header title="Площадка" onBack={onBack} />
@@ -294,8 +318,6 @@ export function BookCourt({ venueId, onBack }) {
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <p style={{ fontSize: 22, fontWeight: 800, color: COLORS.text }}>{venue.name}</p>
           <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 4 }}>{venue.address}</p>
-
-          {/* Stats row */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 16 }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 24, fontWeight: 800, color: COLORS.accent }}>{venue.courts}</p>
@@ -303,26 +325,24 @@ export function BookCourt({ venueId, onBack }) {
             </div>
             <div style={{ width: 1, background: COLORS.border }} />
             {venue.yclientsPriceLabel && (
-              <>
-                <div style={{ textAlign: 'center' }}>
-                  <p style={{ fontSize: 24, fontWeight: 800, color: COLORS.accent }}>{venue.yclientsPriceLabel.replace('от ', '')}</p>
-                  <p style={{ fontSize: 11, color: COLORS.textDim }}>от / час</p>
-                </div>
-              </>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 24, fontWeight: 800, color: COLORS.accent }}>{venue.yclientsPriceLabel.replace('от ', '')}</p>
+                <p style={{ fontSize: 11, color: COLORS.textDim }}>от / час</p>
+              </div>
             )}
           </div>
         </div>
       </Card>
 
-      {/* Booking section */}
+      {/* ── BOOKING SECTION ── */}
       {hasApiSlots && (
         <>
           <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Свободное время</p>
 
-          {/* Duration */}
+          {/* Duration picker */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             {DURATIONS.map(d => (
-              <button key={d.value} onClick={() => setDuration(d.value)} style={{
+              <button key={d.value} onClick={() => { setDuration(d.value); setSelectedTime(null); setSelectedStaffId(null); }} style={{
                 flex: 1, padding: '10px 0', borderRadius: 12,
                 border: `1px solid ${duration === d.value ? COLORS.accent : COLORS.border}`,
                 background: duration === d.value ? COLORS.accentGlow : COLORS.surface,
@@ -333,7 +353,7 @@ export function BookCourt({ venueId, onBack }) {
             ))}
           </div>
 
-          {/* Dates */}
+          {/* Date picker */}
           <div style={{
             display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4,
             scrollbarWidth: 'none', msOverflowStyle: 'none',
@@ -382,7 +402,12 @@ export function BookCourt({ venueId, onBack }) {
                         color: active ? COLORS.accent : COLORS.text,
                         fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                         WebkitTapHighlightColor: 'transparent',
-                      }}>{slot.time}</button>
+                      }}>
+                        {slot.time}
+                        <div style={{ fontSize: 10, color: active ? COLORS.accent : COLORS.textDim, marginTop: 2 }}>
+                          {slot.courts.length} {slot.courts.length === 1 ? 'корт' : slot.courts.length < 5 ? 'корта' : 'кортов'}
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -412,10 +437,10 @@ export function BookCourt({ venueId, onBack }) {
             </>
           )}
 
-          {/* Book button — appears after selecting court */}
+          {/* Book button */}
           {selectedTime && selectedStaffId && (
             <Button fullWidth onClick={openBooking} style={{ marginTop: 16 }}>
-              {'\uD83C\uDFBE'} Забронировать корт
+              {'🎾'} Забронировать корт
             </Button>
           )}
         </>
@@ -470,48 +495,26 @@ export function BookCourt({ venueId, onBack }) {
       {/* Info rows */}
       <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 6, color: COLORS.text }}>Информация</p>
       <Card>
-        {extra.schedule && (
-          <InfoRow icon={'\uD83D\uDD52'} label="Режим работы" value={extra.schedule} />
-        )}
+        {extra.schedule && <InfoRow icon={'🕒'} label="Режим работы" value={extra.schedule} />}
         {extra.phone && (
-          <InfoRow
-            icon={'\uD83D\uDCDE'}
-            label="Телефон"
-            value={extra.phone}
-            onClick={() => openExternal(`tel:${extra.phone.replace(/[^+\d]/g, '')}`)}
-          />
+          <InfoRow icon={'📞'} label="Телефон" value={extra.phone}
+            onClick={() => openExternal(`tel:${extra.phone.replace(/[^+\d]/g, '')}`)} />
         )}
         {extra.mapUrl && (
-          <InfoRow
-            icon={'\uD83D\uDCCD'}
-            label="На карте"
-            value="Открыть в Яндекс.Картах"
-            onClick={() => openExternal(extra.mapUrl)}
-          />
+          <InfoRow icon={'📍'} label="На карте" value="Открыть в Яндекс.Картах"
+            onClick={() => openExternal(extra.mapUrl)} />
         )}
         {extra.website && (
-          <InfoRow
-            icon={'\uD83C\uDF10'}
-            label="Сайт"
-            value={extra.website.replace('https://', '')}
-            onClick={() => openExternal(extra.website)}
-          />
+          <InfoRow icon={'🌐'} label="Сайт" value={extra.website.replace('https://', '')}
+            onClick={() => openExternal(extra.website)} />
         )}
         {extra.telegram && (
-          <InfoRow
-            icon={'\u2708\uFE0F'}
-            label="Telegram"
-            value={'@' + extra.telegram.split('/').pop()}
-            onClick={() => openExternal(extra.telegram)}
-          />
+          <InfoRow icon={'✈️'} label="Telegram" value={'@' + extra.telegram.split('/').pop()}
+            onClick={() => openExternal(extra.telegram)} />
         )}
         {extra.instagram && (
-          <InfoRow
-            icon={'\uD83D\uDCF8'}
-            label="Instagram"
-            value={'@' + (extra.instagram.split('/').pop()?.split('?')[0] || '')}
-            onClick={() => openExternal(extra.instagram)}
-          />
+          <InfoRow icon={'📸'} label="Instagram" value={'@' + (extra.instagram.split('/').pop()?.split('?')[0] || '')}
+            onClick={() => openExternal(extra.instagram)} />
         )}
         {!extra.schedule && !extra.phone && !extra.mapUrl && (
           <p style={{ fontSize: 13, color: COLORS.textDim, padding: '10px 0' }}>Подробная информация скоро появится</p>
@@ -524,16 +527,16 @@ export function BookCourt({ venueId, onBack }) {
           <p style={{ fontSize: 15, fontWeight: 700, marginTop: 20, marginBottom: 10, color: COLORS.text }}>Удобства</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {extra.features.map((f, i) => (
-              <Badge key={i} variant="accent">{'\u2713'} {f}</Badge>
+              <Badge key={i} variant="accent">{'✓'} {f}</Badge>
             ))}
           </div>
         </>
       )}
 
-      {/* Fallback link for venues without API slots */}
-      {!hasApiSlots && fallbackUrl && (
-        <Button fullWidth onClick={() => openExternal(fallbackUrl)} style={{ marginTop: 20 }}>
-          {'\uD83C\uDFBE'} Забронировать корт
+      {/* Fallback for venues without API */}
+      {!hasApiSlots && venue.yclientsFormId && (
+        <Button fullWidth onClick={() => openExternal(buildFallback())} style={{ marginTop: 20 }}>
+          {'🎾'} Забронировать корт
         </Button>
       )}
     </div>
