@@ -221,19 +221,14 @@ export function BookCourt({ venueId, onBack }) {
     else window.open(url, '_blank');
   }
 
-  function openSlotBooking(time) {
-    const slot = mergedSlots.find(s => s.time === time);
-    if (!slot || slot.courts.length === 0) {
+  function openBooking() {
+    if (!selectedTime || !selectedStaffId) {
       openExternal(buildFallback(venue));
       return;
     }
 
-    // Pick first available court
-    const court = slot.courts[0];
-    const staffId = court.staffId;
-
     // Determine tariff by time and day of week
-    const hour = parseInt(time.split(':')[0]);
+    const hour = parseInt(selectedTime.split(':')[0]);
     const dayOfWeek = selectedDate.getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const tariffType = isWeekend ? 'выходной' : (hour < 17 ? 'дневной' : 'вечерний');
@@ -256,10 +251,10 @@ export function BookCourt({ venueId, onBack }) {
     const yy = String(selectedDate.getFullYear()).slice(2);
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const dd = String(selectedDate.getDate()).padStart(2, '0');
-    const [hh, mi] = time.split(':');
+    const [hh, mi] = selectedTime.split(':');
     const dateCode = `${yy}${mm}${dd}${hh}${mi}0`;
 
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${staffId}s${service.id}d${dateCode}&utm_source=padelgo`;
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${service.id}d${dateCode}&utm_source=padelgo`;
     openExternal(url);
   }
 
@@ -287,7 +282,7 @@ export function BookCourt({ venueId, onBack }) {
   const hasApiSlots = courtStaff.length > 0;
 
   return (
-    <div style={{ padding: 20, paddingBottom: 100 }}>
+    <div style={{ padding: 20, paddingBottom: 40 }}>
       <Header title="Площадка" onBack={onBack} />
 
       {/* Hero card */}
@@ -380,7 +375,7 @@ export function BookCourt({ venueId, onBack }) {
                   {mergedSlots.map(slot => {
                     const active = selectedTime === slot.time;
                     return (
-                      <button key={slot.time} onClick={() => openSlotBooking(slot.time)} style={{
+                      <button key={slot.time} onClick={() => { setSelectedTime(slot.time); setSelectedStaffId(null); }} style={{
                         padding: '10px 0', borderRadius: 10,
                         border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
                         background: active ? COLORS.accentGlow : COLORS.surface,
@@ -395,11 +390,33 @@ export function BookCourt({ venueId, onBack }) {
             </>
           )}
 
-          {/* Hint */}
-          {mergedSlots.length > 0 && !loadingTimes && (
-            <p style={{ fontSize: 12, color: COLORS.textDim, marginTop: 8, textAlign: 'center' }}>
-              Нажмите на время для бронирования
-            </p>
+          {/* Court selector */}
+          {selectedTime && availableCourts.length > 0 && (
+            <>
+              <p style={{ fontSize: 14, fontWeight: 600, marginTop: 16, marginBottom: 8, color: COLORS.textDim }}>Выберите корт</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                {availableCourts.map(court => {
+                  const active = selectedStaffId === String(court.staffId);
+                  return (
+                    <button key={court.staffId} onClick={() => setSelectedStaffId(String(court.staffId))} style={{
+                      padding: '14px 8px', borderRadius: 12,
+                      border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                      background: active ? COLORS.accentGlow : COLORS.surface,
+                      color: active ? COLORS.accent : COLORS.text,
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                      textAlign: 'center', WebkitTapHighlightColor: 'transparent',
+                    }}>{court.name}</button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Book button — appears after selecting court */}
+          {selectedTime && selectedStaffId && (
+            <Button fullWidth onClick={openBooking} style={{ marginTop: 16 }}>
+              {'\uD83C\uDFBE'} Забронировать корт
+            </Button>
           )}
         </>
       )}
@@ -513,19 +530,12 @@ export function BookCourt({ venueId, onBack }) {
         </>
       )}
 
-      {/* Bottom CTA */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
-        background: `linear-gradient(transparent, ${COLORS.bg} 30%)`,
-        pointerEvents: 'none',
-      }}>
-        <Button fullWidth onClick={() => {
-          openExternal(fallbackUrl || buildFallback(venue));
-        }} style={{ pointerEvents: 'auto' }}>
+      {/* Fallback link for venues without API slots */}
+      {!hasApiSlots && fallbackUrl && (
+        <Button fullWidth onClick={() => openExternal(fallbackUrl)} style={{ marginTop: 20 }}>
           {'\uD83C\uDFBE'} Забронировать корт
         </Button>
-      </div>
+      )}
     </div>
   );
 }
