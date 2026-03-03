@@ -236,7 +236,11 @@ export function BookCourt({ venueId, onBack }) {
       }
     }
     return Object.entries(timeMap)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => {
+        const [ah, am] = a.split(':').map(Number);
+        const [bh, bm] = b.split(':').map(Number);
+        return (ah * 60 + am) - (bh * 60 + bm);
+      })
       .map(([time, courts]) => ({ time, courts }));
   }, [timeSlots]);
 
@@ -279,7 +283,7 @@ export function BookCourt({ venueId, onBack }) {
     const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
     const dd = String(selectedDate.getDate()).padStart(2, '0');
     const [hh, mi] = selectedTime.split(':');
-    const dateCode = `${yy}${mm}${dd}${hh}${mi}0`;
+    const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}0`;
 
     const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`;
     openExternal(url);
@@ -403,7 +407,7 @@ export function BookCourt({ venueId, onBack }) {
                         fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
                         WebkitTapHighlightColor: 'transparent',
                       }}>
-                        {slot.time}
+                        {slot.time.includes(':') ? slot.time.split(':').map(p => p.padStart(2, '0')).join(':') : slot.time}
                         <div style={{ fontSize: 10, color: active ? COLORS.accent : COLORS.textDim, marginTop: 2 }}>
                           {slot.courts.length} {slot.courts.length === 1 ? 'корт' : slot.courts.length < 5 ? 'корта' : 'кортов'}
                         </div>
