@@ -264,37 +264,41 @@ export function BookCourt({ venueId, onBack }) {
   }
 
   // ── Build YClients booking URL and open it
-  // URL format from competitor: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMM}
-  // Key: date code is exactly 10 digits YYMMDDHHMM (no trailing zero!)
-  // Must use is_chain=false services (evening/weekend) — day tariff (is_chain=true) breaks the URL.
+  // YClients /create-record/record only works for TODAY — future dates redirect.
+  // Today: full pre-fill /create-record/record?o=m{staff}s{service}d{YYMMDDHHMM}
+  // Future: /personal/select-time?o=m{staff} — pre-selects court, user picks date/time.
   function openBooking() {
-    if (!selectedTime || !selectedStaffId || !selectedDate || !venue) {
+    if (!selectedStaffId || !venue) {
       openExternal(buildFallback());
       return;
     }
 
-    // Use is_chain=false service: evening for weekdays, weekend for weekends
-    const durationServices = serviceMap[duration] || {};
-    const dayOfWeek = selectedDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const bookingServiceId = isWeekend
-      ? (durationServices.weekend || durationServices.evening)
-      : (durationServices.evening || durationServices.weekend);
+    const base = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}`;
+    const isToday = selectedDate && formatDate(selectedDate) === formatDate(new Date());
 
-    if (!bookingServiceId) {
-      openExternal(buildFallback());
-      return;
+    if (isToday && selectedTime) {
+      // Today: use is_chain=false service for full pre-fill
+      const durationServices = serviceMap[duration] || {};
+      const dayOfWeek = selectedDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const bookingServiceId = isWeekend
+        ? (durationServices.weekend || durationServices.evening)
+        : (durationServices.evening || durationServices.weekend);
+
+      if (bookingServiceId) {
+        // Date code: YYMMDDHHMM (exactly 10 digits)
+        const yy = String(selectedDate.getFullYear()).slice(2);
+        const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const dd = String(selectedDate.getDate()).padStart(2, '0');
+        const [hh, mi] = selectedTime.split(':');
+        const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}`;
+        openExternal(`${base}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`);
+        return;
+      }
     }
 
-    // Date code: YYMMDDHHMM (exactly 10 digits, NO trailing zero)
-    const yy = String(selectedDate.getFullYear()).slice(2);
-    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(selectedDate.getDate()).padStart(2, '0');
-    const [hh, mi] = selectedTime.split(':');
-    const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}`;
-
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`;
-    openExternal(url);
+    // Future dates or missing service: pre-select court, user picks date/time on YClients
+    openExternal(`${base}/personal/select-time?o=m${selectedStaffId}&utm_source=padelgo`);
   }
 
   // ── RENDER ──
