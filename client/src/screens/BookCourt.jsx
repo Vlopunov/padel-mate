@@ -264,16 +264,36 @@ export function BookCourt({ venueId, onBack }) {
   }
 
   // ── Build YClients booking URL and open it
-  // YClients SPA ignores date/time in URL params — only staff (court) pre-selection works.
-  // We open /personal/select-time?o=m{staffId} which pre-selects the court and shows
-  // ALL available slots (morning, day, evening). User picks date → time → books.
+  // URL format from competitor: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMM}
+  // Key: date code is exactly 10 digits YYMMDDHHMM (no trailing zero!)
+  // Must use is_chain=false services (evening/weekend) — day tariff (is_chain=true) breaks the URL.
   function openBooking() {
-    if (!selectedStaffId || !venue) {
+    if (!selectedTime || !selectedStaffId || !selectedDate || !venue) {
       openExternal(buildFallback());
       return;
     }
 
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/personal/select-time?o=m${selectedStaffId}&utm_source=padelgo`;
+    // Use is_chain=false service: evening for weekdays, weekend for weekends
+    const durationServices = serviceMap[duration] || {};
+    const dayOfWeek = selectedDate.getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const bookingServiceId = isWeekend
+      ? (durationServices.weekend || durationServices.evening)
+      : (durationServices.evening || durationServices.weekend);
+
+    if (!bookingServiceId) {
+      openExternal(buildFallback());
+      return;
+    }
+
+    // Date code: YYMMDDHHMM (exactly 10 digits, NO trailing zero)
+    const yy = String(selectedDate.getFullYear()).slice(2);
+    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(selectedDate.getDate()).padStart(2, '0');
+    const [hh, mi] = selectedTime.split(':');
+    const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}`;
+
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`;
     openExternal(url);
   }
 
