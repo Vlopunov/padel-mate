@@ -264,40 +264,16 @@ export function BookCourt({ venueId, onBack }) {
   }
 
   // ── Build YClients booking URL and open it
+  // YClients SPA ignores date/time in URL params — only staff (court) pre-selection works.
+  // We open /personal/select-time?o=m{staffId} which pre-selects the court and shows
+  // ALL available slots (morning, day, evening). User picks date → time → books.
   function openBooking() {
-    if (!selectedTime || !selectedStaffId || !selectedDate || !venue) {
+    if (!selectedStaffId || !venue) {
       openExternal(buildFallback());
       return;
     }
 
-    // Find the serviceId for this court at this time
-    const slot = mergedSlots.find(s => s.time === selectedTime);
-    const courtEntry = slot?.courts.find(c => String(c.staffId) === selectedStaffId);
-
-    if (!courtEntry?.serviceId) {
-      openExternal(buildFallback());
-      return;
-    }
-
-    // IMPORTANT: YClients /create-record/record URL only works with is_chain=false services.
-    // Day tariff services (is_chain=true) cause redirect to /personal/select-time and lose the date param.
-    // Always use evening (weekday) or weekend service ID in the URL — they have is_chain=false.
-    const durationServices = serviceMap[duration] || {};
-    const dayOfWeek = selectedDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-    const bookingServiceId = isWeekend
-      ? (durationServices.weekend || durationServices.evening || courtEntry.serviceId)
-      : (durationServices.evening || durationServices.weekend || courtEntry.serviceId);
-
-    // Build URL: /create-record/record?o=m{staffId}s{serviceId}d{YYMMDDHHMI}0
-    const yy = String(selectedDate.getFullYear()).slice(2);
-    const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(selectedDate.getDate()).padStart(2, '0');
-    const [hh, mi] = selectedTime.split(':');
-    const dateCode = `${yy}${mm}${dd}${hh.padStart(2, '0')}${mi.padStart(2, '0')}0`;
-
-    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`;
+    const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/personal/select-time?o=m${selectedStaffId}&utm_source=padelgo`;
     openExternal(url);
   }
 
