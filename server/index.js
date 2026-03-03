@@ -89,9 +89,9 @@ app.post("/api/seed-venues", async (req, res) => {
       { name: "Ilo Club", address: "Минск", city: "MINSK", courts: 1 },
       { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 8 },
       // Гродно
-      { name: "Padel Grodno", address: "Гродно", city: "GRODNO", courts: 2 },
+      { name: "Meta Padel", address: "Гродно", city: "GRODNO", courts: 3 },
       // Брест
-      { name: "Padel Brest", address: "Брест", city: "BREST", courts: 2 },
+      { name: "PADEL BAZA", address: "Брест", city: "BREST", courts: 2 },
     ];
     const results = [];
     for (const v of venues) {
