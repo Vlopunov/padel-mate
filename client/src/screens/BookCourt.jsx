@@ -266,24 +266,19 @@ export function BookCourt({ venueId, onBack }) {
   // ── Build YClients booking URL and open it
   // URL: /create-record/record?o=m{staffId}s{serviceId}d{YYDDMMHHMM}
   // IMPORTANT: date code is YYDDMMHHMM — DAY before MONTH (not YYMMDDHHMM!)
-  // Must use is_chain=false services (evening/weekend) — day tariff breaks the URL.
+  // Uses the slot's own serviceId so the correct tariff/price is shown.
   function openBooking() {
     if (!selectedTime || !selectedStaffId || !selectedDate || !venue) {
       openExternal(buildFallback());
       return;
     }
 
-    const base = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}`;
+    // Get the actual serviceId from the slot (carries the correct tariff)
+    const slot = mergedSlots.find(s => s.time === selectedTime);
+    const courtEntry = slot?.courts.find(c => String(c.staffId) === selectedStaffId);
 
-    // Use is_chain=false service: evening for weekdays, weekend for weekends
-    const durationServices = serviceMap[duration] || {};
-    const dayOfWeek = selectedDate.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const bookingServiceId = isWeekend
-      ? (durationServices.weekend || durationServices.evening)
-      : (durationServices.evening || durationServices.weekend);
-
-    if (!bookingServiceId) {
+    if (!courtEntry?.serviceId) {
+      const base = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}`;
       openExternal(`${base}/personal/select-time?o=m${selectedStaffId}&utm_source=padelgo`);
       return;
     }
@@ -295,7 +290,8 @@ export function BookCourt({ venueId, onBack }) {
     const [hh, mi] = selectedTime.split(':');
     const dateCode = `${yy}${dd}${mo}${hh.padStart(2, '0')}${mi.padStart(2, '0')}`;
 
-    openExternal(`${base}/create-record/record?o=m${selectedStaffId}s${bookingServiceId}d${dateCode}&utm_source=padelgo`);
+    const base = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}`;
+    openExternal(`${base}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`);
   }
 
   // ── RENDER ──
