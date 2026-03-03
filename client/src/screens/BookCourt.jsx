@@ -186,7 +186,7 @@ export function BookCourt({ venueId, onBack }) {
   if (loading) {
     return (
       <div style={{ padding: 20, textAlign: 'center' }}>
-        <Header title="Бронирование" leftAction={{ label: '\u2190', onClick: onBack }} />
+        <Header title="Бронирование" onBack={onBack} />
         <p style={{ color: COLORS.textDim, marginTop: 60 }}>Загрузка...</p>
       </div>
     );
@@ -195,7 +195,7 @@ export function BookCourt({ venueId, onBack }) {
   if (!venue) {
     return (
       <div style={{ padding: 20 }}>
-        <Header title="Бронирование" leftAction={{ label: '\u2190', onClick: onBack }} />
+        <Header title="Бронирование" onBack={onBack} />
         <p style={{ color: COLORS.textDim, marginTop: 40, textAlign: 'center' }}>Площадка не найдена</p>
       </div>
     );
@@ -205,7 +205,7 @@ export function BookCourt({ venueId, onBack }) {
   if (fallbackUrl && staff.length === 0) {
     return (
       <div style={{ padding: 20 }}>
-        <Header title="Бронирование" leftAction={{ label: '\u2190', onClick: onBack }} />
+        <Header title="Бронирование" onBack={onBack} />
         <Card style={{ marginTop: 16 }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>{venue.name}</p>
@@ -225,7 +225,7 @@ export function BookCourt({ venueId, onBack }) {
 
   return (
     <div style={{ padding: 20, paddingBottom: 100 }}>
-      <Header title="Бронирование" leftAction={{ label: '\u2190', onClick: onBack }} />
+      <Header title="Бронирование" onBack={onBack} />
 
       {/* Venue card */}
       <Card style={{ marginTop: 16 }}>
