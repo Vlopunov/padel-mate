@@ -7,6 +7,8 @@ import { Header } from '../components/ui/Header';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { FilterTabs } from '../components/ui/ToggleGroup';
 import { RatingChart } from '../components/ui/RatingChart';
+import { WinLossBar } from '../components/ui/WinLossBar';
+import { MonthlyChart } from '../components/ui/MonthlyChart';
 import { api } from '../services/api';
 
 const CATEGORY_LABELS = {
@@ -118,6 +120,106 @@ export function Stats({ user, onBack, onNavigate }) {
           <p style={{ fontSize: 11, color: COLORS.textDim }}>Серия</p>
         </Card>
       </div>
+
+      {/* W/L Balance */}
+      {(stats?.wins > 0 || stats?.losses > 0) && (
+        <Card style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>Баланс побед/поражений</p>
+          <WinLossBar wins={stats.wins} losses={stats.losses} />
+          <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.warning }}>{stats.maxWinStreak || 0}</p>
+              <p style={{ fontSize: 10, color: COLORS.textDim }}>Макс. серия</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.accent }}>{stats.winStreak || 0}</p>
+              <p style={{ fontSize: 10, color: COLORS.textDim }}>Текущая серия</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Monthly Chart */}
+      {stats?.monthlyStats?.some(m => m.matches > 0) && (
+        <Card style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>По месяцам</p>
+          <MonthlyChart data={stats.monthlyStats} />
+        </Card>
+      )}
+
+      {/* Top Partners */}
+      {stats?.topPartners?.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>Лучшие партнёры</h3>
+          {stats.topPartners.map((p) => (
+            <Card
+              key={p.userId}
+              onClick={() => onNavigate('playerProfile', { userId: p.userId })}
+              style={{ marginBottom: 6, padding: 12, cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar src={p.photoUrl} name={p.firstName} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{p.firstName}</p>
+                  <p style={{ fontSize: 12, color: COLORS.textDim }}>{p.matches} матчей вместе</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{p.winRate}%</p>
+                  <p style={{ fontSize: 11, color: COLORS.textDim }}>{p.wins}W / {p.matches - p.wins}L</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {/* When you play */}
+      {stats?.dayOfWeekStats && Object.keys(stats.dayOfWeekStats).length > 0 && (
+        <Card style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 10 }}>Когда играете</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+            {['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'].map((label, day) => {
+              const d = stats.dayOfWeekStats[day];
+              const hasMatches = d && d.matches > 0;
+              const wr = hasMatches ? Math.round((d.wins / d.matches) * 100) : 0;
+              return (
+                <div key={day} style={{ textAlign: 'center', flex: 1 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: 16, margin: '0 auto 4px',
+                    background: hasMatches ? `${COLORS.accent}${wr >= 50 ? '30' : '15'}` : COLORS.surface,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 11, fontWeight: 700,
+                    color: hasMatches ? COLORS.accent : COLORS.textDim,
+                  }}>
+                    {hasMatches ? d.matches : '-'}
+                  </div>
+                  <span style={{ fontSize: 10, color: COLORS.textDim }}>{label}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            {[
+              { key: 'morning', label: 'Утро', icon: '\u2600\uFE0F', sub: '6-12' },
+              { key: 'afternoon', label: 'День', icon: '\uD83C\uDF24\uFE0F', sub: '12-18' },
+              { key: 'evening', label: 'Вечер', icon: '\uD83C\uDF19', sub: '18-6' },
+            ].map(({ key, label, icon, sub }) => {
+              const t = stats.timeOfDayStats?.[key];
+              const cnt = t?.matches || 0;
+              return (
+                <div key={key} style={{
+                  textAlign: 'center', padding: 8, borderRadius: 10,
+                  background: cnt > 0 ? `${COLORS.purple}10` : COLORS.surface,
+                }}>
+                  <span style={{ fontSize: 18 }}>{icon}</span>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginTop: 2 }}>{cnt}</p>
+                  <p style={{ fontSize: 10, color: COLORS.textDim }}>{label} ({sub})</p>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* XP Level */}
       <Card style={{ marginBottom: 12 }}>

@@ -363,6 +363,22 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       include: { achievement: true },
     });
 
+    // Load ALL completed matches for aggregations (not just 20)
+    const allMatchPlayers = await prisma.matchPlayer.findMany({
+      where: { userId, match: { status: "COMPLETED" }, status: "APPROVED" },
+      include: {
+        match: {
+          include: {
+            venue: true,
+            sets: { orderBy: { setNumber: "asc" } },
+            players: { where: { status: "APPROVED" }, include: { user: { select: { id: true, firstName: true, lastName: true, rating: true, photoUrl: true, isVip: true } } } },
+          },
+        },
+      },
+      orderBy: { match: { date: "desc" } },
+    });
+
+    // Recent 20 for display (includes non-completed too)
     const matchHistory = await prisma.matchPlayer.findMany({
       where: { userId },
       include: {
@@ -380,6 +396,79 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
 
     const winRate = user.matchesPlayed > 0 ? Math.min(100, Math.round((user.wins / user.matchesPlayed) * 100)) : 0;
 
+    // --- Aggregations from completed matches ---
+
+    // Monthly stats (last 6 months)
+    const monthlyMap = {};
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      monthlyMap[key] = { month: key, matches: 0, wins: 0, losses: 0, ratingChange: 0 };
+    }
+
+    // Use ratingHistory for monthly W/L and ratingChange
+    const allRatingHistory = await prisma.ratingHistory.findMany({
+      where: { userId, reason: { in: ["match_win", "match_loss"] } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    for (const rh of allRatingHistory) {
+      const d = new Date(rh.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (monthlyMap[key]) {
+        monthlyMap[key].matches++;
+        if (rh.reason === "match_win") monthlyMap[key].wins++;
+        else monthlyMap[key].losses++;
+        monthlyMap[key].ratingChange += rh.change;
+      }
+    }
+
+    const monthlyStats = Object.values(monthlyMap).sort((a, b) => a.month.localeCompare(b.month));
+
+    // Top partners (teammates with best win rate, min 2 matches)
+    const partnerMap = {};
+    for (const mp of allMatchPlayers) {
+      if (mp.team == null) continue;
+      const winner = determineWinner(mp.match.sets);
+      if (!winner) continue;
+      const won = mp.team === winner;
+      const teammates = mp.match.players.filter(p => p.team === mp.team && p.user.id !== userId);
+      for (const tm of teammates) {
+        if (!partnerMap[tm.user.id]) {
+          partnerMap[tm.user.id] = { userId: tm.user.id, firstName: tm.user.firstName, photoUrl: tm.user.photoUrl, matches: 0, wins: 0 };
+        }
+        partnerMap[tm.user.id].matches++;
+        if (won) partnerMap[tm.user.id].wins++;
+      }
+    }
+    const topPartners = Object.values(partnerMap)
+      .filter(p => p.matches >= 2)
+      .map(p => ({ ...p, winRate: Math.round((p.wins / p.matches) * 100) }))
+      .sort((a, b) => b.winRate - a.winRate || b.matches - a.matches)
+      .slice(0, 3);
+
+    // Day of week & time of day stats
+    const dayOfWeekStats = {};
+    const timeOfDayStats = { morning: { matches: 0, wins: 0 }, afternoon: { matches: 0, wins: 0 }, evening: { matches: 0, wins: 0 } };
+
+    for (const mp of allMatchPlayers) {
+      if (mp.team == null) continue;
+      const winner = determineWinner(mp.match.sets);
+      if (!winner) continue;
+      const won = mp.team === winner;
+      const d = new Date(mp.match.date);
+      const day = d.getDay();
+      if (!dayOfWeekStats[day]) dayOfWeekStats[day] = { matches: 0, wins: 0 };
+      dayOfWeekStats[day].matches++;
+      if (won) dayOfWeekStats[day].wins++;
+
+      const hour = d.getHours();
+      const period = hour >= 6 && hour < 12 ? "morning" : hour >= 12 && hour < 18 ? "afternoon" : "evening";
+      timeOfDayStats[period].matches++;
+      if (won) timeOfDayStats[period].wins++;
+    }
+
     res.json({
       rating: user.rating,
       matchesPlayed: user.matchesPlayed,
@@ -395,6 +484,10 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
         ...mp.match,
         myTeam: mp.team,
       })),
+      monthlyStats,
+      topPartners,
+      dayOfWeekStats,
+      timeOfDayStats,
     });
   } catch (err) {
     console.error("Stats error:", err);
