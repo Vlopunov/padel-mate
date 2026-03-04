@@ -14,11 +14,20 @@ const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
 const POSITION_LABELS = { DERECHA: 'Справа', REVES: 'Слева', BOTH: 'Обе' };
 const EXPERIENCE_LABELS = { BEGINNER: 'Начинающий', LESS_YEAR: 'До года', ONE_THREE: '1-3 года', THREE_PLUS: '3+ года' };
 
+function h2hMatchWord(n) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'матч';
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'матча';
+  return 'матчей';
+}
+
 export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   const { openTelegramLink } = useTelegram();
   const [player, setPlayer] = useState(null);
   const [stats, setStats] = useState(null);
   const [allAchievements, setAllAchievements] = useState([]);
+  const [h2h, setH2h] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,14 +37,20 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   async function loadProfile() {
     setLoading(true);
     try {
-      const [playerData, statsData, allAch] = await Promise.all([
+      const promises = [
         api.users.getById(userId),
         api.users.getStats(userId),
         api.achievements.all(),
-      ]);
+      ];
+      const isOther = currentUser?.id && currentUser.id !== userId;
+      if (isOther) {
+        promises.push(api.users.getH2H(currentUser.id, userId).catch(() => null));
+      }
+      const [playerData, statsData, allAch, h2hData] = await Promise.all(promises);
       setPlayer(playerData);
       setStats(statsData);
       setAllAchievements(allAch);
+      if (h2hData) setH2h(h2hData);
     } catch (err) {
       console.error('PlayerProfile load error:', err);
     }
@@ -139,6 +154,70 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
           <p style={{ fontSize: 11, color: COLORS.textDim }}>Серия</p>
         </Card>
       </div>
+
+      {/* Head-to-Head */}
+      {!isMe && h2h && h2h.totalMatches > 0 && (
+        <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}33` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 18 }}>{'\u2694\uFE0F'}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>
+              {'Вы и '}{player.firstName}
+            </span>
+            <Badge variant="purple">{h2h.totalMatches} {h2hMatchWord(h2h.totalMatches)}</Badge>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {h2h.asOpponents.total > 0 && (
+              <div style={{ flex: 1, padding: 10, borderRadius: 12, background: `${COLORS.danger}10`, textAlign: 'center' }}>
+                <p style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Как соперники</p>
+                <p style={{ fontSize: 16, fontWeight: 700 }}>
+                  <span style={{ color: COLORS.accent }}>{h2h.asOpponents.wins}W</span>
+                  {' / '}
+                  <span style={{ color: COLORS.danger }}>{h2h.asOpponents.losses}L</span>
+                </p>
+              </div>
+            )}
+            {h2h.asTeammates.total > 0 && (
+              <div style={{ flex: 1, padding: 10, borderRadius: 12, background: `${COLORS.accent}10`, textAlign: 'center' }}>
+                <p style={{ fontSize: 11, color: COLORS.textDim, marginBottom: 4 }}>Как партнёры</p>
+                <p style={{ fontSize: 16, fontWeight: 700 }}>
+                  <span style={{ color: COLORS.accent }}>{h2h.asTeammates.wins}W</span>
+                  {' / '}
+                  <span style={{ color: COLORS.danger }}>{h2h.asTeammates.losses}L</span>
+                </p>
+              </div>
+            )}
+          </div>
+          {h2h.recentMatches.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              {h2h.recentMatches.map((m) => (
+                <div key={m.matchId} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '5px 0', borderTop: `1px solid ${COLORS.border}`,
+                }}>
+                  <div>
+                    <span style={{ fontSize: 12, color: COLORS.textDim }}>
+                      {new Date(m.date).toLocaleDateString('ru-RU')}
+                    </span>
+                    <span style={{ fontSize: 11, color: COLORS.textDim, marginLeft: 6 }}>
+                      {m.sameTeam ? 'вместе' : 'против'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{m.sets}</span>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
+                      background: m.won ? `${COLORS.accent}20` : `${COLORS.danger}20`,
+                      color: m.won ? COLORS.accent : COLORS.danger,
+                    }}>
+                      {m.won ? 'W' : 'L'}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* W/L balance */}
       <Card style={{ marginBottom: 12 }}>

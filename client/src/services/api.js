@@ -51,6 +51,7 @@ export const api = {
     updateRating: (data) => api.fetch('/users/me/rating', { method: 'PATCH', body: JSON.stringify(data) }),
     getById: (id) => api.fetch(`/users/${id}`),
     getStats: (id) => api.fetch(`/users/${id}/stats`),
+    getH2H: (id, opponentId) => api.fetch(`/users/${id}/h2h/${opponentId}`),
     search: (q, { city, ratingMin, ratingMax } = {}) => {
       const params = new URLSearchParams();
       if (q) params.set('q', q);

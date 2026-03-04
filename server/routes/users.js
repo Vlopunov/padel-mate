@@ -1,7 +1,7 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
-const { calculateInitialElo, convertExternalRating, getLevel, getXpLevel } = require("../services/rating");
+const { calculateInitialElo, convertExternalRating, getLevel, getXpLevel, determineWinner } = require("../services/rating");
 const { checkAndAwardAchievements } = require("../services/achievements");
 
 const router = express.Router();
@@ -247,6 +247,92 @@ router.get("/:id", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error("Get user error:", err);
     res.status(500).json({ error: "Ошибка получения пользователя" });
+  }
+});
+
+// Head-to-head stats between two players
+router.get("/:id/h2h/:opponentId", authMiddleware, async (req, res) => {
+  try {
+    const userA = parseInt(req.params.id);
+    const userB = parseInt(req.params.opponentId);
+
+    if (req.userId !== userA && req.userId !== userB) {
+      return res.status(403).json({ error: "Доступ запрещён" });
+    }
+    if (userA === userB) {
+      return res.json({ totalMatches: 0, asOpponents: { total: 0, wins: 0, losses: 0 }, asTeammates: { total: 0, wins: 0, losses: 0 }, recentMatches: [] });
+    }
+
+    const sharedMatches = await prisma.match.findMany({
+      where: {
+        status: "COMPLETED",
+        AND: [
+          { players: { some: { userId: userA, status: "APPROVED" } } },
+          { players: { some: { userId: userB, status: "APPROVED" } } },
+        ],
+      },
+      include: {
+        players: { where: { status: "APPROVED" }, select: { userId: true, team: true } },
+        sets: { orderBy: { setNumber: "asc" } },
+        venue: { select: { name: true } },
+      },
+      orderBy: { date: "desc" },
+    });
+
+    const asOpponents = { total: 0, wins: 0, losses: 0 };
+    const asTeammates = { total: 0, wins: 0, losses: 0 };
+    const recentMatches = [];
+
+    for (const match of sharedMatches) {
+      const pA = match.players.find(p => p.userId === userA);
+      const pB = match.players.find(p => p.userId === userB);
+      if (!pA || !pB || pA.team == null || pB.team == null) continue;
+
+      const sameTeam = pA.team === pB.team;
+      const winningTeam = determineWinner(match.sets);
+      if (!winningTeam) continue;
+
+      const mePlayer = match.players.find(p => p.userId === req.userId);
+      if (!mePlayer) continue;
+      const won = mePlayer.team === winningTeam;
+
+      if (sameTeam) {
+        asTeammates.total++;
+        if (won) asTeammates.wins++; else asTeammates.losses++;
+      } else {
+        asOpponents.total++;
+        if (won) asOpponents.wins++; else asOpponents.losses++;
+      }
+
+      if (recentMatches.length < 5) {
+        const setsStr = match.sets.map(s => {
+          let str = `${s.team1Score}:${s.team2Score}`;
+          if (s.team1Tiebreak != null && s.team2Tiebreak != null) {
+            str += `(${s.team1Tiebreak}:${s.team2Tiebreak})`;
+          }
+          return str;
+        }).join(", ");
+
+        recentMatches.push({
+          matchId: match.id,
+          date: match.date,
+          venue: match.venue?.name || null,
+          sameTeam,
+          won,
+          sets: setsStr,
+        });
+      }
+    }
+
+    res.json({
+      totalMatches: asOpponents.total + asTeammates.total,
+      asOpponents,
+      asTeammates,
+      recentMatches,
+    });
+  } catch (err) {
+    console.error("H2H error:", err);
+    res.status(500).json({ error: "Ошибка получения статистики" });
   }
 });
 

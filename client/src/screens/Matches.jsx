@@ -127,6 +127,9 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   const [ratingFilter, setRatingFilter] = useState('all'); // 'all' | '0-1200' | '1200-1500' | '1500-1800' | '1800+'
   const searchTimer = useRef(null);
 
+  // H2H data for match detail players
+  const [h2hMap, setH2hMap] = useState({});
+
   // Comments
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState('');
@@ -153,6 +156,22 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
       loadComments(selectedMatch.id);
     }
   }, [selectedMatch?.id]);
+
+  // Load H2H for other players in selected match
+  useEffect(() => {
+    if (!selectedMatch || !user?.id) { setH2hMap({}); return; }
+    const others = (selectedMatch.players || [])
+      .filter(p => p.status === 'APPROVED' && p.user.id !== user.id);
+    if (others.length === 0) { setH2hMap({}); return; }
+    const map = {};
+    Promise.all(
+      others.map(p =>
+        api.users.getH2H(user.id, p.user.id)
+          .then(data => { if (data.totalMatches > 0) map[p.user.id] = data; })
+          .catch(() => {})
+      )
+    ).then(() => setH2hMap({ ...map }));
+  }, [selectedMatch?.id, user?.id]);
 
   async function loadMatches() {
     setLoading(true);
@@ -473,7 +492,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           </div>
           {/* Players (flat list) */}
           {approvedPlayers.map((p) => (
-            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
+            <PlayerRowBig key={p.user.id} player={p} isCreator={p.user.id === match.creatorId} h2h={h2hMap[p.user.id]} onPlayerClick={(userId) => onNavigate('playerProfile', { userId })} />
           ))}
           {approvedPlayers.length < 4 && Array.from({ length: 4 - approvedPlayers.length }).map((_, i) => (
             <EmptySlotBig key={`e-${i}`} onClick={canJoin ? () => handleJoin(match.id) : undefined} />
@@ -1076,7 +1095,7 @@ function InfoRow({ icon, label, value }) {
   );
 }
 
-function PlayerRowBig({ player, isCreator, onPlayerClick }) {
+function PlayerRowBig({ player, isCreator, h2h, onPlayerClick }) {
   const level = getLevel(player.user.rating);
   return (
     <div
@@ -1106,8 +1125,16 @@ function PlayerRowBig({ player, isCreator, onPlayerClick }) {
             }}>⭐ VIP</span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: COLORS.textDim }}>
-          {level?.name || ''}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: COLORS.textDim }}>
+          <span>{level?.name || ''}</span>
+          {h2h && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
+              background: `${COLORS.purple}20`, color: COLORS.purple,
+            }}>
+              {h2h.totalMatches}{'\uD83E\uDD1D'} {h2h.asOpponents.wins}W/{h2h.asOpponents.losses}L
+            </span>
+          )}
         </div>
       </div>
       <div style={{
