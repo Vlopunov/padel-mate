@@ -166,6 +166,53 @@ export function Stats({ user, onBack, onNavigate }) {
                 <div style={{ textAlign: 'right' }}>
                   <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.accent }}>{p.winRate}%</p>
                   <p style={{ fontSize: 11, color: COLORS.textDim }}>{p.wins}W / {p.matches - p.wins}L</p>
+                  {p.pairRating && (
+                    <p style={{ fontSize: 11, color: COLORS.purple, fontWeight: 600, marginTop: 2 }}>
+                      Пара: {p.pairRating}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {/* My Pairs */}
+      {stats?.myPairs?.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginTop: 16, marginBottom: 10 }}>
+            Мои пары
+          </h3>
+          {stats.myPairs.map((pair) => (
+            <Card
+              key={pair.pairId}
+              onClick={() => onNavigate('playerProfile', { userId: pair.partnerId })}
+              style={{ marginBottom: 6, padding: 12, cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Avatar src={pair.partnerPhotoUrl} name={pair.partnerFirstName} size={36} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
+                    {pair.partnerFirstName}
+                  </p>
+                  <p style={{ fontSize: 12, color: COLORS.textDim }}>
+                    {pair.matchesPlayed} {pair.matchesPlayed === 1 ? 'матч' : pair.matchesPlayed < 5 ? 'матча' : 'матчей'} в паре
+                  </p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: 18, fontWeight: 700, color: COLORS.purple }}>{pair.pairRating}</p>
+                  <p style={{ fontSize: 11, color: COLORS.textDim }}>
+                    {pair.winRate}% ({pair.wins}W/{pair.losses}L)
+                  </p>
+                  {pair.lastChange != null && (
+                    <p style={{
+                      fontSize: 11, fontWeight: 600,
+                      color: pair.lastChange > 0 ? COLORS.accent : COLORS.danger,
+                    }}>
+                      {pair.lastChange > 0 ? '+' : ''}{pair.lastChange}
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>

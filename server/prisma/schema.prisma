@@ -186,6 +186,10 @@ model User {
   coachPackagesBought   CoachPackage[]         @relation("PackageStudent")
   coachReviewsReceived  CoachReview[]          @relation("ReviewSubject")
   coachReviewsGiven     CoachReview[]          @relation("ReviewAuthor")
+
+  // Pair rating relations
+  pairsAsPlayer1  Pair[] @relation("PairPlayer1")
+  pairsAsPlayer2  Pair[] @relation("PairPlayer2")
 }
 
 model Venue {
@@ -278,6 +282,38 @@ model RatingHistory {
   reason    String
   matchId   Int?
   note      String?
+  createdAt DateTime @default(now())
+}
+
+model Pair {
+  id            Int      @id @default(autoincrement())
+  player1Id     Int
+  player1       User     @relation("PairPlayer1", fields: [player1Id], references: [id])
+  player2Id     Int
+  player2       User     @relation("PairPlayer2", fields: [player2Id], references: [id])
+  rating        Int      @default(1500)
+  matchesPlayed Int      @default(0)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  winStreak     Int      @default(0)
+  maxWinStreak  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ratingHistory PairRatingHistory[]
+
+  @@unique([player1Id, player2Id])
+}
+
+model PairRatingHistory {
+  id        Int      @id @default(autoincrement())
+  pairId    Int
+  pair      Pair     @relation(fields: [pairId], references: [id])
+  oldRating Int
+  newRating Int
+  change    Int
+  reason    String
+  matchId   Int?
   createdAt DateTime @default(now())
 }
 

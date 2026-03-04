@@ -1,7 +1,7 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
-const { calculateInitialElo, convertExternalRating, getLevel, getXpLevel, determineWinner } = require("../services/rating");
+const { calculateInitialElo, convertExternalRating, getLevel, getXpLevel, determineWinner, normalizePairIds } = require("../services/rating");
 const { checkAndAwardAchievements } = require("../services/achievements");
 
 const router = express.Router();
@@ -469,6 +469,48 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       if (won) timeOfDayStats[period].wins++;
     }
 
+    // Enrich topPartners with pair rating
+    for (const tp of topPartners) {
+      const [p1, p2] = normalizePairIds(userId, tp.userId);
+      const pair = await prisma.pair.findUnique({
+        where: { player1Id_player2Id: { player1Id: p1, player2Id: p2 } },
+      });
+      tp.pairRating = pair?.rating || null;
+      tp.pairMatchesPlayed = pair?.matchesPlayed || 0;
+    }
+
+    // My pairs (all pairs sorted by rating)
+    const pairs = await prisma.pair.findMany({
+      where: { OR: [{ player1Id: userId }, { player2Id: userId }] },
+      include: {
+        player1: { select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true, isVip: true } },
+        player2: { select: { id: true, firstName: true, lastName: true, photoUrl: true, rating: true, isVip: true } },
+        ratingHistory: { orderBy: { createdAt: "desc" }, take: 1 },
+      },
+      orderBy: { rating: "desc" },
+    });
+
+    const myPairs = pairs.map((p) => {
+      const isPlayer1 = p.player1Id === userId;
+      const partner = isPlayer1 ? p.player2 : p.player1;
+      return {
+        pairId: p.id,
+        partnerId: partner.id,
+        partnerFirstName: partner.firstName,
+        partnerPhotoUrl: partner.photoUrl,
+        partnerRating: partner.rating,
+        partnerIsVip: partner.isVip,
+        pairRating: p.rating,
+        matchesPlayed: p.matchesPlayed,
+        wins: p.wins,
+        losses: p.losses,
+        winRate: p.matchesPlayed > 0 ? Math.round((p.wins / p.matchesPlayed) * 100) : 0,
+        winStreak: p.winStreak,
+        maxWinStreak: p.maxWinStreak,
+        lastChange: p.ratingHistory[0]?.change || null,
+      };
+    });
+
     res.json({
       rating: user.rating,
       matchesPlayed: user.matchesPlayed,
@@ -486,6 +528,7 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       })),
       monthlyStats,
       topPartners,
+      myPairs,
       dayOfWeekStats,
       timeOfDayStats,
     });

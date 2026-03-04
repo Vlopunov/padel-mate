@@ -1,7 +1,7 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { authMiddleware } = require("../middleware/auth");
-const { calculateRatingChanges, determineWinner, getLevel } = require("../services/rating");
+const { calculateRatingChanges, calculatePairRatingChanges, normalizePairIds, determineWinner, getLevel } = require("../services/rating");
 const { checkAndAwardAchievements, checkEventAchievement } = require("../services/achievements");
 const { notifyRatingChange, notifyNewAchievement, sendTelegramMessage, notifyScoreConfirmation, notifyMatchFull, notifyLeaderboardPosition } = require("../services/notifications");
 
@@ -1006,6 +1006,72 @@ router.post("/:id/confirm", authMiddleware, async (req, res) => {
           if (a) await notifyNewAchievement(user.telegramId.toString(), a);
         }
       }
+    }
+
+    // --- Pair Elo Rating ---
+    try {
+      const [t1p1, t1p2] = normalizePairIds(team1[0].id, team1[1].id);
+      const [t2p1, t2p2] = normalizePairIds(team2[0].id, team2[1].id);
+
+      // Upsert pair 1 (team 1)
+      let pair1 = await prisma.pair.findUnique({
+        where: { player1Id_player2Id: { player1Id: t1p1, player2Id: t1p2 } },
+      });
+      if (!pair1) {
+        const avgRating = Math.round((team1[0].rating + team1[1].rating) / 2);
+        pair1 = await prisma.pair.create({
+          data: { player1Id: t1p1, player2Id: t1p2, rating: avgRating },
+        });
+      }
+
+      // Upsert pair 2 (team 2)
+      let pair2 = await prisma.pair.findUnique({
+        where: { player1Id_player2Id: { player1Id: t2p1, player2Id: t2p2 } },
+      });
+      if (!pair2) {
+        const avgRating = Math.round((team2[0].rating + team2[1].rating) / 2);
+        pair2 = await prisma.pair.create({
+          data: { player1Id: t2p1, player2Id: t2p2, rating: avgRating },
+        });
+      }
+
+      const pairChanges = calculatePairRatingChanges(
+        { id: pair1.id, rating: pair1.rating, matchesPlayed: pair1.matchesPlayed },
+        { id: pair2.id, rating: pair2.rating, matchesPlayed: pair2.matchesPlayed },
+        match.sets,
+        tournament?.ratingMultiplier || 1.0
+      );
+
+      for (const pc of [pairChanges.pair1Change, pairChanges.pair2Change]) {
+        const currentPair = await prisma.pair.findUnique({ where: { id: pc.pairId } });
+        const newWinStreak = pc.won ? currentPair.winStreak + 1 : 0;
+        const newMaxWinStreak = Math.max(currentPair.maxWinStreak, newWinStreak);
+
+        await prisma.pair.update({
+          where: { id: pc.pairId },
+          data: {
+            rating: pc.newRating,
+            matchesPlayed: { increment: 1 },
+            wins: pc.won ? { increment: 1 } : undefined,
+            losses: !pc.won ? { increment: 1 } : undefined,
+            winStreak: newWinStreak,
+            maxWinStreak: newMaxWinStreak,
+          },
+        });
+
+        await prisma.pairRatingHistory.create({
+          data: {
+            pairId: pc.pairId,
+            oldRating: pc.oldRating,
+            newRating: pc.newRating,
+            change: pc.change,
+            reason: pc.won ? "match_win" : "match_loss",
+            matchId,
+          },
+        });
+      }
+    } catch (pairErr) {
+      console.error("Pair rating error (non-fatal):", pairErr);
     }
 
     // Mark match as completed

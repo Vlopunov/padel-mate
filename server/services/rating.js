@@ -90,6 +90,46 @@ function calculateRatingChanges(team1Players, team2Players, sets, tournamentMult
   return { changes, winningTeam };
 }
 
+function normalizePairIds(idA, idB) {
+  return idA < idB ? [idA, idB] : [idB, idA];
+}
+
+function calculatePairRatingChanges(pair1, pair2, sets, tournamentMultiplier = 1.0) {
+  const winningTeam = determineWinner(sets);
+  const setModifier = calculateSetModifiers(sets);
+
+  const expected1 = getExpectedScore(pair1.rating, pair2.rating);
+  const K1 = getKFactor(pair1.matchesPlayed);
+  const K2 = getKFactor(pair2.matchesPlayed);
+
+  const pair1Won = winningTeam === 1;
+  const score1 = pair1Won ? 1 : 0;
+  const score2 = pair1Won ? 0 : 1;
+
+  let delta1 = Math.round(K1 * (score1 - expected1) * setModifier * tournamentMultiplier);
+  let delta2 = Math.round(K2 * (score2 - (1 - expected1)) * setModifier * tournamentMultiplier);
+
+  if (delta1 === 0) delta1 = pair1Won ? 1 : -1;
+  if (delta2 === 0) delta2 = pair1Won ? -1 : 1;
+
+  return {
+    pair1Change: {
+      pairId: pair1.id,
+      oldRating: pair1.rating,
+      newRating: pair1.rating + delta1,
+      change: delta1,
+      won: pair1Won,
+    },
+    pair2Change: {
+      pairId: pair2.id,
+      oldRating: pair2.rating,
+      newRating: pair2.rating + delta2,
+      change: delta2,
+      won: !pair1Won,
+    },
+  };
+}
+
 function calculateInitialElo(answers) {
   const weights = [0.30, 0.15, 0.20, 0.25, 0.05, 0.05];
   const maxOptions = [4, 4, 4, 4, 3, 1];
@@ -131,6 +171,8 @@ module.exports = {
   calculateSetModifiers,
   determineWinner,
   calculateRatingChanges,
+  normalizePairIds,
+  calculatePairRatingChanges,
   calculateInitialElo,
   convertExternalRating,
 };
