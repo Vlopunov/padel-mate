@@ -13,6 +13,7 @@ export function Input({ label, value, onChange, placeholder, type = 'text', styl
     fontFamily: 'inherit',
     outline: 'none',
     transition: 'border-color 0.2s',
+    boxSizing: 'border-box',
     ...style,
   };
 
@@ -49,6 +50,7 @@ export function Textarea({ label, value, onChange, placeholder, rows = 3, style 
     fontFamily: 'inherit',
     outline: 'none',
     resize: 'vertical',
+    boxSizing: 'border-box',
     ...style,
   };
 

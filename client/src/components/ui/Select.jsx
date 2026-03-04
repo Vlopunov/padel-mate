@@ -18,6 +18,7 @@ export function Select({ label, value, onChange, options, placeholder, style }) 
     backgroundRepeat: 'no-repeat',
     backgroundPosition: 'right 14px center',
     paddingRight: 36,
+    boxSizing: 'border-box',
     ...style,
   };
 

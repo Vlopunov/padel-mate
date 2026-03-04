@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { COLORS } from '../../config';
 
 export function Modal({ isOpen, onClose, title, children }) {
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+      const handleEsc = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
       document.addEventListener('keydown', handleEsc);
       return () => {
         document.body.style.overflow = '';
@@ -15,7 +18,7 @@ export function Modal({ isOpen, onClose, title, children }) {
       document.body.style.overflow = '';
     }
     return () => { document.body.style.overflow = ''; };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

@@ -1,11 +1,10 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { authMiddleware } = require("../middleware/auth");
 const { calculateInitialElo, convertExternalRating, getLevel, getXpLevel, determineWinner, normalizePairIds } = require("../services/rating");
 const { checkAndAwardAchievements } = require("../services/achievements");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 function serializeUser(user) {
   return { ...user, telegramId: user.telegramId.toString() };
@@ -50,6 +49,10 @@ router.get("/me", authMiddleware, async (req, res) => {
 router.post("/onboard", authMiddleware, async (req, res) => {
   try {
     const { city, ratingSource, ratingSystem, ratingValue, surveyAnswers, hand, position } = req.body;
+
+    const existingUser = await prisma.user.findUnique({ where: { id: req.userId } });
+    if (!existingUser) return res.status(404).json({ error: "Пользователь не найден" });
+    if (existingUser.onboarded) return res.status(400).json({ error: "Онбординг уже пройден" });
 
     if (!city) return res.status(400).json({ error: "Город обязателен" });
 
@@ -108,8 +111,26 @@ router.patch("/me", authMiddleware, async (req, res) => {
   try {
     const allowed = ["city", "hand", "position", "experience", "preferredTime", "isVisible", "reminderMinutes"];
     const data = {};
+    const VALID_ENUMS = {
+      city: ["MINSK", "BREST", "GRODNO"],
+      hand: ["RIGHT", "LEFT"],
+      position: ["DERECHA", "REVES", "BOTH"],
+      experience: ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"],
+      preferredTime: ["MORNING", "AFTERNOON", "EVENING", "ANY"],
+    };
     for (const key of allowed) {
       if (req.body[key] !== undefined) {
+        if (VALID_ENUMS[key] && !VALID_ENUMS[key].includes(req.body[key])) {
+          return res.status(400).json({ error: `Недопустимое значение для ${key}` });
+        }
+        if (key === "reminderMinutes") {
+          const val = parseInt(req.body[key]);
+          if (isNaN(val) || val < 0 || val > 1440) {
+            return res.status(400).json({ error: "reminderMinutes должен быть от 0 до 1440" });
+          }
+          data[key] = val;
+          continue;
+        }
         data[key] = req.body[key];
       }
     }

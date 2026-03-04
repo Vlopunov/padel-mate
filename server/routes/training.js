@@ -68,8 +68,7 @@ router.delete("/book/:id", authMiddleware, async (req, res) => {
 
     // Notify coach about cancellation
     try {
-      const { PrismaClient } = require("@prisma/client");
-      const prisma = new PrismaClient();
+      const prisma = require("../lib/prisma");
       const student = await prisma.user.findUnique({
         where: { id: req.userId },
         select: { firstName: true, lastName: true },

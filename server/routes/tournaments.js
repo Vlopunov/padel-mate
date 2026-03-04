@@ -1,11 +1,10 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { authMiddleware } = require("../middleware/auth");
 const { sendTelegramMessage } = require("../services/notifications");
 const { getLiveData } = require("../services/tournamentEngine");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // List tournaments
 router.get("/", authMiddleware, async (req, res) => {
@@ -287,10 +286,12 @@ router.delete("/:id/unregister", authMiddleware, async (req, res) => {
     try {
       const partnerId = reg.player1Id === req.userId ? reg.player2 : reg.player1;
       const canceller = reg.player1Id === req.userId ? reg.player1 : reg.player2;
-      const text =
-        `❌ <b>${canceller.firstName}</b> отменил запись на турнир <b>${tournament.name}</b>.\n` +
-        `Вы можете записаться снова с другим партнёром.`;
-      await sendTelegramMessage(partnerId.telegramId.toString(), text);
+      if (partnerId && partnerId.telegramId) {
+        const text =
+          `❌ <b>${canceller.firstName}</b> отменил запись на турнир <b>${tournament.name}</b>.\n` +
+          `Вы можете записаться снова с другим партнёром.`;
+        await sendTelegramMessage(partnerId.telegramId.toString(), text);
+      }
     } catch (notifErr) {
       console.error("Tournament unregister notification error:", notifErr);
     }

@@ -8,8 +8,7 @@
  * based on current standings (#1+#3 vs #2+#4, etc.).
  */
 
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../lib/prisma");
 const {
   notifyTournamentStart,
   notifyNextRound,

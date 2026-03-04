@@ -1,8 +1,6 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { notifyMatchReminder, notifyMatchCancelled, sendTelegramMessage, notifyInactivePlayer, notifyWeeklySummary, notifyMilestone, notifyTrainingReminder } = require("./notifications");
 const { collectDailyStats, getTodaySummary, formatDigestMessage, getUserWeeklySummary, getInactivePlayers, checkMilestones, getWeeklyReportData, formatWeeklyReport } = require("./analytics");
-
-const prisma = new PrismaClient();
 
 let isRunning = false;
 let lastDigestDate = null;
@@ -76,6 +74,7 @@ async function checkAndSendReminders() {
               err.message
             );
           }
+          continue;
         }
 
         // Also send if match is very close (< reminderMinutes) and reminder hasn't been sent yet

@@ -2,8 +2,8 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  console.warn("WARNING: JWT_SECRET not set! Using insecure default for development only.");
+if (!JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("JWT_SECRET must be set in production!");
 }
 const SECRET = JWT_SECRET || "dev-secret-unsafe";
 
@@ -53,4 +53,4 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { validateTelegramInitData, generateToken, authMiddleware };
+module.exports = { validateTelegramInitData, generateToken, authMiddleware, SECRET };

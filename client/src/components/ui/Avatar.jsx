@@ -1,16 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { COLORS } from '../../config';
 
 export function Avatar({ src, name, size = 40, style }) {
+  const [imgError, setImgError] = useState(false);
+
   const initials = name
     ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
 
-  if (src) {
+  if (src && !imgError) {
     return (
       <img
         src={src}
         alt={name}
+        onError={() => setImgError(true)}
         style={{
           width: size,
           height: size,

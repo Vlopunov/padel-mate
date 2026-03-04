@@ -1,4 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
+const fetch = require("node-fetch");
 const startCommand = require("./commands/start");
 const ratingCommand = require("./commands/rating");
 const matchesCommand = require("./commands/matches");
@@ -36,19 +37,19 @@ process.on("unhandledRejection", (err) => {
 console.log("Padel GO bot started!");
 
 // ─── Text Commands ─────────────────────────────────
-bot.onText(/\/start/, (msg) => startCommand(bot, msg, MINI_APP_URL, API_URL));
-bot.onText(/\/rating/, (msg) => ratingCommand(bot, msg, API_URL));
-bot.onText(/\/matches/, (msg) => matchesCommand(bot, msg));
-bot.onText(/\/help/, (msg) => helpCommand(bot, msg, MINI_APP_URL));
-bot.onText(/\/stats/, (msg) => statsCommand(bot, msg));
-bot.onText(/\/me/, (msg) => meCommand(bot, msg));
-bot.onText(/\/top/, (msg) => topCommand(bot, msg));
-bot.onText(/\/find/, (msg) => findCommand(bot, msg));
-bot.onText(/\/create/, (msg) => startCreate(bot, msg));
-bot.onText(/\/cancel/, (msg) => cancelCommand(bot, msg));
-bot.onText(/\/faq/, (msg) => faqCommand(bot, msg));
-bot.onText(/\/students/, (msg) => studentsCommand(bot, msg));
-bot.onText(/\/schedule/, (msg) => scheduleCommand(bot, msg));
+bot.onText(/^\/start(?:\s|$)/, (msg) => startCommand(bot, msg, MINI_APP_URL, API_URL));
+bot.onText(/^\/rating(?:\s|$)/, (msg) => ratingCommand(bot, msg, API_URL));
+bot.onText(/^\/matches(?:\s|$)/, (msg) => matchesCommand(bot, msg));
+bot.onText(/^\/help(?:\s|$)/, (msg) => helpCommand(bot, msg, MINI_APP_URL));
+bot.onText(/^\/stats(?:\s|$)/, (msg) => statsCommand(bot, msg));
+bot.onText(/^\/me(?:\s|$)/, (msg) => meCommand(bot, msg));
+bot.onText(/^\/top(?:\s|$)/, (msg) => topCommand(bot, msg));
+bot.onText(/^\/find(?:\s|$)/, (msg) => findCommand(bot, msg));
+bot.onText(/^\/create(?:\s|$)/, (msg) => startCreate(bot, msg));
+bot.onText(/^\/cancel(?:\s|$)/, (msg) => cancelCommand(bot, msg));
+bot.onText(/^\/faq(?:\s|$)/, (msg) => faqCommand(bot, msg));
+bot.onText(/^\/students(?:\s|$)/, (msg) => studentsCommand(bot, msg));
+bot.onText(/^\/schedule(?:\s|$)/, (msg) => scheduleCommand(bot, msg));
 
 // ─── Callback Queries ──────────────────────────────
 bot.on("callback_query", async (query) => {

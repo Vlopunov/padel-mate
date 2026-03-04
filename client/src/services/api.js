@@ -30,12 +30,19 @@ export const api = {
       headers,
     });
 
+    const data = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      api.clearToken();
+      window.dispatchEvent(new Event('auth-expired'));
+      throw new Error(data.error || 'Unauthorized');
+    }
+
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       throw new Error(data.error || `HTTP ${res.status}`);
     }
 
-    return res.json();
+    return data;
   },
 
   // Auth

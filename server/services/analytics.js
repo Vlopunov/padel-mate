@@ -1,7 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { CITY_MAP } = require("../config/app");
-
-const prisma = new PrismaClient();
 
 // Minsk is UTC+3 (Belarus has no DST)
 const MINSK_OFFSET_MS = 3 * 60 * 60 * 1000;

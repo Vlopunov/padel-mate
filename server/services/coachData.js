@@ -1,7 +1,5 @@
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { getLevel } = require("./rating");
-
-const prisma = new PrismaClient();
 const MAX_FREE_STUDENTS = 5;
 
 // Get all students for a coach with stats

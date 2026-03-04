@@ -13,13 +13,12 @@ export function Home({ user, onNavigate }) {
   const [matches, setMatches] = useState([]);
   const [pendingMatches, setPendingMatches] = useState([]);
   const [tournament, setTournament] = useState(null);
-  const [trainingSessions, setTrainingSessions] = useState([]);
-  const [homework, setHomework] = useState([]);
   const [bookableVenue, setBookableVenue] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user?.city]);
 
   async function loadData() {
     try {
@@ -59,10 +58,26 @@ export function Home({ user, onNavigate }) {
       // }
     } catch (err) {
       console.error('Home load error:', err);
+      setLoadError(err.message || 'Ошибка загрузки');
     }
   }
 
   if (!user) return null;
+
+  if (loadError) {
+    return (
+      <div style={{ paddingBottom: 80, textAlign: 'center', paddingTop: 40 }}>
+        <p style={{ fontSize: 16, color: COLORS.danger, marginBottom: 8 }}>Ошибка загрузки</p>
+        <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 16 }}>{loadError}</p>
+        <button
+          onClick={() => { setLoadError(null); loadData(); }}
+          style={{ padding: '8px 20px', borderRadius: 10, background: COLORS.accent, color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+        >
+          Повторить
+        </button>
+      </div>
+    );
+  }
 
   const level = getLevel(user.rating);
   const xp = getXpLevel(user.xp || 0);

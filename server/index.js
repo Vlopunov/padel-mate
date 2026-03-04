@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const rateLimit = require("express-rate-limit");
+const prisma = require("./lib/prisma");
 
 const authRoutes = require("./routes/auth");
 const userRoutes = require("./routes/users");
@@ -14,8 +16,6 @@ const adminRoutes = require("./routes/admin");
 const coachRoutes = require("./routes/coach");
 const trainingRoutes = require("./routes/training");
 const coachesRoutes = require("./routes/coaches");
-
-const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,9 +32,6 @@ app.use(express.json({ limit: "10kb" }));
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: "Слишком много запросов, подождите" } });
 const strictLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Слишком много запросов, подождите" } });
 app.use("/api/", apiLimiter);
-app.use("/api/matches/:id/score", strictLimiter);
-app.use("/api/matches/:id/join", strictLimiter);
-app.use("/api/matches/:id/confirm", strictLimiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -54,13 +51,12 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: require("./config/app").APP_NAME });
 });
 
-// One-time admin setup (protected by BOT_TOKEN)
-app.post("/api/setup-admin", async (req, res) => {
-  const { PrismaClient } = require("@prisma/client");
-  const prisma = new PrismaClient();
+// One-time admin setup (protected by ADMIN_SECRET or BOT_TOKEN)
+app.post("/api/setup-admin", strictLimiter, async (req, res) => {
   try {
     const { telegramId, secret } = req.body;
-    if (!secret || secret !== process.env.BOT_TOKEN) {
+    const adminSecret = process.env.ADMIN_SECRET || process.env.BOT_TOKEN;
+    if (!secret || !adminSecret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const user = await prisma.user.upsert({
@@ -77,30 +73,26 @@ app.post("/api/setup-admin", async (req, res) => {
     res.json({ ok: true, userId: user.id, isAdmin: user.isAdmin });
   } catch (err) {
     console.error("Setup admin error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 });
 
-// Seed venues (protected by BOT_TOKEN)
-app.post("/api/seed-venues", async (req, res) => {
-  const { PrismaClient } = require("@prisma/client");
-  const prisma = new PrismaClient();
+// Seed venues (protected by ADMIN_SECRET or BOT_TOKEN)
+app.post("/api/seed-venues", strictLimiter, async (req, res) => {
   try {
     const { secret } = req.body;
-    if (!secret || secret !== process.env.BOT_TOKEN) {
+    const adminSecret = process.env.ADMIN_SECRET || process.env.BOT_TOKEN;
+    if (!secret || !adminSecret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const venues = [
-      // Минск
       { name: "360 Padel Arena", address: "с/с Боровлянский, д. 308, этаж 2", city: "MINSK", courts: 7, yclientsCompanyId: "1073853", yclientsFormId: "n1170112", yclientsPriceLabel: "от 120 BYN/час" },
       { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 2 },
       { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", city: "MINSK", courts: 1 },
       { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", city: "MINSK", courts: 1 },
       { name: "Ilo Club", address: "Минск", city: "MINSK", courts: 1 },
       { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 8 },
-      // Гродно
       { name: "Meta Padel", address: "Гродно", city: "GRODNO", courts: 3 },
-      // Брест
       { name: "PADEL BAZA", address: "Брест", city: "BREST", courts: 2 },
     ];
     const results = [];
@@ -118,23 +110,17 @@ app.post("/api/seed-venues", async (req, res) => {
     res.json({ ok: true, venues: results });
   } catch (err) {
     console.error("Seed venues error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 });
 
 // Serve built client (if dist exists)
 const clientDist = path.join(__dirname, "../client/dist");
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("Client dist path:", clientDist);
-console.log("Client dist exists:", fs.existsSync(clientDist));
 
 if (fs.existsSync(clientDist)) {
   const indexPath = path.join(clientDist, "index.html");
-  console.log("index.html exists:", fs.existsSync(indexPath));
-
   app.use(express.static(clientDist));
 
-  // TV display page (standalone, no React)
   const tvPath = path.join(clientDist, "tv.html");
   app.get("/tv/:id", (req, res) => {
     if (fs.existsSync(tvPath)) {
@@ -150,9 +136,6 @@ if (fs.existsSync(clientDist)) {
     }
     res.sendFile(indexPath);
   });
-  console.log("Static file serving enabled");
-} else {
-  console.log("No client dist found — static serving disabled");
 }
 
 // Error handler
@@ -164,8 +147,8 @@ app.use((err, req, res, _next) => {
 app.listen(PORT, () => {
   console.log(`${require("./config/app").APP_NAME} server running on port ${PORT}`);
 
-  // Start bot in the same process (production)
-  if (process.env.BOT_TOKEN) {
+  // Start bot in the same process (only when NOT running in Docker with separate bot container)
+  if (process.env.BOT_TOKEN && process.env.START_BOT !== "false") {
     try {
       require("../bot/index");
     } catch (err) {

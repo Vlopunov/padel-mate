@@ -46,8 +46,9 @@ function determineWinner(sets) {
   let team2Wins = 0;
   for (const s of sets) {
     if (s.team1Score > s.team2Score) team1Wins++;
-    else team2Wins++;
+    else if (s.team2Score > s.team1Score) team2Wins++;
   }
+  if (team1Wins === team2Wins) return null;
   return team1Wins > team2Wins ? 1 : 2;
 }
 

@@ -2,11 +2,10 @@
  * Bot data helpers — provides DB queries for bot commands.
  * Uses Prisma directly (bot runs in same process as server).
  */
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { CITY_MAP, LEVELS, XP_LEVELS } = require("../config/app");
 const { sendTelegramMessage, notifyMatchFull } = require("./notifications");
 
-const prisma = new PrismaClient();
 
 function getLevelInfo(rating) {
   for (const l of LEVELS) {

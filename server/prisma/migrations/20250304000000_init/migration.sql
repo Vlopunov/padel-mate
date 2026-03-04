@@ -461,6 +461,9 @@ CREATE INDEX "User_city_idx" ON "User"("city");
 CREATE INDEX "User_rating_idx" ON "User"("rating");
 
 -- CreateIndex
+CREATE INDEX "Venue_city_idx" ON "Venue"("city");
+
+-- CreateIndex
 CREATE INDEX "Match_date_idx" ON "Match"("date");
 
 -- CreateIndex
@@ -468,6 +471,9 @@ CREATE INDEX "Match_status_idx" ON "Match"("status");
 
 -- CreateIndex
 CREATE INDEX "Match_creatorId_idx" ON "Match"("creatorId");
+
+-- CreateIndex
+CREATE INDEX "MatchPlayer_userId_idx" ON "MatchPlayer"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "MatchPlayer_matchId_userId_key" ON "MatchPlayer"("matchId", "userId");
@@ -479,10 +485,19 @@ CREATE UNIQUE INDEX "MatchSet_matchId_setNumber_key" ON "MatchSet"("matchId", "s
 CREATE UNIQUE INDEX "ScoreConfirmation_matchId_userId_key" ON "ScoreConfirmation"("matchId", "userId");
 
 -- CreateIndex
+CREATE INDEX "RatingHistory_userId_idx" ON "RatingHistory"("userId");
+
+-- CreateIndex
+CREATE INDEX "RatingHistory_matchId_idx" ON "RatingHistory"("matchId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Pair_player1Id_player2Id_key" ON "Pair"("player1Id", "player2Id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserAchievement_userId_achievementId_key" ON "UserAchievement"("userId", "achievementId");
+
+-- CreateIndex
+CREATE INDEX "MatchComment_matchId_idx" ON "MatchComment"("matchId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TournamentRegistration_tournamentId_player1Id_key" ON "TournamentRegistration"("tournamentId", "player1Id");
@@ -500,7 +515,19 @@ CREATE UNIQUE INDEX "TournamentStanding_tournamentId_userId_key" ON "TournamentS
 CREATE UNIQUE INDEX "TournamentRatingChange_tournamentId_userId_key" ON "TournamentRatingChange"("tournamentId", "userId");
 
 -- CreateIndex
+CREATE INDEX "CoachStudent_coachId_idx" ON "CoachStudent"("coachId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "CoachStudent_coachId_studentId_key" ON "CoachStudent"("coachId", "studentId");
+
+-- CreateIndex
+CREATE INDEX "TrainingSession_coachId_idx" ON "TrainingSession"("coachId");
+
+-- CreateIndex
+CREATE INDEX "TrainingSession_date_idx" ON "TrainingSession"("date");
+
+-- CreateIndex
+CREATE INDEX "SessionBooking_studentId_idx" ON "SessionBooking"("studentId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "SessionBooking_sessionId_studentId_key" ON "SessionBooking"("sessionId", "studentId");
@@ -515,16 +542,22 @@ ALTER TABLE "Match" ADD CONSTRAINT "Match_creatorId_fkey" FOREIGN KEY ("creatorI
 ALTER TABLE "Match" ADD CONSTRAINT "Match_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MatchPlayer" ADD CONSTRAINT "MatchPlayer_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Match" ADD CONSTRAINT "Match_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "Tournament"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Match" ADD CONSTRAINT "Match_scoreSubmitterId_fkey" FOREIGN KEY ("scoreSubmitterId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "MatchPlayer" ADD CONSTRAINT "MatchPlayer_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "MatchPlayer" ADD CONSTRAINT "MatchPlayer_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MatchSet" ADD CONSTRAINT "MatchSet_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MatchSet" ADD CONSTRAINT "MatchSet_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ScoreConfirmation" ADD CONSTRAINT "ScoreConfirmation_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScoreConfirmation" ADD CONSTRAINT "ScoreConfirmation_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ScoreConfirmation" ADD CONSTRAINT "ScoreConfirmation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -548,7 +581,7 @@ ALTER TABLE "UserAchievement" ADD CONSTRAINT "UserAchievement_userId_fkey" FOREI
 ALTER TABLE "UserAchievement" ADD CONSTRAINT "UserAchievement_achievementId_fkey" FOREIGN KEY ("achievementId") REFERENCES "Achievement"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "MatchComment" ADD CONSTRAINT "MatchComment_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MatchComment" ADD CONSTRAINT "MatchComment_matchId_fkey" FOREIGN KEY ("matchId") REFERENCES "Match"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "MatchComment" ADD CONSTRAINT "MatchComment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -557,7 +590,7 @@ ALTER TABLE "MatchComment" ADD CONSTRAINT "MatchComment_userId_fkey" FOREIGN KEY
 ALTER TABLE "Tournament" ADD CONSTRAINT "Tournament_venueId_fkey" FOREIGN KEY ("venueId") REFERENCES "Venue"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TournamentRegistration" ADD CONSTRAINT "TournamentRegistration_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "Tournament"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TournamentRegistration" ADD CONSTRAINT "TournamentRegistration_tournamentId_fkey" FOREIGN KEY ("tournamentId") REFERENCES "Tournament"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TournamentRegistration" ADD CONSTRAINT "TournamentRegistration_player1Id_fkey" FOREIGN KEY ("player1Id") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -642,3 +675,4 @@ ALTER TABLE "CoachReview" ADD CONSTRAINT "CoachReview_coachId_fkey" FOREIGN KEY 
 
 -- AddForeignKey
 ALTER TABLE "CoachReview" ADD CONSTRAINT "CoachReview_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+

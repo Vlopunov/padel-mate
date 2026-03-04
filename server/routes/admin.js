@@ -1,9 +1,8 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { authMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Admin middleware
 async function adminMiddleware(req, res, next) {
@@ -500,7 +499,13 @@ router.patch("/matches/:id", authMiddleware, adminMiddleware, async (req, res) =
     if (courtNumber !== undefined) data.courtNumber = courtNumber ? parseInt(courtNumber) : null;
     if (matchType !== undefined) data.matchType = matchType;
     if (notes !== undefined) data.notes = notes || null;
-    if (status !== undefined) data.status = status;
+    if (status !== undefined) {
+      const VALID_MATCH_STATUSES = ["RECRUITING", "FULL", "IN_PROGRESS", "PENDING_SCORE", "PENDING_CONFIRMATION", "COMPLETED", "CANCELLED"];
+      if (!VALID_MATCH_STATUSES.includes(status)) {
+        return res.status(400).json({ error: `Недопустимый статус. Допустимые: ${VALID_MATCH_STATUSES.join(", ")}` });
+      }
+      data.status = status;
+    }
 
     const updated = await prisma.match.update({
       where: { id: matchId },

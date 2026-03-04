@@ -1,19 +1,17 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
+      POSTGRES_USER: ${POSTGRES_USER:-padelmate}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-padelmate_pass}
       POSTGRES_DB: padelmate
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d padelmate"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-padelmate} -d padelmate"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -26,15 +24,23 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://user:pass@db:5432/padelmate
+      DATABASE_URL: postgresql://${POSTGRES_USER:-padelmate}:${POSTGRES_PASSWORD:-padelmate_pass}@db:5432/padelmate
       BOT_TOKEN: ${BOT_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
       MINI_APP_URL: ${MINI_APP_URL}
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
+      START_BOT: "false"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   bot:
     build:
@@ -42,12 +48,13 @@ services:
       dockerfile: bot/Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://user:pass@db:5432/padelmate
+      DATABASE_URL: postgresql://${POSTGRES_USER:-padelmate}:${POSTGRES_PASSWORD:-padelmate_pass}@db:5432/padelmate
       BOT_TOKEN: ${BOT_TOKEN}
       MINI_APP_URL: ${MINI_APP_URL}
       API_URL: http://server:3000
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   client:
     build:

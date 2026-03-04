@@ -1,9 +1,8 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { validateTelegramInitData, generateToken } = require("../middleware/auth");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.post("/telegram", async (req, res) => {
   try {
@@ -13,9 +12,9 @@ router.post("/telegram", async (req, res) => {
       return res.status(400).json({ error: "initData обязателен" });
     }
 
-    // In development, skip validation
-    const isDev = process.env.NODE_ENV === "development";
-    if (!isDev && !validateTelegramInitData(initData)) {
+    // Only skip validation if explicitly opted in via env flag (never in production)
+    const skipValidation = process.env.SKIP_TG_VALIDATION === "true" && process.env.NODE_ENV !== "production";
+    if (!skipValidation && !validateTelegramInitData(initData)) {
       return res.status(401).json({ error: "Невалидные данные Telegram" });
     }
 

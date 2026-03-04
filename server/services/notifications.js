@@ -161,10 +161,10 @@ async function notifyLeaderboardPosition(telegramId, position, prevPosition, rat
   let text;
   if (prevPosition && position < prevPosition) {
     text = `🏆 Ты поднялся на <b>#${position}</b> в рейтинге! (был #${prevPosition})\n📊 Рейтинг: <b>${rating}</b>`;
-  } else if (position <= 10) {
-    text = `🔥 Ты в <b>топ-10</b>! Позиция: <b>#${position}</b>\n📊 Рейтинг: <b>${rating}</b>`;
   } else if (position <= 3) {
     text = `👑 Ты в <b>топ-3</b>! Позиция: <b>#${position}</b>\n📊 Рейтинг: <b>${rating}</b>`;
+  } else if (position <= 10) {
+    text = `🔥 Ты в <b>топ-10</b>! Позиция: <b>#${position}</b>\n📊 Рейтинг: <b>${rating}</b>`;
   } else {
     return; // Don't notify for positions > 10 without improvement
   }

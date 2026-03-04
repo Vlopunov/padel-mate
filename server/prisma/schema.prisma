@@ -159,6 +159,7 @@ model User {
   matchPlayers    MatchPlayer[]
   ratingHistory   RatingHistory[]
   createdMatches  Match[]              @relation("MatchCreator")
+  submittedScores Match[]              @relation("ScoreSubmitter")
   scoreConfirms   ScoreConfirmation[]
   achievements    UserAchievement[]
   matchComments   MatchComment[]
@@ -209,6 +210,8 @@ model Venue {
   matches          Match[]
   tournaments      Tournament[]
   trainingSessions TrainingSession[]
+
+  @@index([city])
 }
 
 model Match {
@@ -227,8 +230,10 @@ model Match {
   status        MatchStatus @default(RECRUITING)
   notes            String?
   tournamentId     Int?
+  tournament       Tournament? @relation(fields: [tournamentId], references: [id], onDelete: SetNull)
   scoreSubmittedAt DateTime?
   scoreSubmitterId Int?
+  scoreSubmitter   User?       @relation("ScoreSubmitter", fields: [scoreSubmitterId], references: [id])
   createdAt        DateTime    @default(now())
 
   players       MatchPlayer[]
@@ -244,7 +249,7 @@ model Match {
 model MatchPlayer {
   id           Int      @id @default(autoincrement())
   matchId      Int
-  match        Match    @relation(fields: [matchId], references: [id])
+  match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   userId       Int
   user         User     @relation(fields: [userId], references: [id])
   team         Int?
@@ -252,12 +257,13 @@ model MatchPlayer {
   reminderSent Boolean  @default(false)
 
   @@unique([matchId, userId])
+  @@index([userId])
 }
 
 model MatchSet {
   id             Int   @id @default(autoincrement())
   matchId        Int
-  match          Match @relation(fields: [matchId], references: [id])
+  match          Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   setNumber      Int
   team1Score     Int
   team2Score     Int
@@ -270,7 +276,7 @@ model MatchSet {
 model ScoreConfirmation {
   id        Int      @id @default(autoincrement())
   matchId   Int
-  match     Match    @relation(fields: [matchId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   confirmed Boolean  @default(false)
@@ -290,6 +296,9 @@ model RatingHistory {
   matchId   Int?
   note      String?
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([matchId])
 }
 
 model Pair {
@@ -349,11 +358,13 @@ model UserAchievement {
 model MatchComment {
   id        Int      @id @default(autoincrement())
   matchId   Int
-  match     Match    @relation(fields: [matchId], references: [id])
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
   text      String
   createdAt DateTime @default(now())
+
+  @@index([matchId])
 }
 
 model Tournament {
@@ -381,17 +392,18 @@ model Tournament {
   currentRound     Int              @default(0)
   registrationMode RegistrationMode @default(TEAMS)
 
-  registrations TournamentRegistration[]
-  rounds        TournamentRound[]
-  matches       TournamentMatch[]
-  standings     TournamentStanding[]
-  ratingChanges TournamentRatingChange[]
+  registrations    TournamentRegistration[]
+  rounds           TournamentRound[]
+  linkedMatches    Match[]
+  matches          TournamentMatch[]
+  standings        TournamentStanding[]
+  ratingChanges    TournamentRatingChange[]
 }
 
 model TournamentRegistration {
   id           Int        @id @default(autoincrement())
   tournamentId Int
-  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   player1Id    Int
   player1      User       @relation("TournamentPlayer1", fields: [player1Id], references: [id])
   player2Id    Int?
@@ -491,6 +503,7 @@ model CoachStudent {
   createdAt DateTime @default(now())
 
   @@unique([coachId, studentId])
+  @@index([coachId])
 }
 
 model TrainingSession {
@@ -510,6 +523,9 @@ model TrainingSession {
   updatedAt   DateTime              @updatedAt
 
   bookings    SessionBooking[]
+
+  @@index([coachId])
+  @@index([date])
 }
 
 model SessionBooking {
@@ -523,6 +539,7 @@ model SessionBooking {
   createdAt    DateTime        @default(now())
 
   @@unique([sessionId, studentId])
+  @@index([studentId])
 }
 
 model CoachNote {

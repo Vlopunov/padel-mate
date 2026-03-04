@@ -1,3 +1,5 @@
+const fetch = require("node-fetch");
+
 module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
   const chatId = msg.chat.id;
   const name = msg.from.first_name || "Игрок";

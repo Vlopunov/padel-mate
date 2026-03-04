@@ -43,7 +43,7 @@ export const XP_LEVELS = [
 ];
 
 export function getLevel(rating) {
-  return LEVELS.find((l) => rating >= l.min && rating <= l.max) || LEVELS[0];
+  return LEVELS.find((l) => rating >= l.min && rating <= l.max) || LEVELS[LEVELS.length - 1];
 }
 
 export function getLevelByValue(levelFloat) {

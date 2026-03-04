@@ -3,8 +3,7 @@ module.exports = async function studentsCommand(bot, msg) {
   const telegramId = msg.from.id;
 
   try {
-    const { PrismaClient } = require("@prisma/client");
-    const prisma = new PrismaClient();
+    const prisma = require("../../server/lib/prisma");
 
     // Find coach by telegramId
     const user = await prisma.user.findFirst({

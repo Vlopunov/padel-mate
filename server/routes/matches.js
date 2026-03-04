@@ -1,12 +1,11 @@
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
+const prisma = require("../lib/prisma");
 const { authMiddleware } = require("../middleware/auth");
 const { calculateRatingChanges, calculatePairRatingChanges, normalizePairIds, determineWinner, getLevel } = require("../services/rating");
 const { checkAndAwardAchievements, checkEventAchievement } = require("../services/achievements");
 const { notifyRatingChange, notifyNewAchievement, sendTelegramMessage, notifyScoreConfirmation, notifyMatchFull, notifyLeaderboardPosition } = require("../services/notifications");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // Create match
 router.post("/", authMiddleware, async (req, res) => {
@@ -20,6 +19,16 @@ router.post("/", authMiddleware, async (req, res) => {
     // Prevent creating matches in the past
     if (new Date(date) <= new Date()) {
       return res.status(400).json({ error: "Нельзя создать матч задним числом" });
+    }
+
+    // Validate matchType
+    if (matchType && !["RATED", "FRIENDLY"].includes(matchType)) {
+      return res.status(400).json({ error: "Недопустимый тип матча" });
+    }
+
+    // Validate notes length
+    if (notes && notes.length > 5000) {
+      return res.status(400).json({ error: "Заметка слишком длинная (макс. 5000 символов)" });
     }
 
     const match = await prisma.match.create({
@@ -777,6 +786,12 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       if (t1 === 6 && t2 === 6) return res.status(400).json({ error: "При 6-6 должен быть тай-брейк (7-6)" });
     }
 
+    // Must have an overall match winner (no tied sets count)
+    const parsedSets = sets.map((s) => ({ team1Score: parseInt(s.team1Score), team2Score: parseInt(s.team2Score) }));
+    if (determineWinner(parsedSets) === null) {
+      return res.status(400).json({ error: "Должен быть победитель матча" });
+    }
+
     // All score operations in a single transaction to prevent race conditions
     await prisma.$transaction(async (tx) => {
       // Update team assignments
@@ -1172,7 +1187,7 @@ router.get("/:id/calendar", async (req, res) => {
   try {
     // Auth: header OR query param (for external browser opening)
     const jwt = require("jsonwebtoken");
-    const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-unsafe";
+    const { SECRET } = require("../middleware/auth");
     let userId;
 
     const authHeader = req.headers.authorization;
@@ -1181,7 +1196,7 @@ router.get("/:id/calendar", async (req, res) => {
 
     if (!token) return res.status(401).json({ error: "Требуется авторизация" });
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, SECRET);
       userId = decoded.id;
     } catch {
       return res.status(401).json({ error: "Недействительный токен" });
