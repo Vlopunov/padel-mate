@@ -1,7 +1,11 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.warn("WARNING: JWT_SECRET not set! Using insecure default for development only.");
+}
+const SECRET = JWT_SECRET || "dev-secret-unsafe";
 
 function validateTelegramInitData(initData) {
   const params = new URLSearchParams(initData);
@@ -27,7 +31,7 @@ function validateTelegramInitData(initData) {
 function generateToken(user) {
   return jwt.sign(
     { id: user.id, telegramId: user.telegramId.toString() },
-    JWT_SECRET,
+    SECRET,
     { expiresIn: "30d" }
   );
 }
@@ -40,7 +44,7 @@ function authMiddleware(req, res, next) {
 
   const token = authHeader.slice(7);
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, SECRET);
     req.userId = decoded.id;
     req.telegramId = decoded.telegramId;
     next();

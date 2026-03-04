@@ -226,27 +226,42 @@ function approvedPlayers(players) {
 
 // Helper: shared approve logic
 async function approvePlayerLogic(matchId, userId) {
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: { players: true, venue: true },
+  // Use transaction to prevent race conditions
+  const result = await prisma.$transaction(async (tx) => {
+    const match = await tx.match.findUnique({
+      where: { id: matchId },
+      include: { players: true, venue: true },
+    });
+    if (!match) return { error: "Матч не найден", status: 404 };
+
+    const player = match.players.find((p) => p.userId === userId);
+    if (!player) return { error: "Заявка не найдена", status: 404 };
+    if (player.status === "APPROVED") return { error: "Уже одобрен", status: 400 };
+
+    await tx.matchPlayer.update({
+      where: { id: player.id },
+      data: { status: "APPROVED" },
+    });
+
+    // Re-count approved players inside transaction
+    const freshMatch = await tx.match.findUnique({
+      where: { id: matchId },
+      include: { players: true },
+    });
+    const approvedCount = approvedPlayers(freshMatch.players).length;
+    let becameFull = false;
+    if (approvedCount >= 4 && match.status !== "FULL") {
+      await tx.match.update({ where: { id: matchId }, data: { status: "FULL" } });
+      becameFull = true;
+    }
+
+    return { success: true, becameFull, venue: match.venue, date: match.date };
   });
-  if (!match) return { error: "Матч не найден", status: 404 };
 
-  const player = match.players.find((p) => p.userId === userId);
-  if (!player) return { error: "Заявка не найдена", status: 404 };
-  if (player.status === "APPROVED") return { error: "Уже одобрен", status: 400 };
+  if (result.error) return result;
 
-  await prisma.matchPlayer.update({
-    where: { id: player.id },
-    data: { status: "APPROVED" },
-  });
-
-  // Check if match is now full (4 approved players)
-  const approvedCount = approvedPlayers(match.players).length + 1;
-  if (approvedCount >= 4) {
-    await prisma.match.update({ where: { id: matchId }, data: { status: "FULL" } });
-
-    // Notify all players that the match is full
+  // Notifications outside transaction (non-critical)
+  if (result.becameFull) {
     try {
       const fullMatch = await prisma.match.findUnique({
         where: { id: matchId },
@@ -259,12 +274,11 @@ async function approvePlayerLogic(matchId, userId) {
     } catch (e) { console.error("[MatchFull] notify error:", e.message); }
   }
 
-  // Notify the approved player
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (user && user.telegramId) {
-    const venueName = match.venue?.name || '';
-    const dateStr = new Date(match.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
-    const timeStr = new Date(match.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' });
+    const venueName = result.venue?.name || '';
+    const dateStr = new Date(result.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', timeZone: 'Europe/Minsk' });
+    const timeStr = new Date(result.date).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Minsk' });
     const text = `✅ <b>Вас приняли в матч!</b>\n📍 ${venueName}\n📅 ${dateStr} в ${timeStr}`;
     await sendTelegramMessage(user.telegramId.toString(), text);
   }
@@ -314,9 +328,15 @@ router.post("/:id/join", authMiddleware, async (req, res) => {
     const approved = approvedPlayers(match.players);
     if (approved.length >= 4) return res.status(400).json({ error: "Матч уже полный" });
 
-    await prisma.matchPlayer.create({
-      data: { matchId, userId: req.userId, team: null, status: "PENDING" },
-    });
+    // Use unique constraint to prevent duplicate joins
+    try {
+      await prisma.matchPlayer.create({
+        data: { matchId, userId: req.userId, team: null, status: "PENDING" },
+      });
+    } catch (e) {
+      if (e.code === "P2002") return res.status(400).json({ error: "Вы уже подали заявку" });
+      throw e;
+    }
 
     const updated = await prisma.match.findUnique({
       where: { id: matchId },
@@ -739,13 +759,22 @@ router.post("/:id/score", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "В каждой команде должно быть по 2 игрока" });
     }
 
-    // Validate set scores
+    // Validate set scores (padel rules)
     for (const s of sets) {
       const t1 = parseInt(s.team1Score);
       const t2 = parseInt(s.team2Score);
-      if (isNaN(t1) || isNaN(t2) || t1 < 0 || t2 < 0 || t1 > 10 || t2 > 10) {
-        return res.status(400).json({ error: "Некорректный счёт сета (0-10)" });
+      if (isNaN(t1) || isNaN(t2) || t1 < 0 || t2 < 0 || t1 > 7 || t2 > 7) {
+        return res.status(400).json({ error: "Некорректный счёт сета (0-7)" });
       }
+      // Must have a winner: one side >= 6
+      if (t1 < 6 && t2 < 6) {
+        return res.status(400).json({ error: "Сет не завершён — минимум 6 геймов для победы" });
+      }
+      // 7 only valid as 7-5 or 7-6
+      if (t1 === 7 && t2 < 5) return res.status(400).json({ error: "Некорректный счёт: 7 возможно только при 7-5 или 7-6" });
+      if (t2 === 7 && t1 < 5) return res.status(400).json({ error: "Некорректный счёт: 7 возможно только при 7-5 или 7-6" });
+      // Can't tie at 6-6 without going to 7
+      if (t1 === 6 && t2 === 6) return res.status(400).json({ error: "При 6-6 должен быть тай-брейк (7-6)" });
     }
 
     // All score operations in a single transaction to prevent race conditions
@@ -1116,6 +1145,7 @@ router.post("/:id/comments", authMiddleware, async (req, res) => {
     const { text } = req.body;
 
     if (!text || !text.trim()) return res.status(400).json({ error: "Напишите комментарий" });
+    if (text.length > 2000) return res.status(400).json({ error: "Комментарий слишком длинный (макс. 2000 символов)" });
 
     const match = await prisma.match.findUnique({ where: { id: matchId } });
     if (!match) return res.status(404).json({ error: "Матч не найден" });
@@ -1142,7 +1172,7 @@ router.get("/:id/calendar", async (req, res) => {
   try {
     // Auth: header OR query param (for external browser opening)
     const jwt = require("jsonwebtoken");
-    const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
+    const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-unsafe";
     let userId;
 
     const authHeader = req.headers.authorization;

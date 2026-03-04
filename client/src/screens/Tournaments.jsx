@@ -28,6 +28,7 @@ export function Tournaments({ user, onNavigate }) {
 
   useEffect(() => {
     loadTournaments();
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [filter]);
 
   async function loadTournaments() {

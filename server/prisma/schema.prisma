@@ -190,6 +190,9 @@ model User {
   // Pair rating relations
   pairsAsPlayer1  Pair[] @relation("PairPlayer1")
   pairsAsPlayer2  Pair[] @relation("PairPlayer2")
+
+  @@index([city])
+  @@index([rating])
 }
 
 model Venue {
@@ -232,6 +235,10 @@ model Match {
   sets          MatchSet[]
   confirmations ScoreConfirmation[]
   comments      MatchComment[]
+
+  @@index([date])
+  @@index([status])
+  @@index([creatorId])
 }
 
 model MatchPlayer {
@@ -288,9 +295,9 @@ model RatingHistory {
 model Pair {
   id            Int      @id @default(autoincrement())
   player1Id     Int
-  player1       User     @relation("PairPlayer1", fields: [player1Id], references: [id])
+  player1       User     @relation("PairPlayer1", fields: [player1Id], references: [id], onDelete: Cascade)
   player2Id     Int
-  player2       User     @relation("PairPlayer2", fields: [player2Id], references: [id])
+  player2       User     @relation("PairPlayer2", fields: [player2Id], references: [id], onDelete: Cascade)
   rating        Int      @default(1500)
   matchesPlayed Int      @default(0)
   wins          Int      @default(0)
@@ -308,7 +315,7 @@ model Pair {
 model PairRatingHistory {
   id        Int      @id @default(autoincrement())
   pairId    Int
-  pair      Pair     @relation(fields: [pairId], references: [id])
+  pair      Pair     @relation(fields: [pairId], references: [id], onDelete: Cascade)
   oldRating Int
   newRating Int
   change    Int

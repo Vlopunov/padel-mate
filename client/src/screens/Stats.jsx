@@ -29,7 +29,7 @@ export function Stats({ user, onBack, onNavigate }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user?.id]);
 
   async function loadData() {
     try {

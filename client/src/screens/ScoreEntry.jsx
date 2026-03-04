@@ -46,6 +46,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
     } else {
       loadEligibleMatches();
     }
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [matchId]);
 
   async function loadEligibleMatches() {

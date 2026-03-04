@@ -1,5 +1,29 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Component } from 'react';
 import { COLORS } from './config';
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error('App crash:', error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center', color: '#FF4757', background: '#0A0E1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <p style={{ fontSize: 48, marginBottom: 16 }}>⚠️</p>
+          <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Произошла ошибка</p>
+          <p style={{ fontSize: 14, color: '#8a8fa8', marginBottom: 20 }}>Попробуйте перезагрузить приложение</p>
+          <button onClick={() => window.location.reload()} style={{ padding: '10px 24px', borderRadius: 10, background: '#00E68A', color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+            Перезагрузить
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { useTelegram } from './hooks/useTelegram';
 import { api } from './services/api';
 
@@ -277,21 +301,23 @@ export default function App() {
 
   // Main app with tabs
   return (
-    <div style={containerStyle}>
-      {activeTab === 'home' && <Home user={user} onNavigate={handleNavigate} />}
-      {activeTab === 'matches' && <Matches user={user} onNavigate={handleNavigate} highlightMatchId={deepLinkMatchId} />}
-      {activeTab === 'tournaments' && <Tournaments user={user} onNavigate={handleNavigate} />}
-      {activeTab === 'leaderboard' && <Leaderboard user={user} onNavigate={handleNavigate} />}
-      {activeTab === 'profile' && (
-        <Profile
-          user={user}
-          onUpdate={refreshUser}
-          onLogout={handleLogout}
-          onNavigate={handleNavigate}
-        />
-      )}
-      <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
-    </div>
+    <ErrorBoundary>
+      <div style={containerStyle}>
+        {activeTab === 'home' && <Home user={user} onNavigate={handleNavigate} />}
+        {activeTab === 'matches' && <Matches user={user} onNavigate={handleNavigate} highlightMatchId={deepLinkMatchId} />}
+        {activeTab === 'tournaments' && <Tournaments user={user} onNavigate={handleNavigate} />}
+        {activeTab === 'leaderboard' && <Leaderboard user={user} onNavigate={handleNavigate} />}
+        {activeTab === 'profile' && (
+          <Profile
+            user={user}
+            onUpdate={refreshUser}
+            onLogout={handleLogout}
+            onNavigate={handleNavigate}
+          />
+        )}
+        <TabBar activeTab={activeTab} onTabChange={handleTabChange} />
+      </div>
+    </ErrorBoundary>
   );
 }
 

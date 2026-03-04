@@ -363,7 +363,7 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       include: { achievement: true },
     });
 
-    // Load ALL completed matches for aggregations (not just 20)
+    // Load completed matches for aggregations (capped at 500 for safety)
     const allMatchPlayers = await prisma.matchPlayer.findMany({
       where: { userId, match: { status: "COMPLETED" }, status: "APPROVED" },
       include: {
@@ -376,6 +376,7 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
         },
       },
       orderBy: { match: { date: "desc" } },
+      take: 500,
     });
 
     // Recent 20 for display (includes non-completed too)
@@ -469,14 +470,22 @@ router.get("/:id/stats", authMiddleware, async (req, res) => {
       if (won) timeOfDayStats[period].wins++;
     }
 
-    // Enrich topPartners with pair rating
-    for (const tp of topPartners) {
-      const [p1, p2] = normalizePairIds(userId, tp.userId);
-      const pair = await prisma.pair.findUnique({
-        where: { player1Id_player2Id: { player1Id: p1, player2Id: p2 } },
+    // Enrich topPartners with pair rating (batch query)
+    if (topPartners.length > 0) {
+      const pairConditions = topPartners.map(tp => {
+        const [p1, p2] = normalizePairIds(userId, tp.userId);
+        return { player1Id: p1, player2Id: p2 };
       });
-      tp.pairRating = pair?.rating || null;
-      tp.pairMatchesPlayed = pair?.matchesPlayed || 0;
+      const partnerPairs = await prisma.pair.findMany({
+        where: { OR: pairConditions },
+      });
+      const pairMap = new Map(partnerPairs.map(p => [`${p.player1Id}_${p.player2Id}`, p]));
+      for (const tp of topPartners) {
+        const [p1, p2] = normalizePairIds(userId, tp.userId);
+        const pair = pairMap.get(`${p1}_${p2}`);
+        tp.pairRating = pair?.rating || null;
+        tp.pairMatchesPlayed = pair?.matchesPlayed || 0;
+      }
     }
 
     // My pairs (all pairs sorted by rating)
