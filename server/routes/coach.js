@@ -40,7 +40,7 @@ router.patch("/profile", authMiddleware, coachMiddleware, async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error("Coach update profile error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -131,11 +131,22 @@ router.post("/students", authMiddleware, coachMiddleware, async (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(400).json({ error: "Укажите userId" });
 
+    // Enforce free-tier student limit
+    const tier = req.coachUser.coachSubscriptionTier || "FREE";
+    if (tier === "FREE") {
+      const studentCount = await prisma.coachStudent.count({
+        where: { coachId: req.userId, active: true },
+      });
+      if (studentCount >= 5) {
+        return res.status(403).json({ error: "Лимит учеников на бесплатном тарифе (5). Обновите подписку." });
+      }
+    }
+
     const link = await coachData.addStudent(req.userId, parseInt(userId));
     res.json(link);
   } catch (err) {
     console.error("Coach add student error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -147,7 +158,7 @@ router.delete("/students/:studentId", authMiddleware, coachMiddleware, async (re
     res.json(result);
   } catch (err) {
     console.error("Coach remove student error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -210,7 +221,7 @@ router.post("/sessions", authMiddleware, coachMiddleware, async (req, res) => {
     res.json(session);
   } catch (err) {
     console.error("Coach create session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -221,7 +232,7 @@ router.patch("/sessions/:id", authMiddleware, coachMiddleware, async (req, res) 
     res.json(session);
   } catch (err) {
     console.error("Coach update session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -232,7 +243,7 @@ router.delete("/sessions/:id", authMiddleware, coachMiddleware, async (req, res)
     res.json(result);
   } catch (err) {
     console.error("Coach delete session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -255,7 +266,7 @@ router.post("/sessions/:id/cancel", authMiddleware, coachMiddleware, async (req,
     res.json({ success: true, cancelled: affectedStudents.length });
   } catch (err) {
     console.error("Coach cancel session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -266,7 +277,7 @@ router.post("/sessions/:id/complete", authMiddleware, coachMiddleware, async (re
     res.json(result);
   } catch (err) {
     console.error("Coach complete session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -280,7 +291,7 @@ router.get("/students/:studentId/notes", authMiddleware, coachMiddleware, async 
     res.json(notes);
   } catch (err) {
     console.error("Coach get notes error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -317,7 +328,7 @@ router.post("/students/:studentId/notes", authMiddleware, coachMiddleware, async
     res.json(note);
   } catch (err) {
     console.error("Coach add note error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -329,7 +340,7 @@ router.delete("/notes/:noteId", authMiddleware, coachMiddleware, async (req, res
     res.json(result);
   } catch (err) {
     console.error("Coach delete note error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -367,7 +378,7 @@ router.post("/payments", authMiddleware, coachMiddleware, async (req, res) => {
     res.json(payment);
   } catch (err) {
     console.error("Coach record payment error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -379,7 +390,7 @@ router.patch("/payments/:id", authMiddleware, coachMiddleware, async (req, res) 
     res.json(payment);
   } catch (err) {
     console.error("Coach update payment error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -391,7 +402,7 @@ router.delete("/payments/:id", authMiddleware, coachMiddleware, async (req, res)
     res.json(result);
   } catch (err) {
     console.error("Coach delete payment error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -403,7 +414,7 @@ router.get("/students/:studentId/balance", authMiddleware, coachMiddleware, asyn
     res.json(balance);
   } catch (err) {
     console.error("Coach student balance error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -434,7 +445,7 @@ router.post("/packages", authMiddleware, coachMiddleware, async (req, res) => {
     res.json(pkg);
   } catch (err) {
     console.error("Coach create package error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -446,7 +457,7 @@ router.patch("/packages/:id", authMiddleware, coachMiddleware, async (req, res) 
     res.json(pkg);
   } catch (err) {
     console.error("Coach update package error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 
@@ -458,7 +469,7 @@ router.post("/packages/:id/use", authMiddleware, coachMiddleware, async (req, re
     res.json(pkg);
   } catch (err) {
     console.error("Coach use package session error:", err);
-    res.status(400).json({ error: err.message || "Ошибка" });
+    res.status(400).json({ error: "Операция не удалась" });
   }
 });
 

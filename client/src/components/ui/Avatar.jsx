@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { COLORS } from '../../config';
 
 export function Avatar({ src, name, size = 40, style }) {
   const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [src]);
 
   const initials = name
     ? name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()

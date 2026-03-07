@@ -9,8 +9,11 @@ module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
   const matchParam = text.match(/\/start\s+match_(\d+)/);
   if (matchParam) {
     const matchId = matchParam[1];
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch(`${apiUrl}/api/matches/${matchId}/info`);
+      const res = await fetch(`${apiUrl}/api/matches/${matchId}/info`, { signal: controller.signal });
+      clearTimeout(timeout);
       if (res.ok) {
         const match = await res.json();
         const date = new Date(match.date);
@@ -41,6 +44,7 @@ module.exports = async function startCommand(bot, msg, miniAppUrl, apiUrl) {
         await bot.sendMessage(chatId, "❌ Матч не найден или был удалён.");
       }
     } catch (err) {
+      clearTimeout(timeout);
       console.error("Deep link match error:", err);
       await bot.sendMessage(chatId, "❌ Не удалось загрузить информацию о матче.");
     }

@@ -55,6 +55,8 @@ export function getLevelByValue(levelFloat) {
   return LEVELS[3];
 }
 
+export const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk', 'Meta Padel', 'PADEL BAZA'];
+
 export function getXpLevel(xp) {
   let current = XP_LEVELS[0];
   for (const level of XP_LEVELS) {

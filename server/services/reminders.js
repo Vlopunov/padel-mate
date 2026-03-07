@@ -427,14 +427,21 @@ async function checkPlatformMilestones(now) {
   }
 }
 
+let reminderInterval = null;
+
 function startReminderScheduler() {
+  if (reminderInterval) return; // Already running
   console.log("[Reminder] Scheduler started — checking every 60 seconds");
 
-  // Run immediately on startup
   checkAndSendReminders();
-
-  // Then every 60 seconds
-  setInterval(checkAndSendReminders, 60 * 1000);
+  reminderInterval = setInterval(checkAndSendReminders, 60 * 1000);
 }
 
-module.exports = { startReminderScheduler };
+function stopReminderScheduler() {
+  if (reminderInterval) {
+    clearInterval(reminderInterval);
+    reminderInterval = null;
+  }
+}
+
+module.exports = { startReminderScheduler, stopReminderScheduler };

@@ -216,8 +216,14 @@ router.get("/search", authMiddleware, async (req, res) => {
     // Rating range filter
     if (ratingMin || ratingMax) {
       where.rating = {};
-      if (ratingMin) where.rating.gte = parseInt(ratingMin);
-      if (ratingMax) where.rating.lte = parseInt(ratingMax);
+      if (ratingMin) {
+        const min = parseInt(ratingMin);
+        if (!isNaN(min)) where.rating.gte = min;
+      }
+      if (ratingMax) {
+        const max = parseInt(ratingMax);
+        if (!isNaN(max)) where.rating.lte = max;
+      }
     }
 
     const users = await prisma.user.findMany({

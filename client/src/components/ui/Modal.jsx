@@ -1,6 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { COLORS } from '../../config';
 
+// Inject animation keyframes once
+if (typeof document !== 'undefined' && !document.getElementById('modal-keyframes')) {
+  const style = document.createElement('style');
+  style.id = 'modal-keyframes';
+  style.textContent = '@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }';
+  document.head.appendChild(style);
+}
+
 export function Modal({ isOpen, onClose, title, children }) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -75,12 +83,6 @@ export function Modal({ isOpen, onClose, title, children }) {
         </div>
         {children}
       </div>
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }

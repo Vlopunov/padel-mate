@@ -71,6 +71,10 @@ bot.on("callback_query", async (query) => {
   // ── Join match via bot (from /find or notifications) ──
   if (data.startsWith("bot_join_")) {
     const matchId = parseInt(data.replace("bot_join_", ""));
+    if (isNaN(matchId) || matchId <= 0) {
+      await bot.answerCallbackQuery(query.id, { text: "Неверный ID матча", show_alert: true });
+      return;
+    }
     const telegramId = query.from.id;
     try {
       const { botJoinMatch } = require("../server/services/botData");
@@ -94,6 +98,10 @@ bot.on("callback_query", async (query) => {
   // ── Leave match via bot (from /cancel) ──
   if (data.startsWith("bot_leave_")) {
     const matchId = parseInt(data.replace("bot_leave_", ""));
+    if (isNaN(matchId) || matchId <= 0) {
+      await bot.answerCallbackQuery(query.id, { text: "Неверный ID матча", show_alert: true });
+      return;
+    }
     const telegramId = query.from.id;
     try {
       const { botLeaveMatch } = require("../server/services/botData");

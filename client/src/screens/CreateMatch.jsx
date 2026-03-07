@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { COLORS, LEVELS } from '../config';
+import { COLORS, LEVELS, MULTI_COURT_VENUES } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -8,9 +8,6 @@ import { Checkbox } from '../components/ui/Checkbox';
 import { Header } from '../components/ui/Header';
 import { ToggleGroup } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
-
-// Multi-court venues (show court number picker)
-const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk', 'Meta Padel', 'PADEL BAZA'];
 
 // Generate time slots every 30 min from 06:00 to 23:30
 const TIME_SLOTS = [];

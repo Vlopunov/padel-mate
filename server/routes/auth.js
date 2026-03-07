@@ -24,7 +24,15 @@ router.post("/telegram", async (req, res) => {
       return res.status(400).json({ error: "Данные пользователя отсутствуют" });
     }
 
-    const tgUser = JSON.parse(userRaw);
+    let tgUser;
+    try {
+      tgUser = JSON.parse(userRaw);
+    } catch (e) {
+      return res.status(400).json({ error: "Невалидные данные пользователя" });
+    }
+    if (!tgUser || !tgUser.id) {
+      return res.status(400).json({ error: "ID пользователя отсутствует" });
+    }
     const telegramId = BigInt(tgUser.id);
 
     let user = await prisma.user.findUnique({

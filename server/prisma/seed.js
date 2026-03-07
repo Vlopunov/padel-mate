@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../lib/prisma");
 
 const venues = [
   { name: "Padel Club Minsk", address: "ул. Притыцкого 60", city: "MINSK", courts: 3 },

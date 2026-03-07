@@ -67,6 +67,7 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const coachId = parseInt(req.params.id);
+    if (isNaN(coachId)) return res.status(400).json({ error: "Некорректный ID" });
 
     const coach = await prisma.user.findFirst({
       where: { id: coachId, isCoach: true },

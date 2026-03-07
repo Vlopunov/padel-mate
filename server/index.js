@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:5173', 'http://localhost:3000'],
+    : (process.env.NODE_ENV === 'production' ? [] : ['http://localhost:5173', 'http://localhost:3000']),
   credentials: true,
 }));
 app.use(express.json({ limit: "10kb" }));
@@ -31,7 +31,9 @@ app.use(express.json({ limit: "10kb" }));
 // Rate limiting
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: "Слишком много запросов, подождите" } });
 const strictLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Слишком много запросов, подождите" } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { error: "Слишком много попыток, подождите 15 минут" } });
 app.use("/api/", apiLimiter);
+app.use("/api/auth", authLimiter);
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -51,12 +53,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", app: require("./config/app").APP_NAME });
 });
 
-// One-time admin setup (protected by ADMIN_SECRET or BOT_TOKEN)
+// One-time admin setup (protected by ADMIN_SECRET only)
 app.post("/api/setup-admin", strictLimiter, async (req, res) => {
   try {
     const { telegramId, secret } = req.body;
-    const adminSecret = process.env.ADMIN_SECRET || process.env.BOT_TOKEN;
-    if (!secret || !adminSecret || secret !== adminSecret) {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) {
+      return res.status(500).json({ error: "ADMIN_SECRET не настроен" });
+    }
+    if (!secret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const user = await prisma.user.upsert({
@@ -77,12 +82,15 @@ app.post("/api/setup-admin", strictLimiter, async (req, res) => {
   }
 });
 
-// Seed venues (protected by ADMIN_SECRET or BOT_TOKEN)
+// Seed venues (protected by ADMIN_SECRET only)
 app.post("/api/seed-venues", strictLimiter, async (req, res) => {
   try {
     const { secret } = req.body;
-    const adminSecret = process.env.ADMIN_SECRET || process.env.BOT_TOKEN;
-    if (!secret || !adminSecret || secret !== adminSecret) {
+    const adminSecret = process.env.ADMIN_SECRET;
+    if (!adminSecret) {
+      return res.status(500).json({ error: "ADMIN_SECRET не настроен" });
+    }
+    if (!secret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const venues = [

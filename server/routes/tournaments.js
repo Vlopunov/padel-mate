@@ -72,7 +72,7 @@ router.get("/:id/live", authMiddleware, async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error("Tournament live error:", err);
-    res.status(500).json({ error: err.message || "Ошибка получения live-данных" });
+    res.status(500).json({ error: "Ошибка получения live-данных" });
   }
 });
 
@@ -164,7 +164,7 @@ router.post("/:id/register-individual", authMiddleware, async (req, res) => {
   }
 });
 
-// Register for tournament (pair)
+// Register for tournament (pair) — uses transaction to prevent race conditions
 router.post("/:id/register", authMiddleware, async (req, res) => {
   try {
     const tournamentId = parseInt(req.params.id);
@@ -180,71 +180,81 @@ router.post("/:id/register", authMiddleware, async (req, res) => {
       return res.status(400).json({ error: "Нельзя зарегистрироваться с самим собой" });
     }
 
-    const tournament = await prisma.tournament.findUnique({
-      where: { id: tournamentId },
-      include: {
-        registrations: {
-          include: {
-            player1: { select: { id: true, firstName: true } },
-            player2: { select: { id: true, firstName: true } },
+    const reg = await prisma.$transaction(async (tx) => {
+      const tournament = await tx.tournament.findUnique({
+        where: { id: tournamentId },
+        include: {
+          registrations: {
+            include: {
+              player1: { select: { id: true, firstName: true } },
+              player2: { select: { id: true, firstName: true } },
+            },
           },
         },
-      },
+      });
+
+      if (!tournament) throw new Error("NOT_FOUND:Турнир не найден");
+      if (tournament.status !== "REGISTRATION") {
+        throw new Error("BAD:Регистрация закрыта");
+      }
+      if (tournament.registrations.length >= tournament.maxTeams) {
+        throw new Error("BAD:Все места заняты");
+      }
+
+      const myExisting = tournament.registrations.find(
+        (r) => r.player1Id === userIdInt || r.player2Id === userIdInt
+      );
+      if (myExisting) {
+        throw new Error("BAD:Вы уже зарегистрированы на этот турнир");
+      }
+
+      const partnerExisting = tournament.registrations.find(
+        (r) => r.player1Id === partnerIdInt || r.player2Id === partnerIdInt
+      );
+      if (partnerExisting) {
+        const partnerName = partnerExisting.player1Id === partnerIdInt
+          ? partnerExisting.player1?.firstName
+          : partnerExisting.player2?.firstName;
+        throw new Error(`BAD:${partnerName || 'Партнёр'} уже зарегистрирован на этот турнир`);
+      }
+
+      return tx.tournamentRegistration.create({
+        data: {
+          tournamentId,
+          player1Id: userIdInt,
+          player2Id: partnerIdInt,
+        },
+        include: {
+          player1: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
+          player2: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
+        },
+      });
     });
 
-    if (!tournament) return res.status(404).json({ error: "Турнир не найден" });
-    if (tournament.status !== "REGISTRATION") {
-      return res.status(400).json({ error: "Регистрация закрыта" });
-    }
-    if (tournament.registrations.length >= tournament.maxTeams) {
-      return res.status(400).json({ error: "Все места заняты" });
-    }
-
-    // Check if either player already registered (use parseInt for safe comparison)
-    const myExisting = tournament.registrations.find(
-      (r) => r.player1Id === userIdInt || r.player2Id === userIdInt
-    );
-    if (myExisting) {
-      return res.status(400).json({ error: "Вы уже зарегистрированы на этот турнир" });
-    }
-
-    const partnerExisting = tournament.registrations.find(
-      (r) => r.player1Id === partnerIdInt || r.player2Id === partnerIdInt
-    );
-    if (partnerExisting) {
-      const partnerName = partnerExisting.player1Id === partnerIdInt
-        ? partnerExisting.player1?.firstName
-        : partnerExisting.player2?.firstName;
-      return res.status(400).json({ error: `${partnerName || 'Партнёр'} уже зарегистрирован на этот турнир` });
-    }
-
-    const reg = await prisma.tournamentRegistration.create({
-      data: {
-        tournamentId,
-        player1Id: req.userId,
-        player2Id: parseInt(partnerId),
-      },
-      include: {
-        player1: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
-        player2: { select: { id: true, firstName: true, lastName: true, rating: true, telegramId: true } },
-      },
-    });
-
-    // Notify partner via Telegram
+    // Notify partner via Telegram (outside transaction)
     try {
-      const dateStr = new Date(tournament.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long", timeZone: "Europe/Minsk" });
-      const text =
-        `🏆 <b>${reg.player1.firstName}</b> записал вас на турнир!\n\n` +
-        `<b>${tournament.name}</b>\n` +
-        `📅 ${dateStr}\n` +
-        `Ваша пара: ${reg.player1.firstName} & ${reg.player2.firstName}`;
-      await sendTelegramMessage(reg.player2.telegramId.toString(), text);
+      const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+      if (tournament) {
+        const dateStr = new Date(tournament.date).toLocaleDateString("ru-RU", { day: "numeric", month: "long", timeZone: "Europe/Minsk" });
+        const text =
+          `🏆 <b>${reg.player1.firstName}</b> записал вас на турнир!\n\n` +
+          `<b>${tournament.name}</b>\n` +
+          `📅 ${dateStr}\n` +
+          `Ваша пара: ${reg.player1.firstName} & ${reg.player2.firstName}`;
+        await sendTelegramMessage(reg.player2.telegramId.toString(), text);
+      }
     } catch (notifErr) {
       console.error("Tournament registration notification error:", notifErr);
     }
 
     res.json(reg);
   } catch (err) {
+    if (err.message?.startsWith("NOT_FOUND:")) {
+      return res.status(404).json({ error: err.message.slice(10) });
+    }
+    if (err.message?.startsWith("BAD:")) {
+      return res.status(400).json({ error: err.message.slice(4) });
+    }
     console.error("Tournament register error:", err);
     res.status(500).json({ error: "Ошибка регистрации на турнир" });
   }

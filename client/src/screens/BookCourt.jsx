@@ -301,16 +301,6 @@ export function BookCourt({ venueId, onBack }) {
 
     const url = `https://${venue.yclientsFormId}.yclients.com/company/${venue.yclientsCompanyId}/create-record/record?o=m${selectedStaffId}s${courtEntry.serviceId}d${dateCode}&utm_source=padelgo`;
 
-    console.log('[BookCourt] openBooking:', {
-      date: selectedDate.toISOString(),
-      time: selectedTime,
-      staffId: selectedStaffId,
-      serviceId: courtEntry.serviceId,
-      duration,
-      dateCode,
-      url,
-    });
-
     openExternal(url);
   }
 

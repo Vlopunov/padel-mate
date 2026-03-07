@@ -253,7 +253,7 @@ router.post("/seed-tournaments", authMiddleware, adminMiddleware, async (req, re
     res.json({ created: created.length, tournaments: created, testUsers: testUsers.length });
   } catch (err) {
     console.error("Seed tournaments error:", err);
-    res.status(500).json({ error: "Ошибка создания тестовых турниров: " + err.message });
+    res.status(500).json({ error: "Ошибка создания тестовых турниров" });
   }
 });
 

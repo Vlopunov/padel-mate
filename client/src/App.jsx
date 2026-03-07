@@ -110,13 +110,11 @@ export default function App() {
       }
 
       if (!authData) {
-        // Debug info for troubleshooting
         const tgAvailable = !!window.Telegram;
         const webAppAvailable = !!window.Telegram?.WebApp;
         const initDataValue = window.Telegram?.WebApp?.initData;
         const version = window.Telegram?.WebApp?.version;
         const platform = window.Telegram?.WebApp?.platform;
-        console.log('Auth debug:', { tgAvailable, webAppAvailable, initDataValue: initDataValue?.substring(0, 50), version, platform });
         setError(`Откройте приложение через Telegram\n\nDebug: TG=${tgAvailable}, WebApp=${webAppAvailable}, initData=${!!initDataValue}, v=${version}, platform=${platform}`);
         setState('error');
         return;
@@ -319,8 +317,7 @@ export default function App() {
         // case 'findCoach':
         // case 'coachProfile':
         default:
-          setSubScreen(null);
-          break;
+          return null;
       }
       return null;
     })();
