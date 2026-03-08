@@ -26,15 +26,49 @@ export function Tournaments({ user, onNavigate }) {
   const [registering, setRegistering] = useState(false);
   const searchTimer = useRef(null);
 
+  // Region filtering
+  const [countries, setCountries] = useState([]);
+  const [countryFilter, setCountryFilter] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('all');
+
+  useEffect(() => {
+    api.regions.list().then((data) => {
+      const list = data.countries || [];
+      setCountries(list);
+      // Initialize filters from user's regionId
+      if (user?.regionId && list.length) {
+        const found = list.find(c => c.regions.some(r => r.id === user.regionId));
+        if (found) {
+          setCountryFilter(String(found.id));
+          if (found.regions.length > 1) {
+            setRegionFilter(String(user.regionId));
+          }
+        }
+      }
+    });
+  }, []);
+
+  // Get regions for selected country
+  const selectedCountryObj = countries.find((c) => String(c.id) === countryFilter);
+  const countryRegions = selectedCountryObj?.regions || [];
+  const showRegionFilter = countryFilter !== 'all' && countryRegions.length > 1;
+
+  // Determine effective regionId for API call
+  const effectiveRegionId = regionFilter !== 'all' ? regionFilter
+    : (countryFilter !== 'all' && countryRegions.length === 1 ? String(countryRegions[0].id) : '');
+
   useEffect(() => {
     loadTournaments();
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, [filter]);
+  }, [filter, effectiveRegionId]);
 
   async function loadTournaments() {
     setLoading(true);
     try {
-      const data = await api.tournaments.list({ status: filter === 'all' ? '' : filter });
+      const data = await api.tournaments.list({
+        status: filter === 'all' ? '' : filter,
+        ...(effectiveRegionId && { regionId: effectiveRegionId }),
+      });
       setTournaments(data);
     } catch (err) {
       console.error('Load tournaments error:', err);
@@ -78,6 +112,7 @@ export function Tournaments({ user, onNavigate }) {
         if (min) opts.ratingMin = min;
         if (max) opts.ratingMax = max;
       }
+      if (user?.regionId) opts.regionId = user.regionId;
       const results = await api.users.search(q.trim() || '', opts);
       setSearchResults(results);
     } catch (err) {
@@ -200,6 +235,32 @@ export function Tournaments({ user, onNavigate }) {
         value={filter}
         onChange={setFilter}
       />
+
+      {/* Country filter */}
+      <div style={{ marginTop: 8 }}>
+        <FilterTabs
+          options={[
+            { value: 'all', label: 'Все' },
+            ...countries.map(c => ({ value: String(c.id), label: `${c.flag} ${c.name}` })),
+          ]}
+          value={countryFilter}
+          onChange={(v) => { setCountryFilter(v); setRegionFilter('all'); }}
+        />
+      </div>
+
+      {/* Region filter */}
+      {showRegionFilter && (
+        <div style={{ marginTop: 6 }}>
+          <FilterTabs
+            options={[
+              { value: 'all', label: 'Все города' },
+              ...countryRegions.map(r => ({ value: String(r.id), label: r.name })),
+            ]}
+            value={regionFilter}
+            onChange={setRegionFilter}
+          />
+        </div>
+      )}
 
       <div style={{ marginTop: 16 }}>
         {loading && (

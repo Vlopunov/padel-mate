@@ -29,7 +29,7 @@ function StarRating({ rating, size = 14 }) {
   );
 }
 
-export function FindCoach({ onBack, onNavigate }) {
+export function FindCoach({ user, onBack, onNavigate }) {
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [countries, setCountries] = useState([]);
@@ -38,7 +38,18 @@ export function FindCoach({ onBack, onNavigate }) {
 
   useEffect(() => {
     api.regions.list().then((data) => {
-      setCountries(data.countries || []);
+      const list = data.countries || [];
+      setCountries(list);
+      // Initialize filters from user's regionId
+      if (user?.regionId && list.length) {
+        const found = list.find(c => c.regions.some(r => r.id === user.regionId));
+        if (found) {
+          setCountryFilter(String(found.id));
+          if (found.regions.length > 1) {
+            setRegionFilter(String(user.regionId));
+          }
+        }
+      }
     });
   }, []);
 

@@ -25,7 +25,7 @@ export function Home({ user, onNavigate }) {
       const regionFilter = user?.regionId || '';
       const [allMatches, tournaments] = await Promise.all([
         api.matches.list({ status: 'recruiting', ...(regionFilter && { regionId: regionFilter }) }),
-        api.tournaments.list({ status: 'registration' }),
+        api.tournaments.list({ status: 'registration', ...(regionFilter && { regionId: regionFilter }) }),
       ]);
       setMatches(allMatches.slice(0, 2));
 

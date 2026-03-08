@@ -326,6 +326,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         if (min) opts.ratingMin = min;
         if (max) opts.ratingMax = max;
       }
+      if (user?.regionId) opts.regionId = user.regionId;
       const results = await api.users.search(q.trim() || '', opts);
       setSearchResults(results);
     } catch (err) {
