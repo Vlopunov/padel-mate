@@ -14,11 +14,18 @@ import { api } from '../services/api';
 export function Profile({ user, onUpdate, onLogout, onNavigate }) {
   const { openTelegramLink } = useTelegram();
   const [countries, setCountries] = useState([]);
+  const [selectedCountryId, setSelectedCountryId] = useState('');
   const [showRatingEdit, setShowRatingEdit] = useState(false);
 
   useEffect(() => {
     api.regions.list().then((data) => {
-      setCountries(data.countries || []);
+      const list = data.countries || [];
+      setCountries(list);
+      // Set initial country from user's region
+      if (user?.regionId && list.length) {
+        const found = list.find(c => c.regions.some(r => r.id === user.regionId));
+        if (found) setSelectedCountryId(String(found.id));
+      }
     });
   }, []);
   const [newRating, setNewRating] = useState('');
@@ -202,16 +209,37 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         />
 
         <Select
-          label={'\u{1F4CD} Город'}
-          value={String(user.regionId || '')}
-          onChange={(v) => handleUpdate('regionId', parseInt(v))}
-          options={countries.flatMap(c =>
-            c.regions.map(r => ({
-              value: String(r.id),
-              label: `${c.flag} ${r.name}`,
-            }))
-          )}
+          label={'\u{1F30D} Страна'}
+          value={selectedCountryId}
+          onChange={(v) => {
+            setSelectedCountryId(v);
+            // Auto-select region if country has only 1
+            const country = countries.find(c => String(c.id) === v);
+            if (country && country.regions.length === 1) {
+              handleUpdate('regionId', country.regions[0].id);
+            }
+          }}
+          options={countries.map(c => ({
+            value: String(c.id),
+            label: `${c.flag} ${c.name}`,
+          }))}
         />
+
+        {selectedCountryId && (() => {
+          const country = countries.find(c => String(c.id) === selectedCountryId);
+          if (!country || country.regions.length <= 1) return null;
+          return (
+            <Select
+              label={'\u{1F4CD} Город'}
+              value={String(user.regionId || '')}
+              onChange={(v) => handleUpdate('regionId', parseInt(v))}
+              options={country.regions.map(r => ({
+                value: String(r.id),
+                label: r.name,
+              }))}
+            />
+          );
+        })()}
 
         <Select
           label={'\u{1F550} Предпочтительное время'}
