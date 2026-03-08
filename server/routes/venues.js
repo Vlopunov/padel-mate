@@ -8,9 +8,9 @@ const router = express.Router();
 // List venues
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const { city } = req.query;
+    const { regionId } = req.query;
     const where = {};
-    if (city) where.city = city;
+    if (regionId) where.regionId = parseInt(regionId);
 
     const venues = await prisma.venue.findMany({
       where,

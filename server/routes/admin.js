@@ -38,6 +38,10 @@ router.post("/test-users", authMiddleware, adminMiddleware, async (req, res) => 
     const HANDS = ["RIGHT", "LEFT"];
     const EXPERIENCES = ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"];
 
+    // Look up MINSK region for test users
+    const minskRegion = await prisma.region.findUnique({ where: { code: "MINSK" } });
+    const testRegionId = minskRegion?.id || null;
+
     // Use telegramId range 9000000001+ for test users
     const existing = await prisma.user.findMany({
       where: { telegramId: { gte: 9000000001n } },
@@ -56,7 +60,7 @@ router.post("/test-users", authMiddleware, adminMiddleware, async (req, res) => 
           firstName: TEST_NAMES[i % TEST_NAMES.length],
           lastName: TEST_LASTNAMES[i % TEST_LASTNAMES.length],
           username: `test_player_${nextTgId + i}`,
-          city: "MINSK",
+          regionId: testRegionId,
           hand: HANDS[Math.floor(Math.random() * 2)],
           position: POSITIONS[Math.floor(Math.random() * 3)],
           experience: EXPERIENCES[Math.floor(Math.random() * 4)],
@@ -127,11 +131,15 @@ router.post("/seed-tournaments", authMiddleware, adminMiddleware, async (req, re
     const HANDS = ["RIGHT", "LEFT"];
     const EXPERIENCES = ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"];
 
+    // Look up MINSK region
+    const minskRegion = await prisma.region.findUnique({ where: { code: "MINSK" } });
+    const seedRegionId = minskRegion?.id || null;
+
     // Find venue
-    let venue = await prisma.venue.findFirst({ where: { city: "MINSK" } });
+    let venue = await prisma.venue.findFirst({ where: { regionId: seedRegionId } });
     if (!venue) {
       venue = await prisma.venue.create({
-        data: { name: "Test Padel Club", address: "ул. Тестовая 1", city: "MINSK", courts: 4 },
+        data: { name: "Test Padel Club", address: "ул. Тестовая 1", regionId: seedRegionId, courts: 4 },
       });
     }
 
@@ -153,7 +161,7 @@ router.post("/seed-tournaments", authMiddleware, adminMiddleware, async (req, re
           firstName: TEST_NAMES[i],
           lastName: TEST_LASTNAMES[i],
           username: `test_${nextTgId + i}`,
-          city: "MINSK",
+          regionId: seedRegionId,
           hand: HANDS[Math.floor(Math.random() * 2)],
           position: POSITIONS[Math.floor(Math.random() * 3)],
           experience: EXPERIENCES[Math.floor(Math.random() * 4)],
@@ -219,7 +227,7 @@ router.post("/seed-tournaments", authMiddleware, adminMiddleware, async (req, re
           name: cfg.name,
           description: cfg.description,
           date,
-          city: "MINSK",
+          regionId: seedRegionId,
           venueId: venue.id,
           format: cfg.format,
           levelMin: 1.0,
@@ -357,7 +365,7 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
       orderBy: { rating: "desc" },
       select: {
         id: true, telegramId: true, firstName: true, lastName: true, username: true,
-        city: true, rating: true, matchesPlayed: true, wins: true, losses: true,
+        regionId: true, region: { select: { id: true, code: true, name: true } }, rating: true, matchesPlayed: true, wins: true, losses: true,
         isAdmin: true, isVip: true, isCoach: true, coachSubscriptionTier: true,
         onboarded: true, isVisible: true, createdAt: true, xp: true,
       },
@@ -373,14 +381,14 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
 router.patch("/users/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
-    const { rating, isAdmin, isVip, isCoach, coachSubscriptionTier, city } = req.body;
+    const { rating, isAdmin, isVip, isCoach, coachSubscriptionTier, regionId } = req.body;
     const data = {};
     if (rating !== undefined) data.rating = parseInt(rating);
     if (isAdmin !== undefined) data.isAdmin = isAdmin;
     if (isVip !== undefined) data.isVip = isVip;
     if (isCoach !== undefined) data.isCoach = isCoach;
     if (coachSubscriptionTier !== undefined) data.coachSubscriptionTier = coachSubscriptionTier || null;
-    if (city !== undefined) data.city = city;
+    if (regionId !== undefined) data.regionId = regionId ? parseInt(regionId) : null;
 
     // Get old rating BEFORE update for correct history
     let oldRating = null;
@@ -610,9 +618,9 @@ router.get("/tournaments", authMiddleware, adminMiddleware, async (req, res) => 
 // Create tournament
 router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
+    const { name, description, date, endDate, regionId, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
 
-    if (!name || !date || !city || !venueId || !format || levelMin === undefined || levelMax === undefined || !maxTeams) {
+    if (!name || !date || !regionId || !venueId || !format || levelMin === undefined || levelMax === undefined || !maxTeams) {
       return res.status(400).json({ error: "Заполните обязательные поля" });
     }
 
@@ -622,7 +630,7 @@ router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) =>
         description: description || "",
         date: new Date(date),
         endDate: endDate ? new Date(endDate) : null,
-        city,
+        regionId: parseInt(regionId),
         venueId: parseInt(venueId),
         format,
         levelMin: parseFloat(levelMin),
@@ -649,14 +657,14 @@ router.post("/tournaments", authMiddleware, adminMiddleware, async (req, res) =>
 router.patch("/tournaments/:id", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const { name, description, date, endDate, city, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
+    const { name, description, date, endDate, regionId, venueId, format, levelMin, levelMax, maxTeams, price, ratingMultiplier, status, pointsPerMatch, courtsCount, registrationMode } = req.body;
 
     const data = {};
     if (name !== undefined) data.name = name;
     if (description !== undefined) data.description = description;
     if (date !== undefined) data.date = new Date(date);
     if (endDate !== undefined) data.endDate = endDate ? new Date(endDate) : null;
-    if (city !== undefined) data.city = city;
+    if (regionId !== undefined) data.regionId = parseInt(regionId);
     if (venueId !== undefined) data.venueId = parseInt(venueId);
     if (format !== undefined) data.format = format;
     if (levelMin !== undefined) data.levelMin = parseFloat(levelMin);

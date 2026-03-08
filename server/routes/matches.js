@@ -164,14 +164,14 @@ router.post("/past", authMiddleware, async (req, res) => {
 // List matches
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const { status, city, level } = req.query;
+    const { status, regionId, level } = req.query;
     const where = {};
 
     if (status === "recruiting") where.status = "RECRUITING";
     else if (status === "full") where.status = { in: ["FULL", "PENDING_SCORE"] };
     else where.status = { not: "CANCELLED" };
 
-    if (city) where.venue = { city };
+    if (regionId) where.venue = { regionId: parseInt(regionId) };
     if (level) {
       const lvl = parseFloat(level);
       where.levelMin = { lte: lvl };

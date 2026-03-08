@@ -176,8 +176,8 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
   async function loadMatches() {
     setLoading(true);
     try {
-      const cityFilter = user?.city || '';
-      const data = await api.matches.list({ status: filter === 'all' ? '' : filter, ...(cityFilter && { city: cityFilter }) });
+      const regionFilter = user?.regionId || '';
+      const data = await api.matches.list({ status: filter === 'all' ? '' : filter, ...(regionFilter && { regionId: regionFilter }) });
       setMatches(data);
     } catch (err) {
       console.error('Load matches error:', err);

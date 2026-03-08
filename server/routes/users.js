@@ -48,13 +48,16 @@ router.get("/me", authMiddleware, async (req, res) => {
 // Onboarding
 router.post("/onboard", authMiddleware, async (req, res) => {
   try {
-    const { city, ratingSource, ratingSystem, ratingValue, surveyAnswers, hand, position } = req.body;
+    const { regionId, ratingSource, ratingSystem, ratingValue, surveyAnswers, hand, position } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { id: req.userId } });
     if (!existingUser) return res.status(404).json({ error: "Пользователь не найден" });
     if (existingUser.onboarded) return res.status(400).json({ error: "Онбординг уже пройден" });
 
-    if (!city) return res.status(400).json({ error: "Город обязателен" });
+    if (!regionId) return res.status(400).json({ error: "Регион обязателен" });
+
+    const region = await prisma.region.findUnique({ where: { id: parseInt(regionId) } });
+    if (!region) return res.status(400).json({ error: "Недопустимый регион" });
 
     let rating = 1500;
     let source = "survey";
@@ -73,7 +76,7 @@ router.post("/onboard", authMiddleware, async (req, res) => {
     const user = await prisma.user.update({
       where: { id: req.userId },
       data: {
-        city,
+        regionId: parseInt(regionId),
         rating,
         ratingSource: source,
         hand: hand || null,
@@ -109,10 +112,9 @@ router.post("/onboard", authMiddleware, async (req, res) => {
 // Update profile
 router.patch("/me", authMiddleware, async (req, res) => {
   try {
-    const allowed = ["city", "hand", "position", "experience", "preferredTime", "isVisible", "reminderMinutes"];
+    const allowed = ["regionId", "hand", "position", "experience", "preferredTime", "isVisible", "reminderMinutes"];
     const data = {};
     const VALID_ENUMS = {
-      city: ["MINSK", "BREST", "GRODNO"],
       hand: ["RIGHT", "LEFT"],
       position: ["DERECHA", "REVES", "BOTH"],
       experience: ["BEGINNER", "LESS_YEAR", "ONE_THREE", "THREE_PLUS"],
@@ -122,6 +124,18 @@ router.patch("/me", authMiddleware, async (req, res) => {
       if (req.body[key] !== undefined) {
         if (VALID_ENUMS[key] && !VALID_ENUMS[key].includes(req.body[key])) {
           return res.status(400).json({ error: `Недопустимое значение для ${key}` });
+        }
+        if (key === "regionId") {
+          const rid = parseInt(req.body[key]);
+          if (isNaN(rid)) {
+            return res.status(400).json({ error: "Недопустимый regionId" });
+          }
+          const region = await prisma.region.findUnique({ where: { id: rid } });
+          if (!region) {
+            return res.status(400).json({ error: "Регион не найден" });
+          }
+          data.regionId = rid;
+          continue;
         }
         if (key === "reminderMinutes") {
           const val = parseInt(req.body[key]);
@@ -195,7 +209,7 @@ router.patch("/me/rating", authMiddleware, async (req, res) => {
 // Search / list users (for inviting to matches)
 router.get("/search", authMiddleware, async (req, res) => {
   try {
-    const { q, city, ratingMin, ratingMax } = req.query;
+    const { q, regionId, ratingMin, ratingMax } = req.query;
 
     const where = {
       onboarded: true,
@@ -211,7 +225,7 @@ router.get("/search", authMiddleware, async (req, res) => {
       ];
     }
 
-    if (city) where.city = city;
+    if (regionId) where.regionId = parseInt(regionId);
 
     // Rating range filter
     if (ratingMin || ratingMax) {
@@ -230,7 +244,7 @@ router.get("/search", authMiddleware, async (req, res) => {
       where,
       select: {
         id: true, firstName: true, lastName: true, username: true,
-        photoUrl: true, rating: true, city: true, isVip: true,
+        photoUrl: true, rating: true, regionId: true, region: { select: { id: true, code: true, name: true } }, isVip: true,
       },
       orderBy: { rating: "desc" },
       take: 50,
@@ -254,7 +268,8 @@ router.get("/:id", authMiddleware, async (req, res) => {
         lastName: true,
         username: true,
         photoUrl: true,
-        city: true,
+        regionId: true,
+        region: { select: { id: true, code: true, name: true } },
         hand: true,
         position: true,
         experience: true,

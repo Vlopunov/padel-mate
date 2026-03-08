@@ -65,13 +65,13 @@ async function checkAndAwardAchievements(userId) {
         break;
       }
 
-      case "all_cities": {
+      case "all_regions": {
         const matchPlayers = await prisma.matchPlayer.findMany({
           where: { userId },
           include: { match: { include: { venue: true } } },
         });
-        const cities = new Set(matchPlayers.filter((mp) => mp.match?.venue?.city).map((mp) => mp.match.venue.city));
-        earned = cities.size >= condition.value;
+        const regionIds = new Set(matchPlayers.filter((mp) => mp.match?.venue?.regionId).map((mp) => mp.match.venue.regionId));
+        earned = regionIds.size >= condition.value;
         break;
       }
 

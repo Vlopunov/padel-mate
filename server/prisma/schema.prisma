@@ -7,11 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum City {
-  MINSK
-  BREST
-  GRODNO
+// === Region (replaces hardcoded City enum) ===
+
+model Region {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  country   String   @default("BY")
+  timezone  String   @default("Europe/Minsk")
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  users       User[]
+  venues      Venue[]
+  tournaments Tournament[]
 }
+
+// === Enums ===
 
 enum Hand {
   RIGHT
@@ -115,6 +128,8 @@ enum PaymentStatus {
   REFUNDED
 }
 
+// === Core models ===
+
 model User {
   id              Int       @id @default(autoincrement())
   telegramId      BigInt    @unique
@@ -122,7 +137,8 @@ model User {
   firstName       String
   lastName        String?
   photoUrl        String?
-  city            City
+  regionId        Int?
+  region          Region?   @relation(fields: [regionId], references: [id])
   hand            Hand?
   position        Position?
   experience      Experience?
@@ -192,18 +208,22 @@ model User {
   pairsAsPlayer1  Pair[] @relation("PairPlayer1")
   pairsAsPlayer2  Pair[] @relation("PairPlayer2")
 
-  @@index([city])
+  @@index([regionId])
   @@index([rating])
 }
 
 model Venue {
-  id          Int     @id @default(autoincrement())
-  name        String
-  address     String
-  city        City
-  courts      Int     @default(1)
-  phone       String?
-  website     String?
+  id                 Int     @id @default(autoincrement())
+  name               String
+  address            String
+  regionId           Int
+  region             Region  @relation(fields: [regionId], references: [id])
+  courts             Int     @default(1)
+  multiCourt         Boolean @default(false)
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  website            String?
   yclientsCompanyId  String?
   yclientsFormId     String?
   yclientsPriceLabel String?
@@ -211,7 +231,7 @@ model Venue {
   tournaments      Tournament[]
   trainingSessions TrainingSession[]
 
-  @@index([city])
+  @@index([regionId])
 }
 
 model Match {
@@ -373,7 +393,8 @@ model Tournament {
   description      String
   date             DateTime
   endDate          DateTime?
-  city             City
+  regionId         Int
+  region           Region           @relation(fields: [regionId], references: [id])
   venueId          Int
   venue            Venue            @relation(fields: [venueId], references: [id])
   format           String
@@ -398,6 +419,8 @@ model Tournament {
   matches          TournamentMatch[]
   standings        TournamentStanding[]
   ratingChanges    TournamentRatingChange[]
+
+  @@index([regionId])
 }
 
 model TournamentRegistration {
@@ -424,7 +447,7 @@ model DailyStats {
   activeUsers      Int      @default(0)
   topRatingChange  Int      @default(0)
   topRatingUserId  Int?
-  cityCounts       Json     @default("{}")
+  regionCounts     Json     @default("{}")
   createdAt        DateTime @default(now())
 }
 

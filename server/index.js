@@ -16,6 +16,7 @@ const adminRoutes = require("./routes/admin");
 const coachRoutes = require("./routes/coach");
 const trainingRoutes = require("./routes/training");
 const coachesRoutes = require("./routes/coaches");
+const regionsRoutes = require("./routes/regions");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,6 +48,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/coach", coachRoutes);
 app.use("/api/training", trainingRoutes);
 app.use("/api/coaches", coachesRoutes);
+app.use("/api/regions", regionsRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -64,13 +66,15 @@ app.post("/api/setup-admin", strictLimiter, async (req, res) => {
     if (!secret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
+    // Look up MINSK region for admin default
+    const minskRegion = await prisma.region.findUnique({ where: { code: "MINSK" } });
     const user = await prisma.user.upsert({
       where: { telegramId: BigInt(telegramId) },
       update: { isAdmin: true },
       create: {
         telegramId: BigInt(telegramId),
         firstName: "Admin",
-        city: "MINSK",
+        regionId: minskRegion?.id || null,
         isAdmin: true,
         onboarded: false,
       },
@@ -93,15 +97,31 @@ app.post("/api/seed-venues", strictLimiter, async (req, res) => {
     if (!secret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
+    // Ensure regions exist
+    const regionDefs = [
+      { code: "MINSK", name: "Минск", country: "BY", timezone: "Europe/Minsk" },
+      { code: "BREST", name: "Брест", country: "BY", timezone: "Europe/Minsk" },
+      { code: "GRODNO", name: "Гродно", country: "BY", timezone: "Europe/Minsk" },
+    ];
+    const regionMap = {};
+    for (const rd of regionDefs) {
+      const r = await prisma.region.upsert({
+        where: { code: rd.code },
+        update: { name: rd.name, country: rd.country, timezone: rd.timezone },
+        create: rd,
+      });
+      regionMap[rd.code] = r.id;
+    }
+
     const venues = [
-      { name: "360 Padel Arena", address: "с/с Боровлянский, д. 308, этаж 2", city: "MINSK", courts: 7, yclientsCompanyId: "1073853", yclientsFormId: "n1170112", yclientsPriceLabel: "от 120 BYN/час" },
-      { name: "Padel Club Minsk", address: "Минск", city: "MINSK", courts: 2 },
-      { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", city: "MINSK", courts: 1 },
-      { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", city: "MINSK", courts: 1 },
-      { name: "Ilo Club", address: "Минск", city: "MINSK", courts: 1 },
-      { name: "375 Padel Club", address: "Минск", city: "MINSK", courts: 8 },
-      { name: "Meta Padel", address: "Гродно", city: "GRODNO", courts: 3 },
-      { name: "PADEL BAZA", address: "Брест", city: "BREST", courts: 2 },
+      { name: "360 Padel Arena", address: "с/с Боровлянский, д. 308, этаж 2", regionId: regionMap["MINSK"], courts: 7, yclientsCompanyId: "1073853", yclientsFormId: "n1170112", yclientsPriceLabel: "от 120 BYN/час" },
+      { name: "Padel Club Minsk", address: "Минск", regionId: regionMap["MINSK"], courts: 2 },
+      { name: "Padel Park — Софьи Ковалевской", address: "Минск, ул. Софьи Ковалевской", regionId: regionMap["MINSK"], courts: 1 },
+      { name: "Padel Park — Куйбышева", address: "Минск, ул. Куйбышева", regionId: regionMap["MINSK"], courts: 1 },
+      { name: "Ilo Club", address: "Минск", regionId: regionMap["MINSK"], courts: 1 },
+      { name: "375 Padel Club", address: "Минск", regionId: regionMap["MINSK"], courts: 8 },
+      { name: "Meta Padel", address: "Гродно", regionId: regionMap["GRODNO"], courts: 3 },
+      { name: "PADEL BAZA", address: "Брест", regionId: regionMap["BREST"], courts: 2 },
     ];
     const results = [];
     for (const v of venues) {

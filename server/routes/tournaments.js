@@ -9,7 +9,7 @@ const router = express.Router();
 // List tournaments
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const { status, city } = req.query;
+    const { status, regionId } = req.query;
     const where = {};
 
     if (status === "registration") where.status = "REGISTRATION";
@@ -17,7 +17,7 @@ router.get("/", authMiddleware, async (req, res) => {
     else if (status === "upcoming") where.status = "UPCOMING";
     else if (status === "in_progress") where.status = "IN_PROGRESS";
 
-    if (city) where.city = city;
+    if (regionId) where.regionId = parseInt(regionId);
 
     const tournaments = await prisma.tournament.findMany({
       where,

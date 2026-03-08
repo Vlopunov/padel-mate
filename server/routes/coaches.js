@@ -7,9 +7,9 @@ const router = express.Router();
 // GET /api/coaches — public list of coaches
 router.get("/", async (req, res) => {
   try {
-    const { city } = req.query;
+    const { regionId } = req.query;
     const where = { isCoach: true };
-    if (city) where.city = city;
+    if (regionId) where.regionId = parseInt(regionId);
 
     const coaches = await prisma.user.findMany({
       where,
@@ -19,7 +19,8 @@ router.get("/", async (req, res) => {
         lastName: true,
         username: true,
         photoUrl: true,
-        city: true,
+        regionId: true,
+        region: { select: { id: true, code: true, name: true } },
         coachBio: true,
         coachExperience: true,
         coachSpecialization: true,
@@ -45,7 +46,8 @@ router.get("/", async (req, res) => {
       lastName: c.lastName,
       username: c.username,
       photoUrl: c.photoUrl,
-      city: c.city,
+      regionId: c.regionId,
+      region: c.region,
       bio: c.coachBio,
       experience: c.coachExperience,
       specialization: c.coachSpecialization,
@@ -77,7 +79,8 @@ router.get("/:id", async (req, res) => {
         lastName: true,
         username: true,
         photoUrl: true,
-        city: true,
+        regionId: true,
+        region: { select: { id: true, code: true, name: true } },
         coachBio: true,
         coachExperience: true,
         coachSpecialization: true,
@@ -132,7 +135,8 @@ router.get("/:id", async (req, res) => {
       lastName: coach.lastName,
       username: coach.username,
       photoUrl: coach.photoUrl,
-      city: coach.city,
+      regionId: coach.regionId,
+      region: coach.region,
       bio: coach.coachBio,
       experience: coach.coachExperience,
       specialization: coach.coachSpecialization,

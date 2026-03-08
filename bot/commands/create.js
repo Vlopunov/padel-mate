@@ -1,4 +1,17 @@
-const { CITY_MAP, LEVELS } = require("../../server/config/app");
+const { LEVELS } = require("../../server/config/app");
+
+/**
+ * Get UTC offset string (e.g. "+03:00") for a given IANA timezone.
+ */
+function getTimezoneOffset(tz) {
+  const now = new Date();
+  const utcStr = now.toLocaleString("en-US", { timeZone: "UTC" });
+  const tzStr = now.toLocaleString("en-US", { timeZone: tz });
+  const diffMs = new Date(tzStr) - new Date(utcStr);
+  const hours = Math.floor(diffMs / 3600000);
+  const mins = Math.abs(Math.floor((diffMs % 3600000) / 60000));
+  return `${hours >= 0 ? "+" : "-"}${String(Math.abs(hours)).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
 
 // In-memory state for multi-step create conversation
 const createState = new Map();
@@ -18,22 +31,22 @@ async function startCreate(bot, msg) {
   const telegramId = msg.from.id;
 
   try {
-    const { getAllCitiesWithVenues } = require("../../server/services/botData");
-    const cities = await getAllCitiesWithVenues();
+    const { getAllRegionsWithVenues } = require("../../server/services/botData");
+    const regions = await getAllRegionsWithVenues();
 
-    if (cities.length === 0) {
+    if (regions.length === 0) {
       await bot.sendMessage(chatId, "⚠️ Нет доступных площадок. Обратитесь к администратору.");
       return;
     }
 
     // Reset any existing state
-    createState.set(telegramId, { step: "city", timestamp: Date.now(), data: {} });
+    createState.set(telegramId, { step: "region", timestamp: Date.now(), data: {} });
 
-    const buttons = cities.map((c) => [
-      { text: `${c.name} (${c.count} площ.)`, callback_data: `cr_city_${c.city}` },
+    const buttons = regions.map((r) => [
+      { text: `${r.name} (${r.count} площ.)`, callback_data: `cr_reg_${r.id}` },
     ]);
 
-    await bot.sendMessage(chatId, "🎾 <b>Создание матча</b>\n\n🏙️ Выберите город:", {
+    await bot.sendMessage(chatId, "🎾 <b>Создание матча</b>\n\n🏙️ Выберите регион:", {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: buttons },
     });
@@ -49,7 +62,7 @@ async function handleCreateCallback(bot, query) {
   const data = query.data;
 
   try {
-    const { getVenuesByCity, botCreateMatch, getLevelInfo } = require("../../server/services/botData");
+    const { getVenuesByRegion, getAllRegionsWithVenues, botCreateMatch, getLevelInfo } = require("../../server/services/botData");
 
     let state = createState.get(telegramId);
     if (!state) {
@@ -57,16 +70,22 @@ async function handleCreateCallback(bot, query) {
       return;
     }
 
-    // ── Step 1: City selected → show venues ──
-    if (data.startsWith("cr_city_")) {
-      const city = data.replace("cr_city_", "");
-      state.data.city = city;
+    // ── Step 1: Region selected → show venues ──
+    if (data.startsWith("cr_reg_")) {
+      const regionId = parseInt(data.replace("cr_reg_", ""));
+      state.data.regionId = regionId;
       state.step = "venue";
       state.timestamp = Date.now();
 
-      const venues = await getVenuesByCity(city);
+      // Look up region details for timezone and name
+      const regions = await getAllRegionsWithVenues();
+      const region = regions.find(r => r.id === regionId);
+      state.data.timezone = region?.timezone || "Europe/Minsk";
+      state.data.regionName = region?.name || "—";
+
+      const venues = await getVenuesByRegion(regionId);
       if (venues.length === 0) {
-        await bot.answerCallbackQuery(query.id, { text: "Нет площадок в этом городе" });
+        await bot.answerCallbackQuery(query.id, { text: "Нет площадок в этом регионе" });
         return;
       }
 
@@ -114,25 +133,25 @@ async function handleCreateCallback(bot, query) {
     // ── Step 3: Date selected → show times ──
     if (data.startsWith("cr_day_")) {
       const dayOffset = parseInt(data.replace("cr_day_", ""));
-      // Calculate date in Minsk timezone (UTC+3)
-      const MINSK_OFFSET = 3 * 60 * 60 * 1000;
-      const nowUtc = new Date();
-      const minskNow = new Date(nowUtc.getTime() + MINSK_OFFSET);
-      const minskDate = new Date(minskNow);
-      minskDate.setDate(minskDate.getDate() + dayOffset);
-      state.data.dateStr = minskDate.toISOString().split("T")[0];
+      // Calculate date in the region's timezone
+      const tz = state.data.timezone || "Europe/Minsk";
+      const nowInTz = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+      const tzDate = new Date(nowInTz);
+      tzDate.setDate(tzDate.getDate() + dayOffset);
+      state.data.dateStr = tzDate.toISOString().split("T")[0];
+      state.data.timezone = tz; // ensure timezone is stored for later
       state.step = "time";
       state.timestamp = Date.now();
 
-      // Generate time slots from 8:00 to 22:00 (Minsk time)
+      // Generate time slots from 8:00 to 22:00 (region time)
       const slots = [];
-      const minskHour = minskNow.getUTCHours();
-      const minskMinute = minskNow.getUTCMinutes();
+      const tzHour = nowInTz.getHours();
+      const tzMinute = nowInTz.getMinutes();
       for (let h = 8; h <= 22; h++) {
         for (const m of [0, 30]) {
-          // Skip past times if today (compare in Minsk time)
+          // Skip past times if today (compare in region time)
           if (dayOffset === 0) {
-            if (h < minskHour || (h === minskHour && m <= minskMinute)) continue;
+            if (h < tzHour || (h === tzHour && m <= tzMinute)) continue;
           }
           const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
           slots.push(timeStr);
@@ -228,7 +247,7 @@ async function handleCreateCallback(bot, query) {
       state.step = "confirm";
       state.timestamp = Date.now();
 
-      const cityName = CITY_MAP[state.data.city] || state.data.city;
+      const cityName = state.data.regionName || "—";
       const levelNames = LEVELS.filter(
         (l) => l.level >= state.data.levelMin && l.level <= state.data.levelMax
       );
@@ -261,8 +280,9 @@ async function handleCreateCallback(bot, query) {
     // ── Step 7: Confirm ──
     if (data === "cr_ok") {
       const s = state.data;
-      // Minsk is UTC+3, user selects time in Minsk timezone
-      const fullDate = `${s.dateStr}T${s.time}:00+03:00`;
+      // Build date string with the region's timezone offset
+      const tzOffset = getTimezoneOffset(s.timezone || "Europe/Minsk");
+      const fullDate = `${s.dateStr}T${s.time}:00${tzOffset}`;
 
       const result = await botCreateMatch(telegramId, {
         venueId: s.venueId,

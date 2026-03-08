@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { COLORS, LEVELS, MULTI_COURT_VENUES } from '../config';
+import { COLORS, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -30,14 +30,14 @@ export function CreateMatch({ user, onBack, onCreated }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user?.city) {
-      api.venues.list(user.city).then(setVenues).catch(console.error);
+    if (user?.regionId) {
+      api.venues.list(user.regionId).then(setVenues).catch(console.error);
     }
-  }, [user?.city]);
+  }, [user?.regionId]);
 
   // Get selected venue info
   const selectedVenue = venues.find((v) => String(v.id) === venueId);
-  const isMultiCourt = selectedVenue && MULTI_COURT_VENUES.includes(selectedVenue.name);
+  const isMultiCourt = selectedVenue?.multiCourt;
   const showCourtNumber = courtBooked && isMultiCourt;
 
   // Court options for the selected venue

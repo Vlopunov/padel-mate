@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { COLORS, CITIES, LEVELS } from '../config';
+import { COLORS, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -603,9 +603,9 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                   </p>
                   <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
                     <Badge style={{ fontSize: 10 }}>{u.rating}</Badge>
-                    {u.city && (
+                    {u.region?.name && (
                       <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                        {CITIES.find((c) => c.value === u.city)?.label}
+                        {u.region.name}
                       </span>
                     )}
                   </div>

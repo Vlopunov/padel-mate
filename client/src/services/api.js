@@ -45,6 +45,11 @@ export const api = {
     return data;
   },
 
+  // Regions
+  regions: {
+    list: () => api.fetch('/regions'),
+  },
+
   // Auth
   auth: {
     telegram: (initData) => api.fetch('/auth/telegram', { method: 'POST', body: JSON.stringify({ initData }) }),
@@ -59,10 +64,10 @@ export const api = {
     getById: (id) => api.fetch(`/users/${id}`),
     getStats: (id) => api.fetch(`/users/${id}/stats`),
     getH2H: (id, opponentId) => api.fetch(`/users/${id}/h2h/${opponentId}`),
-    search: (q, { city, ratingMin, ratingMax } = {}) => {
+    search: (q, { regionId, ratingMin, ratingMax } = {}) => {
       const params = new URLSearchParams();
       if (q) params.set('q', q);
-      if (city) params.set('city', city);
+      if (regionId) params.set('regionId', regionId);
       if (ratingMin) params.set('ratingMin', ratingMin);
       if (ratingMax) params.set('ratingMax', ratingMax);
       return api.fetch(`/users/search?${params.toString()}`);
@@ -114,7 +119,7 @@ export const api = {
 
   // Venues
   venues: {
-    list: (city) => api.fetch(`/venues${city ? `?city=${city}` : ''}`),
+    list: (regionId) => api.fetch(`/venues${regionId ? `?regionId=${regionId}` : ''}`),
     getById: (id) => api.fetch(`/venues/${id}`),
     bookingServices: (id) => api.fetch(`/venues/${id}/booking/services`),
     bookingStaff: (id, serviceIds = []) => {
@@ -200,7 +205,7 @@ export const api = {
 
   // Coaches (public)
   coaches: {
-    list: (city) => api.fetch(`/coaches${city ? `?city=${city}` : ''}`),
+    list: (regionId) => api.fetch(`/coaches${regionId ? `?regionId=${regionId}` : ''}`),
     getById: (id) => api.fetch(`/coaches/${id}`),
     reviews: (id) => api.fetch(`/coaches/${id}/reviews`),
     writeReview: (id, data) => api.fetch(`/coaches/${id}/reviews`, { method: 'POST', body: JSON.stringify(data) }),

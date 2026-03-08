@@ -2,12 +2,6 @@ module.exports = {
   APP_NAME: "Padel GO",
   TG_CHANNEL: "@PadelMateBY",
   TG_CHAT: "@PadelMateChat",
-  CITIES: ["Минск", "Брест", "Гродно"],
-  CITY_MAP: {
-    MINSK: "Минск",
-    BREST: "Брест",
-    GRODNO: "Гродно",
-  },
   MIN_LEVEL: 1.0,
   MAX_LEVEL: 4.0,
   LEVEL_STEP: 1.0,

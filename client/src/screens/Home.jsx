@@ -18,19 +18,19 @@ export function Home({ user, onNavigate }) {
 
   useEffect(() => {
     loadData();
-  }, [user?.city]);
+  }, [user?.regionId]);
 
   async function loadData() {
     try {
-      const cityFilter = user?.city || '';
+      const regionFilter = user?.regionId || '';
       const [allMatches, tournaments] = await Promise.all([
-        api.matches.list({ status: 'recruiting', ...(cityFilter && { city: cityFilter }) }),
+        api.matches.list({ status: 'recruiting', ...(regionFilter && { regionId: regionFilter }) }),
         api.tournaments.list({ status: 'registration' }),
       ]);
       setMatches(allMatches.slice(0, 2));
 
       // Find pending score matches for this user
-      const full = await api.matches.list({ status: 'full', ...(cityFilter && { city: cityFilter }) });
+      const full = await api.matches.list({ status: 'full', ...(regionFilter && { regionId: regionFilter }) });
       const pending = full.filter(
         (m) => ['FULL', 'PENDING_SCORE'].includes(m.status) && m.players.some((p) => p.user.id === user?.id)
       );
@@ -40,7 +40,7 @@ export function Home({ user, onNavigate }) {
 
       // Find bookable venue (with YClients)
       try {
-        const allVenues = await api.venues.list(cityFilter);
+        const allVenues = await api.venues.list(regionFilter);
         const bv = allVenues.find(v => v.yclientsCompanyId);
         if (bv) setBookableVenue(bv);
       } catch (e) { /* not critical */ }

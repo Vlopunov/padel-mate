@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { COLORS, APP_NAME, CITIES, getLevel } from '../config';
+import React, { useState, useEffect } from 'react';
+import { COLORS, APP_NAME, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
 import { ToggleGroup } from '../components/ui/ToggleGroup';
+import { api } from '../services/api';
 
 const SURVEY_QUESTIONS = [
   {
@@ -35,7 +36,8 @@ const SURVEY_QUESTIONS = [
 
 export function Onboarding({ onComplete }) {
   const [step, setStep] = useState(1);
-  const [city, setCity] = useState('');
+  const [regions, setRegions] = useState([]);
+  const [regionId, setRegionId] = useState('');
   const [hasExternalRating, setHasExternalRating] = useState(null);
   const [ratingSystem, setRatingSystem] = useState('');
   const [ratingValue, setRatingValue] = useState('');
@@ -44,6 +46,10 @@ export function Onboarding({ onComplete }) {
   const [hand, setHand] = useState(null);
   const [position, setPosition] = useState(null);
   const [calculatedRating, setCalculatedRating] = useState(null);
+
+  useEffect(() => {
+    api.regions.list().then(setRegions);
+  }, []);
 
   const containerStyle = {
     maxWidth: 420,
@@ -55,7 +61,7 @@ export function Onboarding({ onComplete }) {
   };
 
   const handleCitySelect = () => {
-    if (city) setStep(2);
+    if (regionId) setStep(2);
   };
 
   const getRatingLimits = () => {
@@ -100,7 +106,7 @@ export function Onboarding({ onComplete }) {
 
   const finishOnboarding = (source) => {
     const data = {
-      city,
+      regionId: parseInt(regionId),
       hand: hand === 'RIGHT' ? 'RIGHT' : hand === 'LEFT' ? 'LEFT' : null,
       position,
     };
@@ -136,22 +142,22 @@ export function Onboarding({ onComplete }) {
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {CITIES.map((c) => (
+            {regions.map((r) => (
               <Card
-                key={c.value}
-                variant={city === c.value ? 'accent' : 'default'}
-                onClick={() => setCity(c.value)}
+                key={r.id}
+                variant={regionId === String(r.id) ? 'accent' : 'default'}
+                onClick={() => setRegionId(String(r.id))}
                 style={{ cursor: 'pointer', textAlign: 'center', padding: 18 }}
               >
-                <span style={{ fontSize: 16, fontWeight: 600, color: city === c.value ? COLORS.accent : COLORS.text }}>
-                  {c.label}
+                <span style={{ fontSize: 16, fontWeight: 600, color: regionId === String(r.id) ? COLORS.accent : COLORS.text }}>
+                  {r.name}
                 </span>
               </Card>
             ))}
           </div>
         </div>
 
-        <Button fullWidth onClick={handleCitySelect} disabled={!city} style={{ marginTop: 24 }}>
+        <Button fullWidth onClick={handleCitySelect} disabled={!regionId} style={{ marginTop: 24 }}>
           Далее
         </Button>
       </div>

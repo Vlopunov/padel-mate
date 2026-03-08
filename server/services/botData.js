@@ -3,7 +3,7 @@
  * Uses Prisma directly (bot runs in same process as server).
  */
 const prisma = require("../lib/prisma");
-const { CITY_MAP, LEVELS, XP_LEVELS } = require("../config/app");
+const { LEVELS, XP_LEVELS } = require("../config/app");
 const { sendTelegramMessage, notifyMatchFull } = require("./notifications");
 
 
@@ -34,6 +34,7 @@ async function getUserProfile(telegramId) {
   const user = await prisma.user.findUnique({
     where: { telegramId: BigInt(telegramId) },
     include: {
+      region: { select: { name: true } },
       achievements: {
         include: { achievement: true },
         orderBy: { unlockedAt: "desc" },
@@ -62,7 +63,7 @@ async function getUserProfile(telegramId) {
   return {
     firstName: user.firstName,
     lastName: user.lastName,
-    city: user.city,
+    regionName: user.region?.name || "—",
     rating: user.rating,
     matchesPlayed: user.matchesPlayed,
     wins: user.wins,
@@ -96,7 +97,8 @@ async function getLeaderboard(limit = 10, telegramId = null) {
       wins: true,
       losses: true,
       matchesPlayed: true,
-      city: true,
+      regionId: true,
+      region: { select: { id: true, code: true, name: true } },
       telegramId: true,
     },
   });
@@ -170,7 +172,7 @@ async function getUserMatches(telegramId) {
 async function getAvailableMatches(telegramId) {
   const user = await prisma.user.findUnique({
     where: { telegramId: BigInt(telegramId) },
-    select: { id: true, city: true, rating: true },
+    select: { id: true, regionId: true, rating: true },
   });
 
   const where = {
@@ -178,9 +180,9 @@ async function getAvailableMatches(telegramId) {
     date: { gt: new Date() },
   };
 
-  // If user is registered, filter by city
-  if (user) {
-    where.venue = { city: user.city };
+  // If user is registered, filter by region
+  if (user && user.regionId) {
+    where.venue = { regionId: user.regionId };
   }
 
   const matches = await prisma.match.findMany({
@@ -302,22 +304,25 @@ async function botLeaveMatch(telegramId, matchId) {
 }
 
 // ─── Create match via bot ─────────────────────────
-async function getVenuesByCity(city) {
+async function getVenuesByRegion(regionId) {
   return prisma.venue.findMany({
-    where: { city },
+    where: { regionId: parseInt(regionId) },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
 }
 
-async function getAllCitiesWithVenues() {
-  const venues = await prisma.venue.groupBy({
-    by: ["city"],
-    _count: { id: true },
+async function getAllRegionsWithVenues() {
+  const regions = await prisma.region.findMany({
+    where: { active: true },
+    include: {
+      _count: { select: { venues: true } },
+    },
+    orderBy: { sortOrder: "asc" },
   });
-  return venues
-    .filter((v) => v._count.id > 0)
-    .map((v) => ({ city: v.city, name: CITY_MAP[v.city] || v.city, count: v._count.id }));
+  return regions
+    .filter((r) => r._count.venues > 0)
+    .map((r) => ({ id: r.id, name: r.name, timezone: r.timezone, count: r._count.venues }));
 }
 
 async function botCreateMatch(telegramId, data) {
@@ -364,11 +369,10 @@ module.exports = {
   getAvailableMatches,
   botJoinMatch,
   botLeaveMatch,
-  getVenuesByCity,
-  getAllCitiesWithVenues,
+  getVenuesByRegion,
+  getAllRegionsWithVenues,
   botCreateMatch,
   getLevelInfo,
   getLevelByValue,
-  CITY_MAP,
   LEVELS,
 };

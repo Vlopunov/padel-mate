@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS, CITIES, LEVELS, getLevel, getLevelByValue } from '../config';
+import { COLORS, LEVELS, getLevel, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
@@ -93,8 +93,7 @@ const PLAYER_STATUS_LABELS = {
   INVITED: 'Приглашён',
 };
 
-// Multi-court venues (same as CreateMatch)
-const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk'];
+// Multi-court is now a boolean on Venue model (venue.multiCourt)
 
 // Generate time slots every 30 min from 06:00 to 23:30
 const TIME_SLOTS = [];
@@ -111,6 +110,7 @@ export function Admin({ onBack }) {
   const [matches, setMatches] = useState([]);
   const [tournaments, setTournaments] = useState([]);
   const [venues, setVenues] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState(null);
   const [newRating, setNewRating] = useState('');
@@ -125,7 +125,7 @@ export function Admin({ onBack }) {
   const [editingTournament, setEditingTournament] = useState(null);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [tForm, setTForm] = useState({
-    name: '', description: '', date: '', endDate: '', city: 'MINSK',
+    name: '', description: '', date: '', endDate: '', regionId: '',
     venueId: '', format: 'americano', levelMin: '1.0', levelMax: '4.0',
     maxTeams: '16', price: '', ratingMultiplier: '1.0', status: 'REGISTRATION',
     pointsPerMatch: '24', courtsCount: '1', registrationMode: 'INDIVIDUAL',
@@ -135,9 +135,10 @@ export function Admin({ onBack }) {
     loadData();
   }, [tab]);
 
-  // Load venues for forms
+  // Load venues and regions for forms
   useEffect(() => {
     api.venues.list().then(setVenues).catch(console.error);
+    api.regions.list().then(setRegions).catch(console.error);
   }, []);
 
   async function loadData() {
@@ -268,7 +269,7 @@ export function Admin({ onBack }) {
     const dd = String(today.getDate()).padStart(2, '0');
     setTForm({
       name: '', description: '', date: `${yyyy}-${mm}-${dd}`, endDate: '',
-      city: 'MINSK', venueId: venues.length > 0 ? String(venues[0].id) : '',
+      regionId: regions.length > 0 ? String(regions[0].id) : '', venueId: venues.length > 0 ? String(venues[0].id) : '',
       format: 'americano', levelMin: '1.0', levelMax: '4.0',
       maxTeams: '16', price: '', ratingMultiplier: '1.0', status: 'REGISTRATION',
       pointsPerMatch: '24', courtsCount: '1', registrationMode: 'INDIVIDUAL',
@@ -287,7 +288,7 @@ export function Admin({ onBack }) {
     }
     setTForm({
       name: t.name, description: t.description || '', date: dateStr, endDate: endDateStr,
-      city: t.city, venueId: String(t.venueId), format: t.format,
+      regionId: String(t.regionId || ''), venueId: String(t.venueId), format: t.format,
       levelMin: String(t.levelMin), levelMax: String(t.levelMax),
       maxTeams: String(t.maxTeams), price: t.price || '',
       ratingMultiplier: String(t.ratingMultiplier), status: t.status,
@@ -370,7 +371,7 @@ export function Admin({ onBack }) {
     label: `${l.category} — ${l.name}`,
   }));
 
-  const filteredVenues = venues.filter((v) => v.city === tForm.city);
+  const filteredVenues = tForm.regionId ? venues.filter((v) => String(v.regionId) === tForm.regionId) : venues;
 
   // Match filter logic
   const filteredMatches = matchFilter === 'all'
@@ -509,19 +510,19 @@ export function Admin({ onBack }) {
             </Card>
           )}
 
-          {/* City breakdown */}
-          {stats.today?.cityCounts && Object.keys(stats.today.cityCounts).length > 0 && (
+          {/* Region breakdown */}
+          {stats.today?.regionCounts && Object.keys(stats.today.regionCounts).length > 0 && (
             <Card style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-                {'\uD83C\uDFD9\uFE0F'} По городам
+                {'\uD83C\uDFD9\uFE0F'} По регионам
               </div>
-              {Object.entries(stats.today.cityCounts).map(([city, count]) => (
-                <div key={city} style={{
+              {Object.entries(stats.today.regionCounts).map(([regionName, count]) => (
+                <div key={regionName} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '8px 0', borderBottom: `1px solid ${COLORS.border}`,
                 }}>
                   <span style={{ fontSize: 13, color: COLORS.textDim }}>
-                    {CITIES.find((c) => c.value === city)?.label || city}
+                    {regionName}
                   </span>
                   <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>{count}</span>
                 </div>
@@ -646,7 +647,7 @@ export function Admin({ onBack }) {
                   display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim, marginBottom: 10,
                   padding: '6px 10px', background: `${COLORS.bg}80`, borderRadius: 8,
                 }}>
-                  <span>{'\uD83C\uDFD9\uFE0F'} {u.city}</span>
+                  <span>{'\uD83C\uDFD9\uFE0F'} {u.region?.name || '\u2014'}</span>
                   <span>{'\uD83C\uDFBE'} {u.matchesPlayed}</span>
                   <span style={{ color: '#4CAF50' }}>{'\u2705'} {u.wins}</span>
                   <span style={{ color: COLORS.danger }}>{'\u274C'} {u.losses}</span>
@@ -999,10 +1000,10 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Select
-              label={'\uD83C\uDFD9\uFE0F Город'}
-              value={tForm.city}
-              onChange={(v) => setTForm({ ...tForm, city: v, venueId: '' })}
-              options={CITIES}
+              label={'\uD83C\uDFD9\uFE0F Регион'}
+              value={tForm.regionId}
+              onChange={(v) => setTForm({ ...tForm, regionId: v, venueId: '' })}
+              options={regions.map(r => ({ value: String(r.id), label: r.name }))}
             />
             <Select
               label={'\uD83D\uDCCD Площадка'}
@@ -1614,7 +1615,7 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
   const [saving, setSaving] = useState(false);
 
   const selectedVenue = venues.find((v) => String(v.id) === form.venueId);
-  const isMultiCourt = selectedVenue && MULTI_COURT_VENUES.includes(selectedVenue.name);
+  const isMultiCourt = selectedVenue?.multiCourt;
   const showCourtNumber = form.courtBooked && isMultiCourt;
 
   const courtOptions = selectedVenue

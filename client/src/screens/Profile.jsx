@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, CITIES, getLevel, getXpLevel } from '../config';
+import React, { useState, useEffect } from 'react';
+import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -13,7 +13,12 @@ import { api } from '../services/api';
 
 export function Profile({ user, onUpdate, onLogout, onNavigate }) {
   const { openTelegramLink } = useTelegram();
+  const [regions, setRegions] = useState([]);
   const [showRatingEdit, setShowRatingEdit] = useState(false);
+
+  useEffect(() => {
+    api.regions.list().then(setRegions);
+  }, []);
   const [newRating, setNewRating] = useState('');
   const [ratingReason, setRatingReason] = useState('');
 
@@ -63,7 +68,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           <Badge>{xp.current.icon} {xp.current.name}</Badge>
         </div>
         <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 6 }}>
-          {CITIES.find((c) => c.value === user.city)?.label || user.city}
+          {user.region?.name || '\u2014'}
         </p>
       </div>
 
@@ -196,9 +201,9 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
 
         <Select
           label={'\u{1F4CD} Город'}
-          value={user.city}
-          onChange={(v) => handleUpdate('city', v)}
-          options={CITIES}
+          value={String(user.regionId || '')}
+          onChange={(v) => handleUpdate('regionId', parseInt(v))}
+          options={regions.map(r => ({ value: String(r.id), label: r.name }))}
         />
 
         <Select

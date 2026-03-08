@@ -1,5 +1,4 @@
 const prisma = require("../lib/prisma");
-const { CITY_MAP } = require("../config/app");
 
 // Minsk is UTC+3 (Belarus has no DST)
 const MINSK_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -61,14 +60,17 @@ async function collectDailyStats(dateOverride) {
     orderBy: { change: "desc" },
   });
 
-  // City breakdown
-  const cityGroups = await prisma.user.groupBy({
-    by: ["city"],
+  // Region breakdown
+  const regionGroups = await prisma.user.groupBy({
+    by: ["regionId"],
     _count: { id: true },
   });
-  const cityCounts = {};
-  for (const g of cityGroups) {
-    cityCounts[g.city] = g._count.id;
+  const allRegions = await prisma.region.findMany({ select: { id: true, name: true } });
+  const regionNameMap = Object.fromEntries(allRegions.map((r) => [r.id, r.name]));
+  const regionCounts = {};
+  for (const g of regionGroups) {
+    const name = regionNameMap[g.regionId] || `region_${g.regionId}`;
+    regionCounts[name] = g._count.id;
   }
 
   // Upsert
@@ -84,7 +86,7 @@ async function collectDailyStats(dateOverride) {
       activeUsers,
       topRatingChange: topChange?.change || 0,
       topRatingUserId: topChange?.userId || null,
-      cityCounts,
+      regionCounts: regionCounts,
     },
     create: {
       date: statsDate,
@@ -96,7 +98,7 @@ async function collectDailyStats(dateOverride) {
       activeUsers,
       topRatingChange: topChange?.change || 0,
       topRatingUserId: topChange?.userId || null,
-      cityCounts,
+      regionCounts: regionCounts,
     },
   });
 
@@ -110,7 +112,7 @@ async function collectDailyStats(dateOverride) {
     activeUsers,
     topRatingChange: topChange?.change || 0,
     topRatingUserId: topChange?.userId || null,
-    cityCounts,
+    regionCounts,
   };
 }
 
@@ -157,8 +159,9 @@ function formatDigestMessage(today, yesterday) {
     return "";
   };
 
-  const cityLines = Object.entries(today.cityCounts || {})
-    .map(([city, count]) => `  ${CITY_MAP[city] || city}: ${count}`)
+  const regionData = today.regionCounts || {};
+  const regionLines = Object.entries(regionData)
+    .map(([name, count]) => `  ${name}: ${count}`)
     .join("\n");
 
   let text = `📊 <b>Padel GO — сводка за ${today.date}</b>\n\n`;
@@ -173,8 +176,8 @@ function formatDigestMessage(today, yesterday) {
     text += `\n📈 Лучший рейтинг-скачок: <b>+${today.topRatingChange}</b>\n`;
   }
 
-  if (cityLines) {
-    text += `\n🏙️ По городам:\n${cityLines}\n`;
+  if (regionLines) {
+    text += `\n🏙️ По регионам:\n${regionLines}\n`;
   }
 
   return text;
@@ -266,7 +269,7 @@ async function getInactivePlayers(days = 14) {
 
   // All users who haven't played in a match since cutoff
   const allUsers = await prisma.user.findMany({
-    select: { id: true, telegramId: true, firstName: true, city: true },
+    select: { id: true, telegramId: true, firstName: true, regionId: true },
   });
 
   const activeUserIds = await prisma.matchPlayer.findMany({
@@ -311,7 +314,7 @@ async function checkMilestones() {
  * Format admin weekly report
  */
 function formatWeeklyReport(weekData) {
-  const { totalUsers, newUsers, totalMatches, newMatches, activeUsers, topPlayer, cityCounts } = weekData;
+  const { totalUsers, newUsers, totalMatches, newMatches, activeUsers, topPlayer, regionCounts } = weekData;
 
   let text = `📈 <b>Padel GO — еженедельный отчёт</b>\n\n`;
   text += `👥 Игроков: <b>${totalUsers}</b> (+${newUsers} за неделю)\n`;
@@ -322,11 +325,11 @@ function formatWeeklyReport(weekData) {
     text += `\n⭐ Самый активный: <b>${topPlayer.name}</b> (${topPlayer.matches} матчей)\n`;
   }
 
-  const cityLines = Object.entries(cityCounts || {})
-    .map(([city, count]) => `  ${CITY_MAP[city] || city}: ${count}`)
+  const regionLines = Object.entries(regionCounts || {})
+    .map(([name, count]) => `  ${name}: ${count}`)
     .join("\n");
-  if (cityLines) {
-    text += `\n🏙️ По городам:\n${cityLines}\n`;
+  if (regionLines) {
+    text += `\n🏙️ По регионам:\n${regionLines}\n`;
   }
 
   text += `\nХорошей недели! 🚀`;
@@ -371,14 +374,17 @@ async function getWeeklyReportData() {
   }
   const topPlayer = Object.values(playerCounts).sort((a, b) => b.matches - a.matches)[0] || null;
 
-  // City breakdown
-  const cityGroups = await prisma.user.groupBy({ by: ["city"], _count: { id: true } });
-  const cityCounts = {};
-  for (const g of cityGroups) {
-    cityCounts[g.city] = g._count.id;
+  // Region breakdown
+  const regionGroups = await prisma.user.groupBy({ by: ["regionId"], _count: { id: true } });
+  const allRegions = await prisma.region.findMany({ select: { id: true, name: true } });
+  const regionNameMap = Object.fromEntries(allRegions.map((r) => [r.id, r.name]));
+  const regionCounts = {};
+  for (const g of regionGroups) {
+    const name = regionNameMap[g.regionId] || `region_${g.regionId}`;
+    regionCounts[name] = g._count.id;
   }
 
-  return { totalUsers, newUsers, totalMatches, newMatches, activeUsers, topPlayer, cityCounts };
+  return { totalUsers, newUsers, totalMatches, newMatches, activeUsers, topPlayer, regionCounts };
 }
 
 module.exports = {

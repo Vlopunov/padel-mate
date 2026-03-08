@@ -4,7 +4,6 @@ module.exports = async function meCommand(bot, msg) {
 
   try {
     const { getUserProfile } = require("../../server/services/botData");
-    const { CITY_MAP } = require("../../server/config/app");
 
     const profile = await getUserProfile(telegramId);
     if (!profile) {
@@ -16,7 +15,7 @@ module.exports = async function meCommand(bot, msg) {
       ? Math.round((profile.wins / profile.matchesPlayed) * 100)
       : 0;
 
-    const cityName = CITY_MAP[profile.city] || profile.city || "—";
+    const cityName = profile.regionName || "—";
 
     let text = `👤 <b>${profile.firstName}${profile.lastName ? " " + profile.lastName : ""}</b>`;
     if (profile.isVip) text += ` ⭐`;

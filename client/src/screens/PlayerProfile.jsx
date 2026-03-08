@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS, CITIES, getLevel, getXpLevel } from '../config';
+import { COLORS, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -90,7 +90,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   const xp = getXpLevel(freshXp);
   const winRate = stats?.winRate || 0;
   const unlockedIds = new Set((stats?.achievements || []).map((a) => a.id));
-  const cityLabel = CITIES.find((c) => c.value === player.city)?.label;
+  const cityLabel = player.region?.name;
   const isMe = currentUser?.id === player.id;
 
   return (

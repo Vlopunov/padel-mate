@@ -20,12 +20,6 @@ export const COLORS = {
   surface: "#0F1425",
 };
 
-export const CITIES = [
-  { value: "MINSK", label: "Минск" },
-  { value: "BREST", label: "Брест" },
-  { value: "GRODNO", label: "Гродно" },
-];
-
 export const LEVELS = [
   { min: 0, max: 2500, level: 1.0, category: "D", name: "Новичок", ntrp: "1.0–2.5" },
   { min: 2501, max: 3500, level: 2.0, category: "C", name: "Любитель", ntrp: "3.0–3.5" },
@@ -54,8 +48,6 @@ export function getLevelByValue(levelFloat) {
   if (levelFloat <= 3.5) return LEVELS[2];
   return LEVELS[3];
 }
-
-export const MULTI_COURT_VENUES = ['360 Padel Arena', '375 Padel Club', 'Padel Club Minsk', 'Meta Padel', 'PADEL BAZA'];
 
 export function getXpLevel(xp) {
   let current = XP_LEVELS[0];

@@ -1,12 +1,18 @@
 const prisma = require("../lib/prisma");
 
+const regions = [
+  { code: "MINSK", name: "Минск", country: "BY", timezone: "Europe/Minsk" },
+  { code: "BREST", name: "Брест", country: "BY", timezone: "Europe/Minsk" },
+  { code: "GRODNO", name: "Гродно", country: "BY", timezone: "Europe/Minsk" },
+];
+
 const venues = [
-  { name: "Padel Club Minsk", address: "ул. Притыцкого 60", city: "MINSK", courts: 3 },
-  { name: "Padel Arena", address: "ул. Кальварийская 1", city: "MINSK", courts: 2 },
-  { name: "Tennis Club Minsk", address: "ул. Сурганова 2", city: "MINSK", courts: 1 },
-  { name: "Sport Palace Brest", address: "ул. Ленина 10", city: "BREST", courts: 2 },
-  { name: "Arena Brest Padel", address: "ул. Московская 275", city: "BREST", courts: 1 },
-  { name: "Grodno Padel Club", address: "ул. Горького 82", city: "GRODNO", courts: 2 },
+  { name: "Padel Club Minsk", address: "ул. Притыцкого 60", regionCode: "MINSK", courts: 3 },
+  { name: "Padel Arena", address: "ул. Кальварийская 1", regionCode: "MINSK", courts: 2 },
+  { name: "Tennis Club Minsk", address: "ул. Сурганова 2", regionCode: "MINSK", courts: 1 },
+  { name: "Sport Palace Brest", address: "ул. Ленина 10", regionCode: "BREST", courts: 2 },
+  { name: "Arena Brest Padel", address: "ул. Московская 275", regionCode: "BREST", courts: 1 },
+  { name: "Grodno Padel Club", address: "ул. Горького 82", regionCode: "GRODNO", courts: 2 },
 ];
 
 const achievements = [
@@ -34,8 +40,8 @@ const achievements = [
   { id: "partners_5", name: "Коммуникабельный", description: "Сыграйте с 5 разными партнёрами", icon: "🤝", category: "social", xp: 75, condition: { type: "unique_partners", value: 5 } },
   { id: "partners_20", name: "Нетворкер", description: "Сыграйте с 20 разными партнёрами", icon: "🌐", category: "social", xp: 200, condition: { type: "unique_partners", value: 20 } },
   { id: "create_match", name: "Организатор", description: "Создайте 10 матчей", icon: "📋", category: "social", xp: 100, condition: { type: "matches_created", value: 10 } },
-  { id: "all_cities", name: "Путешественник", description: "Играйте во всех 3 городах", icon: "🗺️", category: "social", xp: 250, condition: { type: "all_cities", value: 3 } },
-  { id: "all_venues", name: "Исследователь", description: "Играйте на всех площадках", icon: "🏟️", category: "social", xp: 300, condition: { type: "all_venues", value: 6 } },
+  { id: "multi_region", name: "Путешественник", description: "Играйте во всех регионах", icon: "🗺️", category: "social", xp: 250, condition: { type: "all_regions", value: 3 } },
+  { id: "all_venues", name: "Исследователь", description: "Играйте на всех площадках", icon: "🏟️", category: "social", xp: 300, condition: { type: "all_venues", value: 0 } },
   // Турниры
   { id: "tournament_play", name: "Турнирщик", description: "Участие в 1 турнире", icon: "🎪", category: "tournaments", xp: 150, condition: { type: "tournaments_played", value: 1 } },
   { id: "tournament_win", name: "Чемпион", description: "Победа в турнире", icon: "🏆", category: "tournaments", xp: 500, condition: { type: "tournament_wins", value: 1 } },
@@ -45,16 +51,40 @@ const achievements = [
 async function main() {
   console.log("Seeding database...");
 
+  // Upsert regions first
+  const regionMap = {};
+  for (const region of regions) {
+    const r = await prisma.region.upsert({
+      where: { code: region.code },
+      update: { name: region.name, country: region.country, timezone: region.timezone },
+      create: region,
+    });
+    regionMap[region.code] = r.id;
+  }
+  console.log(`Seeded ${regions.length} regions`);
+
   for (const venue of venues) {
+    const { regionCode, ...venueData } = venue;
+    const data = { ...venueData, regionId: regionMap[regionCode] };
     await prisma.venue.upsert({
       where: { id: venues.indexOf(venue) + 1 },
-      update: venue,
-      create: venue,
+      update: data,
+      create: data,
     });
   }
   console.log(`Seeded ${venues.length} venues`);
 
+  // Dynamically set all_venues count and all_regions count
+  const totalVenues = await prisma.venue.count();
+  const totalRegions = await prisma.region.count({ where: { active: true } });
+
   for (const achievement of achievements) {
+    if (achievement.id === "all_venues") {
+      achievement.condition.value = totalVenues;
+    }
+    if (achievement.id === "multi_region") {
+      achievement.condition.value = totalRegions;
+    }
     await prisma.achievement.upsert({
       where: { id: achievement.id },
       update: achievement,

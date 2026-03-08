@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { COLORS, CITIES, getLevelByValue } from '../config';
+import { COLORS, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
@@ -237,7 +237,7 @@ export function Tournaments({ user, onNavigate }) {
                   <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 2 }}>
                     {new Date(t.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
                     {' \u00B7 '}
-                    {CITIES.find((c) => c.value === t.city)?.label}
+                    {t.region?.name}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -544,9 +544,9 @@ export function Tournaments({ user, onNavigate }) {
                   </p>
                   <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
                     <Badge style={{ fontSize: 10 }}>{u.rating}</Badge>
-                    {u.city && (
+                    {u.region?.name && (
                       <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                        {CITIES.find((c) => c.value === u.city)?.label}
+                        {u.region.name}
                       </span>
                     )}
                   </div>

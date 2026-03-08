@@ -7,10 +7,10 @@ const router = express.Router();
 
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const { city, period } = req.query;
+    const { regionId, period } = req.query;
     const where = { onboarded: true, isVisible: true };
 
-    if (city && city !== "all") where.city = city;
+    if (regionId && regionId !== "all") where.regionId = parseInt(regionId);
 
     let users;
 
@@ -37,7 +37,8 @@ router.get("/", authMiddleware, async (req, res) => {
           lastName: true,
           username: true,
           photoUrl: true,
-          city: true,
+          regionId: true,
+          region: { select: { id: true, code: true, name: true } },
           hand: true,
           rating: true,
           matchesPlayed: true,
@@ -65,7 +66,8 @@ router.get("/", authMiddleware, async (req, res) => {
           lastName: true,
           username: true,
           photoUrl: true,
-          city: true,
+          regionId: true,
+          region: { select: { id: true, code: true, name: true } },
           hand: true,
           rating: true,
           matchesPlayed: true,

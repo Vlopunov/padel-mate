@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { COLORS, CITIES } from '../config';
+import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
 import { Badge } from '../components/ui/Badge';
@@ -32,16 +32,21 @@ function StarRating({ rating, size = 14 }) {
 export function FindCoach({ onBack, onNavigate }) {
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cityFilter, setCityFilter] = useState('');
+  const [regions, setRegions] = useState([]);
+  const [regionFilter, setRegionFilter] = useState('');
+
+  useEffect(() => {
+    api.regions.list().then(setRegions);
+  }, []);
 
   useEffect(() => {
     loadCoaches();
-  }, [cityFilter]);
+  }, [regionFilter]);
 
   async function loadCoaches() {
     setLoading(true);
     try {
-      const data = await api.coaches.list(cityFilter || undefined);
+      const data = await api.coaches.list(regionFilter || undefined);
       setCoaches(data);
     } catch (err) {
       console.error('Load coaches error:', err);
@@ -54,25 +59,24 @@ export function FindCoach({ onBack, onNavigate }) {
     return (kopeks / 100).toFixed(kopeks % 100 === 0 ? 0 : 2);
   }
 
-  function getCityLabel(val) {
-    const c = CITIES.find((c) => c.value === val);
-    return c ? c.label : val;
+  function getRegionLabel(coach) {
+    return coach.region?.name || '';
   }
 
   return (
     <div>
       <Header title="Найти тренера" subtitle="Профессиональные тренировки" onBack={onBack} />
 
-      {/* City filter */}
+      {/* Region filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 2 }}>
         <button
-          onClick={() => setCityFilter('')}
+          onClick={() => setRegionFilter('')}
           style={{
             padding: '6px 14px',
             borderRadius: 20,
-            border: !cityFilter ? 'none' : `1px solid ${COLORS.border}`,
-            background: !cityFilter ? COLORS.accent : 'transparent',
-            color: !cityFilter ? COLORS.bg : COLORS.textDim,
+            border: !regionFilter ? 'none' : `1px solid ${COLORS.border}`,
+            background: !regionFilter ? COLORS.accent : 'transparent',
+            color: !regionFilter ? COLORS.bg : COLORS.textDim,
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -81,23 +85,23 @@ export function FindCoach({ onBack, onNavigate }) {
         >
           Все города
         </button>
-        {CITIES.map((c) => (
+        {regions.map((r) => (
           <button
-            key={c.value}
-            onClick={() => setCityFilter(c.value)}
+            key={r.id}
+            onClick={() => setRegionFilter(String(r.id))}
             style={{
               padding: '6px 14px',
               borderRadius: 20,
-              border: cityFilter === c.value ? 'none' : `1px solid ${COLORS.border}`,
-              background: cityFilter === c.value ? COLORS.accent : 'transparent',
-              color: cityFilter === c.value ? COLORS.bg : COLORS.textDim,
+              border: regionFilter === String(r.id) ? 'none' : `1px solid ${COLORS.border}`,
+              background: regionFilter === String(r.id) ? COLORS.accent : 'transparent',
+              color: regionFilter === String(r.id) ? COLORS.bg : COLORS.textDim,
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}
           >
-            {c.label}
+            {r.name}
           </button>
         ))}
       </div>
@@ -114,7 +118,7 @@ export function FindCoach({ onBack, onNavigate }) {
             Тренеры не найдены
           </p>
           <p style={{ fontSize: 13, color: COLORS.textDim }}>
-            {cityFilter ? 'Попробуйте другой город' : 'Скоро здесь появятся тренеры'}
+            {regionFilter ? 'Попробуйте другой город' : 'Скоро здесь появятся тренеры'}
           </p>
         </Card>
       ) : (
@@ -216,7 +220,7 @@ export function FindCoach({ onBack, onNavigate }) {
                   background: COLORS.surface,
                   borderRadius: 12,
                   padding: '10px 0',
-                  marginBottom: coach.experience || coach.certificates || coach.city ? 12 : 0,
+                  marginBottom: coach.experience || coach.certificates || coach.region?.name ? 12 : 0,
                 }}>
                   {[
                     { value: coach.studentCount || 0, label: 'учеников', show: true },
@@ -238,17 +242,17 @@ export function FindCoach({ onBack, onNavigate }) {
                   ))}
                 </div>
 
-                {/* Tags: certificates, city */}
-                {(coach.certificates || coach.city) && (
+                {/* Tags: certificates, region */}
+                {(coach.certificates || coach.region?.name) && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {coach.certificates && (
                       <Badge variant="purple" style={{ fontSize: 11 }}>
                         {'\u{1F4DC}'} {coach.certificates.length > 30 ? coach.certificates.substring(0, 30) + '...' : coach.certificates}
                       </Badge>
                     )}
-                    {coach.city && (
+                    {coach.region?.name && (
                       <Badge style={{ fontSize: 11 }}>
-                        {'\u{1F4CD}'} {getCityLabel(coach.city)}
+                        {'\u{1F4CD}'} {coach.region.name}
                       </Badge>
                     )}
                   </div>
