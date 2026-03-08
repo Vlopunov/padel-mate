@@ -1,6 +1,21 @@
 #!/bin/sh
 set -e
 
+# Wait for database to be reachable
+echo "Waiting for database..."
+MAX_RETRIES=30
+RETRY=0
+until node -e "const{PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$connect().then(()=>{p.\$disconnect();process.exit(0)}).catch(()=>process.exit(1))" 2>/dev/null; do
+  RETRY=$((RETRY + 1))
+  if [ $RETRY -ge $MAX_RETRIES ]; then
+    echo "Database not reachable after $MAX_RETRIES attempts, proceeding anyway..."
+    break
+  fi
+  echo "  Attempt $RETRY/$MAX_RETRIES — database not ready, waiting 2s..."
+  sleep 2
+done
+echo "Database is reachable."
+
 echo "Running database migrations..."
 npx prisma migrate deploy || {
   echo "Migration deploy failed. Attempting baseline..."
