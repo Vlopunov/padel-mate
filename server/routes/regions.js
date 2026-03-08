@@ -4,12 +4,22 @@ const router = express.Router();
 
 router.get("/", async (req, res) => {
   try {
-    const regions = await prisma.region.findMany({
+    const countries = await prisma.country.findMany({
       where: { active: true },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, code: true, name: true, country: true, timezone: true },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        flag: true,
+        regions: {
+          where: { active: true },
+          orderBy: { sortOrder: "asc" },
+          select: { id: true, code: true, name: true, timezone: true },
+        },
+      },
     });
-    res.json(regions);
+    res.json({ countries });
   } catch (err) {
     console.error("Regions error:", err);
     res.status(500).json({ error: "Ошибка получения регионов" });

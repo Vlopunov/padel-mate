@@ -98,7 +98,7 @@ async function getLeaderboard(limit = 10, telegramId = null) {
       losses: true,
       matchesPlayed: true,
       regionId: true,
-      region: { select: { id: true, code: true, name: true } },
+      region: { select: { id: true, code: true, name: true, country: { select: { id: true, code: true, name: true, flag: true } } } },
       telegramId: true,
     },
   });
@@ -316,13 +316,57 @@ async function getAllRegionsWithVenues() {
   const regions = await prisma.region.findMany({
     where: { active: true },
     include: {
+      country: { select: { id: true, code: true, name: true, flag: true } },
       _count: { select: { venues: true } },
     },
     orderBy: { sortOrder: "asc" },
   });
   return regions
     .filter((r) => r._count.venues > 0)
-    .map((r) => ({ id: r.id, name: r.name, timezone: r.timezone, count: r._count.venues }));
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      timezone: r.timezone,
+      count: r._count.venues,
+      country: r.country,
+    }));
+}
+
+async function getAllCountriesWithRegions() {
+  const countries = await prisma.country.findMany({
+    where: { active: true },
+    include: {
+      regions: {
+        where: { active: true },
+        include: {
+          _count: { select: { venues: true } },
+        },
+        orderBy: { sortOrder: "asc" },
+      },
+    },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  return countries
+    .map((c) => {
+      const regions = c.regions
+        .filter((r) => r._count.venues > 0)
+        .map((r) => ({
+          id: r.id,
+          code: r.code,
+          name: r.name,
+          count: r._count.venues,
+          timezone: r.timezone,
+        }));
+      return {
+        id: c.id,
+        code: c.code,
+        name: c.name,
+        flag: c.flag,
+        regions,
+      };
+    })
+    .filter((c) => c.regions.length > 0);
 }
 
 async function botCreateMatch(telegramId, data) {
@@ -371,6 +415,7 @@ module.exports = {
   botLeaveMatch,
   getVenuesByRegion,
   getAllRegionsWithVenues,
+  getAllCountriesWithRegions,
   botCreateMatch,
   getLevelInfo,
   getLevelByValue,

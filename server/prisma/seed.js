@@ -1,9 +1,16 @@
 const prisma = require("../lib/prisma");
 
+const countries = [
+  { code: "BY", name: "Беларусь", flag: "🇧🇾", sortOrder: 1 },
+  { code: "RU", name: "Россия", flag: "🇷🇺", sortOrder: 2 },
+  { code: "ID", name: "Индонезия", flag: "🇮🇩", sortOrder: 3 },
+  { code: "AE", name: "ОАЭ", flag: "🇦🇪", sortOrder: 4 },
+];
+
 const regions = [
-  { code: "MINSK", name: "Минск", country: "BY", timezone: "Europe/Minsk" },
-  { code: "BREST", name: "Брест", country: "BY", timezone: "Europe/Minsk" },
-  { code: "GRODNO", name: "Гродно", country: "BY", timezone: "Europe/Minsk" },
+  { code: "MINSK", name: "Минск", countryCode: "BY", timezone: "Europe/Minsk" },
+  { code: "BREST", name: "Брест", countryCode: "BY", timezone: "Europe/Minsk" },
+  { code: "GRODNO", name: "Гродно", countryCode: "BY", timezone: "Europe/Minsk" },
 ];
 
 const venues = [
@@ -51,13 +58,26 @@ const achievements = [
 async function main() {
   console.log("Seeding database...");
 
-  // Upsert regions first
+  // Upsert countries first
+  const countryMap = {};
+  for (const country of countries) {
+    const c = await prisma.country.upsert({
+      where: { code: country.code },
+      update: { name: country.name, flag: country.flag, sortOrder: country.sortOrder },
+      create: country,
+    });
+    countryMap[country.code] = c.id;
+  }
+  console.log(`Seeded ${countries.length} countries`);
+
+  // Upsert regions
   const regionMap = {};
   for (const region of regions) {
+    const { countryCode, ...regionData } = region;
     const r = await prisma.region.upsert({
       where: { code: region.code },
-      update: { name: region.name, country: region.country, timezone: region.timezone },
-      create: region,
+      update: { name: region.name, countryId: countryMap[countryCode], timezone: region.timezone },
+      create: { ...regionData, countryId: countryMap[countryCode] },
     });
     regionMap[region.code] = r.id;
   }

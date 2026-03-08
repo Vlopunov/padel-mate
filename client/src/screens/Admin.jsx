@@ -138,7 +138,7 @@ export function Admin({ onBack }) {
   // Load venues and regions for forms
   useEffect(() => {
     api.venues.list().then(setVenues).catch(console.error);
-    api.regions.list().then(setRegions).catch(console.error);
+    api.regions.list().then((data) => setRegions(data.countries || [])).catch(console.error);
   }, []);
 
   async function loadData() {
@@ -269,7 +269,7 @@ export function Admin({ onBack }) {
     const dd = String(today.getDate()).padStart(2, '0');
     setTForm({
       name: '', description: '', date: `${yyyy}-${mm}-${dd}`, endDate: '',
-      regionId: regions.length > 0 ? String(regions[0].id) : '', venueId: venues.length > 0 ? String(venues[0].id) : '',
+      regionId: allRegions.length > 0 ? String(allRegions[0].id) : '', venueId: venues.length > 0 ? String(venues[0].id) : '',
       format: 'americano', levelMin: '1.0', levelMax: '4.0',
       maxTeams: '16', price: '', ratingMultiplier: '1.0', status: 'REGISTRATION',
       pointsPerMatch: '24', courtsCount: '1', registrationMode: 'INDIVIDUAL',
@@ -371,6 +371,7 @@ export function Admin({ onBack }) {
     label: `${l.category} — ${l.name}`,
   }));
 
+  const allRegions = regions.flatMap(c => c.regions || []);
   const filteredVenues = tForm.regionId ? venues.filter((v) => String(v.regionId) === tForm.regionId) : venues;
 
   // Match filter logic
@@ -647,7 +648,7 @@ export function Admin({ onBack }) {
                   display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim, marginBottom: 10,
                   padding: '6px 10px', background: `${COLORS.bg}80`, borderRadius: 8,
                 }}>
-                  <span>{'\uD83C\uDFD9\uFE0F'} {u.region?.name || '\u2014'}</span>
+                  <span>{'\uD83C\uDFD9\uFE0F'} {u.region?.country?.flag ? `${u.region.country.flag} ` : ''}{u.region?.name || '\u2014'}</span>
                   <span>{'\uD83C\uDFBE'} {u.matchesPlayed}</span>
                   <span style={{ color: '#4CAF50' }}>{'\u2705'} {u.wins}</span>
                   <span style={{ color: COLORS.danger }}>{'\u274C'} {u.losses}</span>
@@ -1003,7 +1004,12 @@ export function Admin({ onBack }) {
               label={'\uD83C\uDFD9\uFE0F Регион'}
               value={tForm.regionId}
               onChange={(v) => setTForm({ ...tForm, regionId: v, venueId: '' })}
-              options={regions.map(r => ({ value: String(r.id), label: r.name }))}
+              options={regions.flatMap(c =>
+                c.regions.map(r => ({
+                  value: String(r.id),
+                  label: `${c.flag} ${r.name}`,
+                }))
+              )}
             />
             <Select
               label={'\uD83D\uDCCD Площадка'}

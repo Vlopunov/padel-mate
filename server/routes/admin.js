@@ -365,7 +365,7 @@ router.get("/users", authMiddleware, adminMiddleware, async (req, res) => {
       orderBy: { rating: "desc" },
       select: {
         id: true, telegramId: true, firstName: true, lastName: true, username: true,
-        regionId: true, region: { select: { id: true, code: true, name: true } }, rating: true, matchesPlayed: true, wins: true, losses: true,
+        regionId: true, region: { select: { id: true, code: true, name: true, country: { select: { id: true, code: true, name: true, flag: true } } } }, rating: true, matchesPlayed: true, wins: true, losses: true,
         isAdmin: true, isVip: true, isCoach: true, coachSubscriptionTier: true,
         onboarded: true, isVisible: true, createdAt: true, xp: true,
       },

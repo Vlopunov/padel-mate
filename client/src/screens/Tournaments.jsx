@@ -237,7 +237,7 @@ export function Tournaments({ user, onNavigate }) {
                   <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 2 }}>
                     {new Date(t.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
                     {' \u00B7 '}
-                    {t.region?.name}
+                    {t.region?.country?.flag ? `${t.region.country.flag} ` : ''}{t.region?.name}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -546,7 +546,7 @@ export function Tournaments({ user, onNavigate }) {
                     <Badge style={{ fontSize: 10 }}>{u.rating}</Badge>
                     {u.region?.name && (
                       <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                        {u.region.name}
+                        {u.region?.country?.flag ? `${u.region.country.flag} ` : ''}{u.region.name}
                       </span>
                     )}
                   </div>

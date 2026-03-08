@@ -90,7 +90,9 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
   const xp = getXpLevel(freshXp);
   const winRate = stats?.winRate || 0;
   const unlockedIds = new Set((stats?.achievements || []).map((a) => a.id));
-  const cityLabel = player.region?.name;
+  const cityLabel = player.region?.name
+    ? `${player.region?.country?.flag ? player.region.country.flag + ' ' : ''}${player.region.name}`
+    : null;
   const isMe = currentUser?.id === player.id;
 
   return (

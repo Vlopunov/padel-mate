@@ -605,7 +605,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                     <Badge style={{ fontSize: 10 }}>{u.rating}</Badge>
                     {u.region?.name && (
                       <span style={{ fontSize: 11, color: COLORS.textDim }}>
-                        {u.region.name}
+                        {u.region?.country?.flag ? `${u.region.country.flag} ` : ''}{u.region.name}
                       </span>
                     )}
                   </div>

@@ -13,11 +13,13 @@ import { api } from '../services/api';
 
 export function Profile({ user, onUpdate, onLogout, onNavigate }) {
   const { openTelegramLink } = useTelegram();
-  const [regions, setRegions] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [showRatingEdit, setShowRatingEdit] = useState(false);
 
   useEffect(() => {
-    api.regions.list().then(setRegions);
+    api.regions.list().then((data) => {
+      setCountries(data.countries || []);
+    });
   }, []);
   const [newRating, setNewRating] = useState('');
   const [ratingReason, setRatingReason] = useState('');
@@ -68,7 +70,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           <Badge>{xp.current.icon} {xp.current.name}</Badge>
         </div>
         <p style={{ fontSize: 13, color: COLORS.textDim, marginTop: 6 }}>
-          {user.region?.name || '\u2014'}
+          {user.region?.country?.flag ? `${user.region.country.flag} ` : ''}{user.region?.name || '\u2014'}
         </p>
       </div>
 
@@ -203,7 +205,12 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           label={'\u{1F4CD} Город'}
           value={String(user.regionId || '')}
           onChange={(v) => handleUpdate('regionId', parseInt(v))}
-          options={regions.map(r => ({ value: String(r.id), label: r.name }))}
+          options={countries.flatMap(c =>
+            c.regions.map(r => ({
+              value: String(r.id),
+              label: `${c.flag} ${r.name}`,
+            }))
+          )}
         />
 
         <Select

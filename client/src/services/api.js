@@ -45,7 +45,7 @@ export const api = {
     return data;
   },
 
-  // Regions
+  // Regions (returns { countries: [{ id, code, name, flag, regions: [...] }] })
   regions: {
     list: () => api.fetch('/regions'),
   },

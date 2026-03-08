@@ -32,21 +32,32 @@ function StarRating({ rating, size = 14 }) {
 export function FindCoach({ onBack, onNavigate }) {
   const [coaches, setCoaches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [regions, setRegions] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [countryFilter, setCountryFilter] = useState('');
   const [regionFilter, setRegionFilter] = useState('');
 
   useEffect(() => {
-    api.regions.list().then(setRegions);
+    api.regions.list().then((data) => {
+      setCountries(data.countries || []);
+    });
   }, []);
+
+  // Get regions for selected country
+  const selectedCountryObj = countries.find((c) => String(c.id) === countryFilter);
+  const countryRegions = selectedCountryObj?.regions || [];
+  const showRegionFilter = countryFilter && countryRegions.length > 1;
+
+  // Determine effective regionId for API call
+  const effectiveRegionId = regionFilter || (countryFilter && countryRegions.length === 1 ? String(countryRegions[0].id) : '');
 
   useEffect(() => {
     loadCoaches();
-  }, [regionFilter]);
+  }, [effectiveRegionId]);
 
   async function loadCoaches() {
     setLoading(true);
     try {
-      const data = await api.coaches.list(regionFilter || undefined);
+      const data = await api.coaches.list(effectiveRegionId || undefined);
       setCoaches(data);
     } catch (err) {
       console.error('Load coaches error:', err);
@@ -60,51 +71,94 @@ export function FindCoach({ onBack, onNavigate }) {
   }
 
   function getRegionLabel(coach) {
-    return coach.region?.name || '';
+    const flag = coach.region?.country?.flag;
+    const name = coach.region?.name || '';
+    return flag ? `${flag} ${name}` : name;
   }
 
   return (
     <div>
       <Header title="Найти тренера" subtitle="Профессиональные тренировки" onBack={onBack} />
 
-      {/* Region filter */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 2 }}>
+      {/* Country filter */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: showRegionFilter ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
         <button
-          onClick={() => setRegionFilter('')}
+          onClick={() => { setCountryFilter(''); setRegionFilter(''); }}
           style={{
             padding: '6px 14px',
             borderRadius: 20,
-            border: !regionFilter ? 'none' : `1px solid ${COLORS.border}`,
-            background: !regionFilter ? COLORS.accent : 'transparent',
-            color: !regionFilter ? COLORS.bg : COLORS.textDim,
+            border: !countryFilter ? 'none' : `1px solid ${COLORS.border}`,
+            background: !countryFilter ? COLORS.accent : 'transparent',
+            color: !countryFilter ? COLORS.bg : COLORS.textDim,
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
             whiteSpace: 'nowrap',
           }}
         >
-          Все города
+          Все
         </button>
-        {regions.map((r) => (
+        {countries.map((c) => (
           <button
-            key={r.id}
-            onClick={() => setRegionFilter(String(r.id))}
+            key={c.id}
+            onClick={() => { setCountryFilter(String(c.id)); setRegionFilter(''); }}
             style={{
               padding: '6px 14px',
               borderRadius: 20,
-              border: regionFilter === String(r.id) ? 'none' : `1px solid ${COLORS.border}`,
-              background: regionFilter === String(r.id) ? COLORS.accent : 'transparent',
-              color: regionFilter === String(r.id) ? COLORS.bg : COLORS.textDim,
+              border: countryFilter === String(c.id) ? 'none' : `1px solid ${COLORS.border}`,
+              background: countryFilter === String(c.id) ? COLORS.accent : 'transparent',
+              color: countryFilter === String(c.id) ? COLORS.bg : COLORS.textDim,
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
             }}
           >
-            {r.name}
+            {c.flag} {c.name}
           </button>
         ))}
       </div>
+
+      {/* Region filter (when country selected and has multiple regions) */}
+      {showRegionFilter && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 2 }}>
+          <button
+            onClick={() => setRegionFilter('')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 20,
+              border: !regionFilter ? 'none' : `1px solid ${COLORS.border}`,
+              background: !regionFilter ? COLORS.accent : 'transparent',
+              color: !regionFilter ? COLORS.bg : COLORS.textDim,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Все города
+          </button>
+          {countryRegions.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRegionFilter(String(r.id))}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 20,
+                border: regionFilter === String(r.id) ? 'none' : `1px solid ${COLORS.border}`,
+                background: regionFilter === String(r.id) ? COLORS.accent : 'transparent',
+                color: regionFilter === String(r.id) ? COLORS.bg : COLORS.textDim,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {r.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
@@ -252,7 +306,7 @@ export function FindCoach({ onBack, onNavigate }) {
                     )}
                     {coach.region?.name && (
                       <Badge style={{ fontSize: 11 }}>
-                        {'\u{1F4CD}'} {coach.region.name}
+                        {'\u{1F4CD}'} {coach.region?.country?.flag ? `${coach.region.country.flag} ` : ''}{coach.region.name}
                       </Badge>
                     )}
                   </div>

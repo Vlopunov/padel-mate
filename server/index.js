@@ -97,18 +97,36 @@ app.post("/api/seed-venues", strictLimiter, async (req, res) => {
     if (!secret || secret !== adminSecret) {
       return res.status(403).json({ error: "Forbidden" });
     }
+    // Ensure countries exist
+    const countryDefs = [
+      { code: "BY", name: "Беларусь", flag: "🇧🇾", sortOrder: 1 },
+      { code: "RU", name: "Россия", flag: "🇷🇺", sortOrder: 2 },
+      { code: "ID", name: "Индонезия", flag: "🇮🇩", sortOrder: 3 },
+      { code: "AE", name: "ОАЭ", flag: "🇦🇪", sortOrder: 4 },
+    ];
+    const countryMap = {};
+    for (const cd of countryDefs) {
+      const c = await prisma.country.upsert({
+        where: { code: cd.code },
+        update: { name: cd.name, flag: cd.flag, sortOrder: cd.sortOrder },
+        create: cd,
+      });
+      countryMap[cd.code] = c.id;
+    }
+
     // Ensure regions exist
     const regionDefs = [
-      { code: "MINSK", name: "Минск", country: "BY", timezone: "Europe/Minsk" },
-      { code: "BREST", name: "Брест", country: "BY", timezone: "Europe/Minsk" },
-      { code: "GRODNO", name: "Гродно", country: "BY", timezone: "Europe/Minsk" },
+      { code: "MINSK", name: "Минск", countryCode: "BY", timezone: "Europe/Minsk" },
+      { code: "BREST", name: "Брест", countryCode: "BY", timezone: "Europe/Minsk" },
+      { code: "GRODNO", name: "Гродно", countryCode: "BY", timezone: "Europe/Minsk" },
     ];
     const regionMap = {};
     for (const rd of regionDefs) {
+      const { countryCode, ...regionData } = rd;
       const r = await prisma.region.upsert({
         where: { code: rd.code },
-        update: { name: rd.name, country: rd.country, timezone: rd.timezone },
-        create: rd,
+        update: { name: rd.name, countryId: countryMap[countryCode], timezone: rd.timezone },
+        create: { ...regionData, countryId: countryMap[countryCode] },
       });
       regionMap[rd.code] = r.id;
     }

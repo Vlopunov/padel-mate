@@ -244,7 +244,7 @@ router.get("/search", authMiddleware, async (req, res) => {
       where,
       select: {
         id: true, firstName: true, lastName: true, username: true,
-        photoUrl: true, rating: true, regionId: true, region: { select: { id: true, code: true, name: true } }, isVip: true,
+        photoUrl: true, rating: true, regionId: true, region: { select: { id: true, code: true, name: true, country: { select: { id: true, code: true, name: true, flag: true } } } }, isVip: true,
       },
       orderBy: { rating: "desc" },
       take: 50,
@@ -269,7 +269,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
         username: true,
         photoUrl: true,
         regionId: true,
-        region: { select: { id: true, code: true, name: true } },
+        region: { select: { id: true, code: true, name: true, country: { select: { id: true, code: true, name: true, flag: true } } } },
         hand: true,
         position: true,
         experience: true,

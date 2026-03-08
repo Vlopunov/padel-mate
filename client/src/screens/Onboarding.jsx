@@ -36,7 +36,8 @@ const SURVEY_QUESTIONS = [
 
 export function Onboarding({ onComplete }) {
   const [step, setStep] = useState(1);
-  const [regions, setRegions] = useState([]);
+  const [countries, setCountries] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const [regionId, setRegionId] = useState('');
   const [hasExternalRating, setHasExternalRating] = useState(null);
   const [ratingSystem, setRatingSystem] = useState('');
@@ -48,7 +49,9 @@ export function Onboarding({ onComplete }) {
   const [calculatedRating, setCalculatedRating] = useState(null);
 
   useEffect(() => {
-    api.regions.list().then(setRegions);
+    api.regions.list().then((data) => {
+      setCountries(data.countries || []);
+    });
   }, []);
 
   const containerStyle = {
@@ -58,6 +61,17 @@ export function Onboarding({ onComplete }) {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
+  };
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country);
+    if (country.regions.length === 1) {
+      // Auto-select the only region and skip step 1b
+      setRegionId(String(country.regions[0].id));
+      setStep(2);
+    } else {
+      setStep('1b');
+    }
   };
 
   const handleCitySelect = () => {
@@ -122,7 +136,7 @@ export function Onboarding({ onComplete }) {
     onComplete(data);
   };
 
-  // Step 1: City
+  // Step 1a: Country selection
   if (step === 1) {
     return (
       <div style={containerStyle}>
@@ -138,11 +152,45 @@ export function Onboarding({ onComplete }) {
           </div>
 
           <h3 style={{ fontSize: 17, fontWeight: 600, color: COLORS.text, marginBottom: 16 }}>
+            Выберите страну
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {countries.map((c) => (
+              <Card
+                key={c.id}
+                onClick={() => handleCountrySelect(c)}
+                style={{ cursor: 'pointer', textAlign: 'center', padding: 18 }}
+              >
+                <span style={{ fontSize: 16, fontWeight: 600, color: COLORS.text }}>
+                  {c.flag} {c.name}
+                </span>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 1b: City selection within chosen country
+  if (step === '1b' && selectedCountry) {
+    return (
+      <div style={containerStyle}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <span style={{ fontSize: 36 }}>{selectedCountry.flag}</span>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: COLORS.text, marginTop: 8 }}>
+              {selectedCountry.name}
+            </h2>
+          </div>
+
+          <h3 style={{ fontSize: 17, fontWeight: 600, color: COLORS.text, marginBottom: 16 }}>
             Выберите город
           </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {regions.map((r) => (
+            {selectedCountry.regions.map((r) => (
               <Card
                 key={r.id}
                 variant={regionId === String(r.id) ? 'accent' : 'default'}
@@ -159,6 +207,9 @@ export function Onboarding({ onComplete }) {
 
         <Button fullWidth onClick={handleCitySelect} disabled={!regionId} style={{ marginTop: 24 }}>
           Далее
+        </Button>
+        <Button variant="ghost" fullWidth onClick={() => { setStep(1); setSelectedCountry(null); setRegionId(''); }} style={{ marginTop: 8 }}>
+          Назад
         </Button>
       </div>
     );
@@ -191,7 +242,17 @@ export function Onboarding({ onComplete }) {
             </div>
           </div>
 
-          <Button variant="ghost" fullWidth onClick={() => setStep(1)} style={{ marginTop: 16 }}>
+          <Button variant="ghost" fullWidth onClick={() => {
+            setHasExternalRating(null);
+            // Go back to country or city selection
+            if (selectedCountry && selectedCountry.regions.length > 1) {
+              setStep('1b');
+            } else {
+              setStep(1);
+              setSelectedCountry(null);
+              setRegionId('');
+            }
+          }} style={{ marginTop: 16 }}>
             Назад
           </Button>
         </div>

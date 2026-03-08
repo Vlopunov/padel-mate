@@ -65,8 +65,12 @@ async function collectDailyStats(dateOverride) {
     by: ["regionId"],
     _count: { id: true },
   });
-  const allRegions = await prisma.region.findMany({ select: { id: true, name: true } });
-  const regionNameMap = Object.fromEntries(allRegions.map((r) => [r.id, r.name]));
+  const allRegions = await prisma.region.findMany({
+    select: { id: true, name: true, country: { select: { flag: true } } },
+  });
+  const regionNameMap = Object.fromEntries(
+    allRegions.map((r) => [r.id, r.country?.flag ? `${r.country.flag} ${r.name}` : r.name])
+  );
   const regionCounts = {};
   for (const g of regionGroups) {
     const name = regionNameMap[g.regionId] || `region_${g.regionId}`;
@@ -376,8 +380,12 @@ async function getWeeklyReportData() {
 
   // Region breakdown
   const regionGroups = await prisma.user.groupBy({ by: ["regionId"], _count: { id: true } });
-  const allRegions = await prisma.region.findMany({ select: { id: true, name: true } });
-  const regionNameMap = Object.fromEntries(allRegions.map((r) => [r.id, r.name]));
+  const allRegions = await prisma.region.findMany({
+    select: { id: true, name: true, country: { select: { flag: true } } },
+  });
+  const regionNameMap = Object.fromEntries(
+    allRegions.map((r) => [r.id, r.country?.flag ? `${r.country.flag} ${r.name}` : r.name])
+  );
   const regionCounts = {};
   for (const g of regionGroups) {
     const name = regionNameMap[g.regionId] || `region_${g.regionId}`;

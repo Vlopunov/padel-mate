@@ -7,13 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// === Region (replaces hardcoded City enum) ===
+// === Country + Region ===
+
+model Country {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  flag      String   @default("")
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  regions   Region[]
+}
 
 model Region {
   id        Int      @id @default(autoincrement())
   code      String   @unique
   name      String
-  country   String   @default("BY")
+  countryId Int
+  country   Country  @relation(fields: [countryId], references: [id])
   timezone  String   @default("Europe/Minsk")
   active    Boolean  @default(true)
   sortOrder Int      @default(0)
@@ -22,6 +33,8 @@ model Region {
   users       User[]
   venues      Venue[]
   tournaments Tournament[]
+
+  @@index([countryId])
 }
 
 // === Enums ===

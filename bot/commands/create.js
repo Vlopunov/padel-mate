@@ -31,22 +31,22 @@ async function startCreate(bot, msg) {
   const telegramId = msg.from.id;
 
   try {
-    const { getAllRegionsWithVenues } = require("../../server/services/botData");
-    const regions = await getAllRegionsWithVenues();
+    const { getAllCountriesWithRegions } = require("../../server/services/botData");
+    const countries = await getAllCountriesWithRegions();
 
-    if (regions.length === 0) {
+    if (countries.length === 0) {
       await bot.sendMessage(chatId, "⚠️ Нет доступных площадок. Обратитесь к администратору.");
       return;
     }
 
-    // Reset any existing state
-    createState.set(telegramId, { step: "region", timestamp: Date.now(), data: {} });
+    // Reset any existing state, store countries for later use
+    createState.set(telegramId, { step: "country", timestamp: Date.now(), data: {}, countries });
 
-    const buttons = regions.map((r) => [
-      { text: `${r.name} (${r.count} площ.)`, callback_data: `cr_reg_${r.id}` },
+    const buttons = countries.map((c) => [
+      { text: `${c.flag} ${c.name}`, callback_data: `cr_country_${c.id}` },
     ]);
 
-    await bot.sendMessage(chatId, "🎾 <b>Создание матча</b>\n\n🏙️ Выберите регион:", {
+    await bot.sendMessage(chatId, "🎾 <b>Создание матча</b>\n\n🌍 Выберите страну:", {
       parse_mode: "HTML",
       reply_markup: { inline_keyboard: buttons },
     });
@@ -62,11 +62,72 @@ async function handleCreateCallback(bot, query) {
   const data = query.data;
 
   try {
-    const { getVenuesByRegion, getAllRegionsWithVenues, botCreateMatch, getLevelInfo } = require("../../server/services/botData");
+    const { getVenuesByRegion, getAllCountriesWithRegions, botCreateMatch, getLevelInfo } = require("../../server/services/botData");
 
     let state = createState.get(telegramId);
     if (!state) {
       await bot.answerCallbackQuery(query.id, { text: "Сессия истекла. Начните /create заново." });
+      return;
+    }
+
+    // ── Step 0: Country selected → show regions or auto-select ──
+    if (data.startsWith("cr_country_")) {
+      const countryId = parseInt(data.replace("cr_country_", ""));
+      const countries = state.countries || await getAllCountriesWithRegions();
+      const country = countries.find((c) => c.id === countryId);
+
+      if (!country || country.regions.length === 0) {
+        await bot.answerCallbackQuery(query.id, { text: "Нет площадок в этой стране" });
+        return;
+      }
+
+      state.data.countryName = country.name;
+      state.data.countryFlag = country.flag;
+      state.timestamp = Date.now();
+
+      // If country has only 1 region → skip region step, go to venues
+      if (country.regions.length === 1) {
+        const region = country.regions[0];
+        state.data.regionId = region.id;
+        state.data.regionName = region.name;
+        state.data.timezone = region.timezone;
+        state.step = "venue";
+
+        const venues = await getVenuesByRegion(region.id);
+        if (venues.length === 0) {
+          await bot.answerCallbackQuery(query.id, { text: "Нет площадок в этом регионе" });
+          return;
+        }
+
+        const buttons = venues.map((v) => [
+          { text: v.name, callback_data: `cr_ven_${v.id}` },
+        ]);
+
+        await bot.editMessageText("🎾 <b>Создание матча</b>\n\n📍 Выберите площадку:", {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: "HTML",
+          reply_markup: { inline_keyboard: buttons },
+        });
+        await bot.answerCallbackQuery(query.id);
+        return;
+      }
+
+      // Multiple regions → show region selection
+      state.step = "region";
+      state.countryRegions = country.regions;
+
+      const buttons = country.regions.map((r) => [
+        { text: `${r.name} (${r.count} площ.)`, callback_data: `cr_reg_${r.id}` },
+      ]);
+
+      await bot.editMessageText(`🎾 <b>Создание матча</b>\n\n${country.flag} ${country.name}\n🏙️ Выберите регион:`, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: "HTML",
+        reply_markup: { inline_keyboard: buttons },
+      });
+      await bot.answerCallbackQuery(query.id);
       return;
     }
 
@@ -77,8 +138,8 @@ async function handleCreateCallback(bot, query) {
       state.step = "venue";
       state.timestamp = Date.now();
 
-      // Look up region details for timezone and name
-      const regions = await getAllRegionsWithVenues();
+      // Look up region details from cached country regions or fetch fresh
+      const regions = state.countryRegions || (await getAllCountriesWithRegions()).flatMap((c) => c.regions);
       const region = regions.find(r => r.id === regionId);
       state.data.timezone = region?.timezone || "Europe/Minsk";
       state.data.regionName = region?.name || "—";
@@ -247,7 +308,8 @@ async function handleCreateCallback(bot, query) {
       state.step = "confirm";
       state.timestamp = Date.now();
 
-      const cityName = state.data.regionName || "—";
+      const countryFlag = state.data.countryFlag || "";
+      const cityName = (countryFlag ? countryFlag + " " : "") + (state.data.regionName || "—");
       const levelNames = LEVELS.filter(
         (l) => l.level >= state.data.levelMin && l.level <= state.data.levelMax
       );

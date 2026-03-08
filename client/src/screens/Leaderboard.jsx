@@ -11,25 +11,38 @@ const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
 
 export function Leaderboard({ user, onNavigate }) {
   const [period, setPeriod] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
   const [regionId, setRegionId] = useState('all');
-  const [regions, setRegions] = useState([]);
+  const [countries, setCountries] = useState([]);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.regions.list().then(setRegions);
+    api.regions.list().then((data) => {
+      setCountries(data.countries || []);
+    });
   }, []);
+
+  // Get regions for selected country
+  const selectedCountryObj = countries.find((c) => String(c.id) === countryFilter);
+  const countryRegions = selectedCountryObj?.regions || [];
+  const showRegionFilter = countryFilter !== 'all' && countryRegions.length > 1;
 
   useEffect(() => {
     loadLeaderboard();
-  }, [period, regionId]);
+  }, [period, regionId, countryFilter]);
 
   async function loadLeaderboard() {
     setLoading(true);
     try {
       const params = {};
       if (period !== 'all') params.period = period;
-      if (regionId !== 'all') params.regionId = regionId;
+      // If a specific region is selected, use it; otherwise if a country with 1 region, use that region
+      if (regionId !== 'all') {
+        params.regionId = regionId;
+      } else if (countryFilter !== 'all' && countryRegions.length === 1) {
+        params.regionId = String(countryRegions[0].id);
+      }
       const data = await api.leaderboard.get(params);
       setPlayers(data);
     } catch (err) {
@@ -59,17 +72,33 @@ export function Leaderboard({ user, onNavigate }) {
         onChange={setPeriod}
       />
 
-      {/* Region filter */}
-      <div style={{ marginTop: 8, marginBottom: 16 }}>
+      {/* Country filter */}
+      <div style={{ marginTop: 8 }}>
         <FilterTabs
           options={[
-            { value: 'all', label: 'Все города' },
-            ...regions.map(r => ({ value: String(r.id), label: r.name })),
+            { value: 'all', label: 'Все' },
+            ...countries.map(c => ({ value: String(c.id), label: `${c.flag} ${c.name}` })),
           ]}
-          value={regionId}
-          onChange={setRegionId}
+          value={countryFilter}
+          onChange={(v) => { setCountryFilter(v); setRegionId('all'); }}
         />
       </div>
+
+      {/* Region filter (when country selected and has multiple regions) */}
+      {showRegionFilter && (
+        <div style={{ marginTop: 6 }}>
+          <FilterTabs
+            options={[
+              { value: 'all', label: 'Все города' },
+              ...countryRegions.map(r => ({ value: String(r.id), label: r.name })),
+            ]}
+            value={regionId}
+            onChange={setRegionId}
+          />
+        </div>
+      )}
+
+      <div style={{ marginBottom: 16 }} />
 
       {loading && <p style={{ textAlign: 'center', color: COLORS.textDim, padding: 40 }}>Загрузка...</p>}
 
@@ -142,7 +171,7 @@ export function Leaderboard({ user, onNavigate }) {
                   </div>
                   <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
                     <Badge style={{ fontSize: 10, padding: '2px 6px' }}>
-                      {p.region?.name}
+                      {p.region?.country?.flag ? `${p.region.country.flag} ` : ''}{p.region?.name}
                     </Badge>
                   </div>
                 </div>
