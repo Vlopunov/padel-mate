@@ -83,33 +83,63 @@ export function Leaderboard({ user, onNavigate }) {
         onChange={setPeriod}
       />
 
-      {/* Country filter */}
-      <div style={{ marginTop: 8 }}>
-        <FilterTabs
-          options={[
-            { value: 'all', label: 'Все' },
-            ...countries.map(c => ({ value: String(c.id), label: `${c.flag} ${c.name}` })),
-          ]}
+      {/* Country & Region dropdowns */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, marginBottom: 16 }}>
+        <select
           value={countryFilter}
-          onChange={(v) => { setCountryFilter(v); setRegionId('all'); }}
-        />
-      </div>
-
-      {/* Region filter (when country selected and has multiple regions) */}
-      {showRegionFilter && (
-        <div style={{ marginTop: 6 }}>
-          <FilterTabs
-            options={[
-              { value: 'all', label: 'Все города' },
-              ...countryRegions.map(r => ({ value: String(r.id), label: r.name })),
-            ]}
+          onChange={(e) => { setCountryFilter(e.target.value); setRegionId('all'); }}
+          style={{
+            flex: 1,
+            padding: '8px 32px 8px 10px',
+            borderRadius: 12,
+            border: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            color: COLORS.text,
+            fontSize: 13,
+            fontFamily: 'inherit',
+            fontWeight: 600,
+            outline: 'none',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237A8299' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 10px center',
+          }}
+        >
+          <option value="all">Все страны</option>
+          {countries.map(c => (
+            <option key={c.id} value={String(c.id)}>{c.flag} {c.name}</option>
+          ))}
+        </select>
+        {showRegionFilter && (
+          <select
             value={regionId}
-            onChange={setRegionId}
-          />
-        </div>
-      )}
-
-      <div style={{ marginBottom: 16 }} />
+            onChange={(e) => setRegionId(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 32px 8px 10px',
+              borderRadius: 12,
+              border: `1px solid ${COLORS.border}`,
+              background: COLORS.surface,
+              color: COLORS.text,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              outline: 'none',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237A8299' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+            }}
+          >
+            <option value="all">Все города</option>
+            {countryRegions.map(r => (
+              <option key={r.id} value={String(r.id)}>{r.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {loading && <p style={{ textAlign: 'center', color: COLORS.textDim, padding: 40 }}>Загрузка...</p>}
 

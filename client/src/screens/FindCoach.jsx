@@ -91,85 +91,63 @@ export function FindCoach({ user, onBack, onNavigate }) {
     <div>
       <Header title="Найти тренера" subtitle="Профессиональные тренировки" onBack={onBack} />
 
-      {/* Country filter */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: showRegionFilter ? 6 : 16, overflowX: 'auto', paddingBottom: 2 }}>
-        <button
-          onClick={() => { setCountryFilter(''); setRegionFilter(''); }}
+      {/* Country & Region dropdowns */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <select
+          value={countryFilter}
+          onChange={(e) => { setCountryFilter(e.target.value); setRegionFilter(''); }}
           style={{
-            padding: '6px 14px',
-            borderRadius: 20,
-            border: !countryFilter ? 'none' : `1px solid ${COLORS.border}`,
-            background: !countryFilter ? COLORS.accent : 'transparent',
-            color: !countryFilter ? COLORS.bg : COLORS.textDim,
+            flex: 1,
+            padding: '8px 32px 8px 10px',
+            borderRadius: 12,
+            border: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            color: COLORS.text,
             fontSize: 13,
+            fontFamily: 'inherit',
             fontWeight: 600,
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
+            outline: 'none',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237A8299' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 10px center',
           }}
         >
-          Все
-        </button>
-        {countries.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => { setCountryFilter(String(c.id)); setRegionFilter(''); }}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 20,
-              border: countryFilter === String(c.id) ? 'none' : `1px solid ${COLORS.border}`,
-              background: countryFilter === String(c.id) ? COLORS.accent : 'transparent',
-              color: countryFilter === String(c.id) ? COLORS.bg : COLORS.textDim,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {c.flag} {c.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Region filter (when country selected and has multiple regions) */}
-      {showRegionFilter && (
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 2 }}>
-          <button
-            onClick={() => setRegionFilter('')}
-            style={{
-              padding: '6px 14px',
-              borderRadius: 20,
-              border: !regionFilter ? 'none' : `1px solid ${COLORS.border}`,
-              background: !regionFilter ? COLORS.accent : 'transparent',
-              color: !regionFilter ? COLORS.bg : COLORS.textDim,
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Все города
-          </button>
-          {countryRegions.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setRegionFilter(String(r.id))}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 20,
-                border: regionFilter === String(r.id) ? 'none' : `1px solid ${COLORS.border}`,
-                background: regionFilter === String(r.id) ? COLORS.accent : 'transparent',
-                color: regionFilter === String(r.id) ? COLORS.bg : COLORS.textDim,
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {r.name}
-            </button>
+          <option value="">Все страны</option>
+          {countries.map(c => (
+            <option key={c.id} value={String(c.id)}>{c.flag} {c.name}</option>
           ))}
-        </div>
-      )}
+        </select>
+        {showRegionFilter && (
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '8px 32px 8px 10px',
+              borderRadius: 12,
+              border: `1px solid ${COLORS.border}`,
+              background: COLORS.surface,
+              color: COLORS.text,
+              fontSize: 13,
+              fontFamily: 'inherit',
+              fontWeight: 600,
+              outline: 'none',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%237A8299' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+            }}
+          >
+            <option value="">Все города</option>
+            {countryRegions.map(r => (
+              <option key={r.id} value={String(r.id)}>{r.name}</option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
