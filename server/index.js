@@ -32,7 +32,7 @@ app.use(express.json({ limit: "10kb" }));
 // Rate limiting
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: "Слишком много запросов, подождите" } });
 const strictLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Слишком много запросов, подождите" } });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { error: "Слишком много попыток, подождите 15 минут" } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, message: { error: "Слишком много попыток, подождите 15 минут" } });
 app.use("/api/", apiLimiter);
 app.use("/api/auth", authLimiter);
 
