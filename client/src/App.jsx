@@ -42,7 +42,8 @@ import { PlayerProfile } from './screens/PlayerProfile';
 import { FAQ } from './screens/FAQ';
 import { TournamentLive } from './screens/TournamentLive';
 import { BookCourt } from './screens/BookCourt';
-import { PadelCamp } from './screens/PadelCamp';
+// HIDDEN: Padel Camp — will enable later
+// import { PadelCamp } from './screens/PadelCamp';
 // HIDDEN: Coach features — will enable later
 // import { CoachPanel } from './screens/CoachPanel';
 // import { CoachStudentDetail } from './screens/CoachStudentDetail';
@@ -166,7 +167,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt', 'padelCamp'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -311,12 +312,13 @@ export default function App() {
               />
             </div>
           );
-        case 'padelCamp':
-          return (
-            <div style={containerStyle}>
-              <PadelCamp onBack={() => setSubScreen(null)} />
-            </div>
-          );
+        // HIDDEN: Padel Camp — will enable later
+        // case 'padelCamp':
+        //   return (
+        //     <div style={containerStyle}>
+        //       <PadelCamp onBack={() => setSubScreen(null)} />
+        //     </div>
+        //   );
         // HIDDEN: Coach screens — will enable later
         // case 'coachPanel':
         // case 'coachStudentDetail':

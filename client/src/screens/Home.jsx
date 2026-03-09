@@ -186,25 +186,7 @@ export function Home({ user, onNavigate }) {
         </Card>
       )}
 
-      {/* Padel Camp promo */}
-      <Card
-        onClick={() => onNavigate('padelCamp')}
-        style={{
-          marginBottom: 12,
-          cursor: 'pointer',
-          background: `linear-gradient(135deg, ${COLORS.purple}25, ${COLORS.accent}15)`,
-          borderColor: `${COLORS.purple}40`,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 28 }}>{'\u{1F3DD}\u{FE0F}'}</span>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 15, fontWeight: 800, color: COLORS.purple }}>PADEL CAMP MINSK</p>
-            <p style={{ fontSize: 12, color: COLORS.textDim }}>21–24 мая · 360 Padel Arena · от $390</p>
-          </div>
-          <span style={{ color: COLORS.purple, fontSize: 18 }}>{'\u2192'}</span>
-        </div>
-      </Card>
+      {/* HIDDEN: Padel Camp promo — will enable later */}
 
       {/* Quick actions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
