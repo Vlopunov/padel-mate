@@ -223,7 +223,7 @@ export const api = {
   // Subscriptions
   subscriptions: {
     status: () => api.fetch('/subscriptions/status'),
-    createInvoice: (planId) => api.fetch('/subscriptions/create-invoice', { method: 'POST', body: JSON.stringify({ planId }) }),
+    createInvoice: (planId, provider) => api.fetch('/subscriptions/create-invoice', { method: 'POST', body: JSON.stringify({ planId, provider }) }),
     history: () => api.fetch('/subscriptions/history'),
   },
 
