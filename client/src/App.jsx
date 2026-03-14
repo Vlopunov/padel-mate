@@ -362,7 +362,7 @@ export default function App() {
 const containerStyle = {
   maxWidth: 420,
   margin: '0 auto',
-  padding: '12px 16px',
+  padding: 'calc(12px + var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px)) 16px 12px',
   minHeight: '100vh',
   background: COLORS.bg,
 };
