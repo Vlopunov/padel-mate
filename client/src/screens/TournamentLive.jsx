@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Trophy, CircleDot, Rocket, Share2, ArrowRight, Flag, TrendingUp, Check, Circle, PenLine, Medal } from 'lucide-react';
 import { COLORS, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -151,7 +152,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
       <div style={{ paddingBottom: 80 }}>
         <Header title="Турнир" onBack={onBack} />
         <div style={{ textAlign: 'center', padding: 60 }}>
-          <span style={{ fontSize: 32, display: 'block', marginBottom: 12, animation: 'pulse 1.5s infinite' }}>{'\u{1F3C6}'}</span>
+          <span style={{ display: 'block', marginBottom: 12, animation: 'pulse 1.5s infinite' }}><Trophy size={32} color={COLORS.accent} /></span>
           <p style={{ color: COLORS.textDim, fontSize: 14 }}>Загрузка...</p>
         </div>
       </div>
@@ -175,7 +176,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
       <div style={{ paddingBottom: 80 }}>
         <Header title={tournament.name} onBack={onBack} />
         <Card style={{ textAlign: 'center', padding: 40 }}>
-          <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F3BE}'}</span>
+          <span style={{ display: 'block', marginBottom: 12 }}><CircleDot size={48} color={COLORS.textDim} /></span>
           <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
             Турнир ещё не начался
           </p>
@@ -184,7 +185,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
           </p>
           {isAdmin && tournament.status === 'REGISTRATION' && (
             <Button variant="accent" onClick={handleStart} fullWidth>
-              {'\u{1F680}'} Запустить турнир
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Rocket size={16} /> Запустить турнир</span>
             </Button>
           )}
         </Card>
@@ -237,7 +238,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
           textAlign: 'center',
         }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.purple }}>
-            {'\u{1F3C6}'} Турнир завершён
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Trophy size={16} /> Турнир завершён</span>
           </span>
         </div>
       )}
@@ -267,7 +268,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
             fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {'\uD83D\uDD17'} Поделиться
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Share2 size={14} /> Поделиться</span>
         </button>
       )}
 
@@ -295,7 +296,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
               transition: 'all 0.2s',
             }}
           >
-            {tab === 'matches' ? '\u{1F3BE} Матчи' : '\u{1F4CA} Таблица'}
+            {tab === 'matches' ? 'Матчи' : 'Таблица'}
           </button>
         ))}
       </div>
@@ -374,7 +375,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
             <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {format === 'mexicano' && currentRoundData?.status === 'COMPLETED' && (
                 <Button variant="purple" fullWidth onClick={handleNextRound}>
-                  {'\u27A1\uFE0F'} Следующий раунд
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ArrowRight size={14} /> Следующий раунд</span>
                 </Button>
               )}
               <Button
@@ -383,7 +384,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
                 onClick={handleComplete}
                 style={{ borderColor: `${COLORS.warning}40`, color: COLORS.warning }}
               >
-                {'\u{1F3C1}'} Завершить турнир
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flag size={14} /> Завершить турнир</span>
               </Button>
             </div>
           )}
@@ -441,7 +442,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
                       fontWeight: 700,
                       color: idx < 3 ? [COLORS.gold, '#C0C0C0', '#CD7F32'][idx] : COLORS.textDim,
                     }}>
-                      {idx < 3 ? ['\u{1F947}', '\u{1F948}', '\u{1F949}'][idx] : standing.position}
+                      {idx < 3 ? <Medal size={14} color={[COLORS.gold, '#C0C0C0', '#CD7F32'][idx]} fill={[COLORS.gold, '#C0C0C0', '#CD7F32'][idx]} /> : standing.position}
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                       <Avatar src={standing.user?.photoUrl} name={standing.user?.firstName} size={28} />
@@ -493,7 +494,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
           {isCompleted && tournament.ratingChanges?.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 10 }}>
-                {'\u{1F4C8}'} Изменения рейтинга
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TrendingUp size={16} /> Изменения рейтинга</span>
               </p>
               <Card>
                 {tournament.ratingChanges.map((rc) => (
@@ -512,7 +513,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 12, color: COLORS.textDim }}>{rc.oldRating}</span>
-                      <span style={{ fontSize: 12, color: COLORS.textDim }}>{'\u2192'}</span>
+                      <span style={{ fontSize: 12, color: COLORS.textDim }}><ArrowRight size={12} /></span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.text }}>{rc.newRating}</span>
                       <Badge variant={rc.change >= 0 ? 'success' : 'danger'} style={{ fontSize: 11 }}>
                         {rc.change > 0 ? '+' : ''}{rc.change}
@@ -617,7 +618,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
               onClick={handleSubmitScore}
               disabled={submitting || !team1Score || !team2Score}
             >
-              {submitting ? 'Сохранение...' : '\u2705 Сохранить счёт'}
+              {submitting ? 'Сохранение...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Сохранить счёт</span>}
             </Button>
           </div>
         )}
@@ -662,12 +663,12 @@ function MatchCard({ match, isAdmin, isInProgress, onScoreClick, onNavigate, use
         background: COLORS.surface,
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.textDim }}>
-          {'\u{1F3BE}'} Корт {match.courtNumber}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CircleDot size={12} /> Корт {match.courtNumber}</span>
         </span>
         {isCompleted ? (
-          <Badge variant="default" style={{ fontSize: 10 }}>{'\u2705'} Завершён</Badge>
+          <Badge variant="default" style={{ fontSize: 10 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Check size={10} /> Завершён</span></Badge>
         ) : (
-          <Badge variant="accent" style={{ fontSize: 10 }}>{'\u{1F534}'} LIVE</Badge>
+          <Badge variant="accent" style={{ fontSize: 10 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><Circle size={8} fill={COLORS.danger} color={COLORS.danger} /> LIVE</span></Badge>
         )}
       </div>
 
@@ -719,7 +720,7 @@ function MatchCard({ match, isAdmin, isInProgress, onScoreClick, onNavigate, use
               cursor: 'pointer',
             }}
           >
-            {'\u270F\uFE0F'} Ввести счёт
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PenLine size={13} /> Ввести счёт</span>
           </button>
         )}
       </div>
@@ -781,7 +782,7 @@ function PodiumSection({ standings, onNavigate }) {
   // Reorder for visual podium: [2nd, 1st, 3rd]
   const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
   const heights = [80, 110, 60];
-  const medals = ['\u{1F948}', '\u{1F947}', '\u{1F949}'];
+  const medalColors = ['#C0C0C0', COLORS.gold, '#CD7F32'];
   const colors = ['#C0C0C0', COLORS.gold, '#CD7F32'];
 
   return (
@@ -805,7 +806,7 @@ function PodiumSection({ standings, onNavigate }) {
             cursor: 'pointer',
           }}
         >
-          <span style={{ fontSize: idx === 1 ? 28 : 22, marginBottom: 4 }}>{medals[idx]}</span>
+          <Medal size={idx === 1 ? 28 : 22} color={medalColors[idx]} fill={medalColors[idx]} style={{ marginBottom: 4 }} />
           <Avatar src={s.user?.photoUrl} name={s.user?.firstName} size={idx === 1 ? 52 : 40} />
           <span style={{
             fontSize: 12,

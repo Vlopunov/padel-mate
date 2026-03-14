@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Star, CircleDot, Search, MapPin, Award } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -8,22 +9,15 @@ import { api } from '../services/api';
 
 function StarRating({ rating, size = 14 }) {
   if (!rating) return null;
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    if (i <= Math.floor(rating)) {
-      stars.push('\u2605'); // filled
-    } else if (i - 0.5 <= rating) {
-      stars.push('\u2605'); // half rounds up visually
-    } else {
-      stars.push('\u2606'); // empty
-    }
-  }
   return (
-    <span style={{ fontSize: size, letterSpacing: 1 }}>
-      {stars.map((s, i) => (
-        <span key={i} style={{ color: i < Math.round(rating) ? COLORS.gold : COLORS.textMuted }}>
-          {s}
-        </span>
+    <span style={{ display: 'inline-flex', gap: 1 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <Star
+          key={i}
+          size={size}
+          color={i < Math.round(rating) ? COLORS.gold : COLORS.textMuted}
+          fill={i < Math.round(rating) ? COLORS.gold : 'none'}
+        />
       ))}
     </span>
   );
@@ -151,12 +145,12 @@ export function FindCoach({ user, onBack, onNavigate }) {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
-          <span style={{ fontSize: 32, display: 'block', marginBottom: 12, animation: 'pulse 1.5s infinite' }}>{'\u{1F3BE}'}</span>
+          <CircleDot size={32} color={COLORS.accent} style={{ display: 'block', margin: '0 auto 12px', animation: 'pulse 1.5s infinite' }} />
           <p style={{ color: COLORS.textDim, fontSize: 14 }}>Загрузка тренеров...</p>
         </div>
       ) : coaches.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: 48 }}>
-          <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F50D}'}</span>
+          <Search size={48} color={COLORS.textDim} style={{ display: 'block', margin: '0 auto 12px' }} />
           <p style={{ fontSize: 16, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
             Тренеры не найдены
           </p>
@@ -290,12 +284,12 @@ export function FindCoach({ user, onBack, onNavigate }) {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {coach.certificates && (
                       <Badge variant="purple" style={{ fontSize: 11 }}>
-                        {'\u{1F4DC}'} {coach.certificates.length > 30 ? coach.certificates.substring(0, 30) + '...' : coach.certificates}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Award size={11} /> {coach.certificates.length > 30 ? coach.certificates.substring(0, 30) + '...' : coach.certificates}</span>
                       </Badge>
                     )}
                     {coach.region?.name && (
                       <Badge style={{ fontSize: 11 }}>
-                        {'\u{1F4CD}'} {coach.region?.country?.flag ? `${coach.region.country.flag} ` : ''}{coach.region.name}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={11} /> {coach.region?.country?.flag ? `${coach.region.country.flag} ` : ''}{coach.region.name}</span>
                       </Badge>
                     )}
                   </div>

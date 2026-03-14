@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { Clock, ArrowLeft, ArrowUp, Trophy, Smile, MapPin, Timer, BarChart3, Check, CheckCircle, FileText, Users, Plus, Mail, Send, X, CircleDot, Hourglass, MessageCircle, Share2, PenLine, Trash2, ChevronRight, Swords } from 'lucide-react';
 import { COLORS, LEVELS, getLevel, getLevelByValue, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -55,7 +56,7 @@ function CountdownTimer({ targetDate, compact = false }) {
         fontWeight: 700,
         color: isUrgent ? COLORS.warning : COLORS.accent,
       }}>
-        {'\u23F0'} {text}
+        <Clock size={16} /> {text}
       </span>
     );
   }
@@ -91,7 +92,7 @@ function CountdownTimer({ targetDate, compact = false }) {
       marginBottom: 12,
     }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: textColor, marginBottom: 8, textAlign: 'center' }}>
-        {'\u23F0'} {isUrgent ? 'Скоро начало!' : 'До начала матча'}
+        <Clock size={16} /> {isUrgent ? 'Скоро начало!' : 'До начала матча'}
       </div>
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: 6 }}>
         {timeLeft.days > 0 && (
@@ -410,7 +411,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            {'\u2190'}
+            <ArrowLeft size={16} />
           </button>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: 0, flex: 1 }}>
             Матч #{match.id}
@@ -449,20 +450,20 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              {match.matchType === 'RATED' && <Badge variant="accent">{'\uD83C\uDFC6'} Рейтинг</Badge>}
-              {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'} Друж.</Badge>}
+              {match.matchType === 'RATED' && <Badge variant="accent"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trophy size={12} /> Рейтинг</span></Badge>}
+              {match.matchType === 'FRIENDLY' && <Badge variant="default"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Smile size={12} /> Друж.</span></Badge>}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={match.venue?.name || '—'} />
-            <InfoRow icon={'\u23F1\uFE0F'} label="Длительность" value={`${match.durationMin} мин`} />
-            <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`} />
+            <InfoRow icon={<MapPin size={16} color={COLORS.textDim} />} label="Площадка" value={match.venue?.name || '—'} />
+            <InfoRow icon={<Timer size={16} color={COLORS.textDim} />} label="Длительность" value={`${match.durationMin} мин`} />
+            <InfoRow icon={<BarChart3 size={16} color={COLORS.textDim} />} label="Уровень" value={getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category} — ${getLevelByValue(match.levelMax).category}`} />
             {match.courtBooked && (
-              <InfoRow icon={'\u2705'} label="Корт" value={match.courtNumber ? `Забронирован (корт ${match.courtNumber})` : 'Забронирован'} />
+              <InfoRow icon={<Check size={16} color={COLORS.accent} />} label="Корт" value={match.courtNumber ? `Забронирован (корт ${match.courtNumber})` : 'Забронирован'} />
             )}
             {match.notes && (
-              <InfoRow icon={'\uD83D\uDCDD'} label="Заметка" value={match.notes} />
+              <InfoRow icon={<FileText size={16} color={COLORS.textDim} />} label="Заметка" value={match.notes} />
             )}
           </div>
         </Card>
@@ -476,7 +477,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         <Card style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>
-              {'\uD83D\uDC65'} Игроки ({approvedPlayers.length}/4)
+              <Users size={14} /> Игроки ({approvedPlayers.length}/4)
             </div>
             {canInvite && (
               <button
@@ -487,7 +488,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                   fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                {'\u2795'} Пригласить
+                <Plus size={14} /> Пригласить
               </button>
             )}
           </div>
@@ -504,7 +505,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {isCreator && pendingPlayers.length > 0 && (
           <Card style={{ marginBottom: 12, border: '1px solid rgba(255,193,7,0.3)' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#FFC107', marginBottom: 12 }}>
-              {'\uD83D\uDCE8'} Заявки ({pendingPlayers.length})
+              <Mail size={14} /> Заявки ({pendingPlayers.length})
             </div>
             {pendingPlayers.map((p) => (
               <div key={p.user.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -514,10 +515,10 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                   <div style={{ fontSize: 12, color: COLORS.textDim }}>Рейтинг: {p.user.rating}</div>
                 </div>
                 <Button size="sm" onClick={() => handleApprove(match.id, p.user.id)} style={{ padding: '6px 12px', fontSize: 12 }}>
-                  {'\u2705'}
+                  <Check size={14} />
                 </Button>
                 <Button size="sm" variant="danger" onClick={() => handleReject(match.id, p.user.id)} style={{ padding: '6px 12px', fontSize: 12 }}>
-                  {'\u274C'}
+                  <X size={14} />
                 </Button>
               </div>
             ))}
@@ -528,7 +529,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {isCreator && invitedPlayers.length > 0 && (
           <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}40` }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.purple, marginBottom: 12 }}>
-              {'\uD83D\uDCE9'} Приглашённые ({invitedPlayers.length})
+              <Send size={14} /> Приглашённые ({invitedPlayers.length})
             </div>
             {invitedPlayers.map((p) => (
               <div key={p.user.id} style={{
@@ -555,7 +556,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {isInvited && !isCreator && (
           <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}40` }}>
             <div style={{ textAlign: 'center', marginBottom: 12 }}>
-              <span style={{ fontSize: 24 }}>{'\uD83C\uDFBE'}</span>
+              <span style={{ fontSize: 24 }}><CircleDot size={16} /></span>
               <div style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginTop: 4 }}>
                 Вас пригласили в этот матч!
               </div>
@@ -573,7 +574,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                   }
                 } catch (err) { alert(err.message); }
               }}>
-                {'\u2705'} Принять
+                <Check size={14} /> Принять
               </Button>
               <Button fullWidth variant="danger" onClick={async () => {
                 try {
@@ -582,7 +583,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                   loadMatches();
                 } catch (err) { alert(err.message); }
               }}>
-                {'\u274C'} Отклонить
+                <X size={14} /> Отклонить
               </Button>
             </div>
           </Card>
@@ -592,7 +593,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {isPending && !isCreator && (
           <Card style={{ marginBottom: 12, border: '1px solid rgba(255,193,7,0.3)' }}>
             <div style={{ textAlign: 'center', color: '#FFC107', fontSize: 14, fontWeight: 600 }}>
-              {'\u23F3'} Заявка отправлена, ожидает одобрения
+              <Hourglass size={14} /> Заявка отправлена, ожидает одобрения
             </div>
           </Card>
         )}
@@ -600,7 +601,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {/* Comments */}
         <Card style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>
-            {'\uD83D\uDCAC'} Комментарии {comments.length > 0 && `(${comments.length})`}
+            <MessageCircle size={16} /> Комментарии {comments.length > 0 && `(${comments.length})`}
           </div>
 
           {commentsLoading && (
@@ -669,7 +670,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 fontWeight: 700, flexShrink: 0,
               }}
             >
-              {'\u2191'}
+              <ArrowUp size={12} />
             </button>
           </div>
         </Card>
@@ -686,7 +687,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           return (
             <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.warning}40` }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.warning, marginBottom: 12 }}>
-                {'\u23F3'} Счёт на проверке
+                <Hourglass size={14} /> Счёт на проверке
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                 {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => {
@@ -718,7 +719,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </p>
               {isOpponent && (
                 <Button fullWidth onClick={() => handleConfirmScore(match.id)} size="lg">
-                  {'\u2705'} Подтвердить счёт
+                  <Check size={14} /> Подтвердить счёт
                 </Button>
               )}
               {myPlayer && myPlayer.team === submitterTeam && myPlayer.user.id !== submitterId && (
@@ -739,7 +740,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         {match.status === 'COMPLETED' && match.sets?.length > 0 && (
           <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.accent}40` }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent, marginBottom: 12 }}>
-              {'\u2705'} Итоговый счёт
+              <Check size={14} /> Итоговый счёт
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
               {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => {
@@ -769,7 +770,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {canJoin && (
             <Button fullWidth onClick={() => handleJoin(match.id)} size="lg">
-              {'\uD83C\uDFBE'} Подать заявку
+              <CircleDot size={16} /> Подать заявку
             </Button>
           )}
           {isPending && !isCreator && (
@@ -779,7 +780,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           )}
           {canScore && (
             <Button fullWidth variant="outline" onClick={() => onNavigate('score', { matchId: match.id })} size="lg">
-              {'\u270F\uFE0F'} Записать счёт
+              <PenLine size={14} /> Записать счёт
             </Button>
           )}
           {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
@@ -789,17 +790,17 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
           )}
           <div style={{ display: 'flex', gap: 8 }}>
             <Button fullWidth variant="outline" onClick={() => handleShare(match)}>
-              {'\uD83D\uDD17'} Поделиться
+              <Share2 size={14} /> Поделиться
             </Button>
             {isCreator && ['RECRUITING', 'FULL'].includes(match.status) && (
               <Button fullWidth variant="outline" onClick={() => openEdit(match)}>
-                {'\u270F\uFE0F'} Редактировать
+                <PenLine size={14} /> Редактировать
               </Button>
             )}
           </div>
           {isInMatch && !isPending && match.status === 'RECRUITING' && (
             <Button fullWidth variant="danger" onClick={isCreator ? () => handleDelete(match.id) : () => handleLeave(match.id)}>
-              {isCreator ? '\uD83D\uDDD1\uFE0F Удалить матч' : 'Покинуть матч'}
+              {isCreator ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trash2 size={14} /> Удалить матч</span> : 'Покинуть матч'}
             </Button>
           )}
         </div>
@@ -829,7 +830,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               onClick={(e) => e.stopPropagation()}
             >
               <h3 style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, marginBottom: 4, margin: 0 }}>
-                {'\uD83D\uDC65'} Добавить игрока
+                <Users size={14} /> Добавить игрока
               </h3>
               <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 12, marginTop: 4 }}>
                 Выберите игрока из списка или найдите по имени
@@ -910,7 +911,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                       }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>{u.rating}</span>
                       </div>
-                      <span style={{ fontSize: 18, color: COLORS.accent }}>{'\u2795'}</span>
+                      <span style={{ fontSize: 18, color: COLORS.accent }}><Plus size={14} /></span>
                     </div>
                   );
                 })}
@@ -962,7 +963,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 
       {!loading && matches.length === 0 && (
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <span style={{ fontSize: 48 }}>{'\u{1F3BE}'}</span>
+          <span style={{ fontSize: 48 }}><CircleDot size={48} color={COLORS.textDim} /></span>
           <p style={{ color: COLORS.textDim, marginTop: 12 }}>Матчей пока нет</p>
           <Button onClick={() => onNavigate('createMatch')} style={{ marginTop: 16 }}>
             Создать первый матч
@@ -1004,13 +1005,13 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 <Badge variant="default">{match.durationMin} мин</Badge>
-                {match.courtBooked && <Badge variant="success">{'\u2705'}</Badge>}
+                {match.courtBooked && <Badge variant="success"><Check size={14} /></Badge>}
               </div>
             </div>
 
             {/* Venue */}
             <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 8 }}>
-              {'\uD83D\uDCCD'} {match.venue?.name}
+              <MapPin size={14} /> {match.venue?.name}
             </div>
 
             {/* Player avatars row */}
@@ -1030,7 +1031,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 {approvedPlayers.length}/4
               </span>
               {pendingPlayers.length > 0 && isCreator && (
-                <Badge variant="warning" style={{ marginLeft: 'auto' }}>{pendingPlayers.length} {'\uD83D\uDCE8'}</Badge>
+                <Badge variant="warning" style={{ marginLeft: 'auto' }}>{pendingPlayers.length} <Mail size={14} /></Badge>
               )}
             </div>
 
@@ -1041,7 +1042,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
                 padding: '6px 10px', borderRadius: 10, background: `${COLORS.accent}08`,
                 border: `1px solid ${COLORS.accent}20`,
               }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent }}>{'\u2705'} Счёт:</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent }}><Check size={14} /> Счёт:</span>
                 {match.sets.sort((a, b) => a.setNumber - b.setNumber).map((s) => (
                   <span key={s.setNumber} style={{ fontSize: 14, fontWeight: 800, color: COLORS.text }}>
                     {s.team1Score}:{s.team2Score}
@@ -1053,12 +1054,12 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
             {/* Bottom row: level + type + indicator + countdown */}
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <Badge variant="accent">{getLevelByValue(match.levelMin).category === getLevelByValue(match.levelMax).category ? getLevelByValue(match.levelMin).category : `${getLevelByValue(match.levelMin).category}-${getLevelByValue(match.levelMax).category}`}</Badge>
-              {match.matchType === 'FRIENDLY' && <Badge variant="default">{'\uD83D\uDE0A'}</Badge>}
+              {match.matchType === 'FRIENDLY' && <Badge variant="default"><Smile size={12} /></Badge>}
               {match.status === 'PENDING_CONFIRMATION' && (
-                <Badge variant="warning" style={{ marginLeft: 'auto' }}>{'\u23F3'} Проверка</Badge>
+                <Badge variant="warning" style={{ marginLeft: 'auto' }}><Hourglass size={14} /> Проверка</Badge>
               )}
               {match.status === 'COMPLETED' && (
-                <Badge variant="success" style={{ marginLeft: 'auto' }}>{'\u2705'} Завершён</Badge>
+                <Badge variant="success" style={{ marginLeft: 'auto' }}><Check size={14} /> Завершён</Badge>
               )}
               {myPlayer && myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date() && (
                 <span style={{ marginLeft: 'auto' }}>
@@ -1067,10 +1068,10 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
               )}
               {myPlayer && !['PENDING_CONFIRMATION', 'COMPLETED'].includes(match.status) && !(myPlayer.status === 'APPROVED' && ['RECRUITING', 'FULL'].includes(match.status) && new Date(match.date) > new Date()) && (
                 <span style={{ fontSize: 11, color: myPlayer.status === 'INVITED' ? COLORS.purple : COLORS.accent, marginLeft: 'auto', fontWeight: 600 }}>
-                  {myPlayer.status === 'PENDING' ? '\u23F3 Заявка' : myPlayer.status === 'INVITED' ? '\uD83D\uDCE9 Приглашение' : '\u2705 Вы в матче'}
+                  {myPlayer.status === 'PENDING' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Hourglass size={12} /> Заявка</span> : myPlayer.status === 'INVITED' ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Send size={12} /> Приглашение</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={12} /> Вы в матче</span>}
                 </span>
               )}
-              <span style={{ fontSize: 14, color: COLORS.textDim, marginLeft: myPlayer ? 0 : 'auto' }}>{'\u203A'}</span>
+              <span style={{ fontSize: 14, color: COLORS.textDim, marginLeft: myPlayer ? 0 : 'auto' }}><ChevronRight size={14} /></span>
             </div>
           </Card>
         );
@@ -1087,7 +1088,7 @@ export function Matches({ user, onNavigate, highlightMatchId }) {
 function InfoRow({ icon, label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-      <span style={{ fontSize: 16, width: 24, textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+      <span style={{ width: 24, textAlign: 'center', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>{icon}</span>
       <div>
         <div style={{ fontSize: 12, color: COLORS.textDim }}>{label}</div>
         <div style={{ fontSize: 14, color: COLORS.text, fontWeight: 500 }}>{value}</div>
@@ -1133,7 +1134,7 @@ function PlayerRowBig({ player, isCreator, h2h, onPlayerClick }) {
               fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 4,
               background: `${COLORS.purple}20`, color: COLORS.purple,
             }}>
-              {h2h.totalMatches}{'\uD83E\uDD1D'} {h2h.asOpponents.wins}W/{h2h.asOpponents.losses}L
+              {h2h.totalMatches}<Swords size={14} style={{ verticalAlign: 'middle', margin: '0 2px' }} /> {h2h.asOpponents.wins}W/{h2h.asOpponents.losses}L
             </span>
           )}
         </div>

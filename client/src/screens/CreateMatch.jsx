@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Calendar, Clock, Timer, MapPin } from 'lucide-react';
 import { COLORS, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -117,7 +118,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
               fontSize: 16,
             }}
           >
-            {'\u2190'}
+            <ArrowLeft size={16} />
           </button>
         }
       />
@@ -125,7 +126,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
       {/* Date & Time */}
       <Card style={{ marginBottom: 12 }}>
         <Input
-          label={'\uD83D\uDCC5 Дата'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Calendar size={14} /> Дата</span>}
           type="date"
           value={date}
           onChange={setDate}
@@ -133,7 +134,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
         />
 
         <Select
-          label={'\u{1F552} Время начала'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> Время начала</span>}
           value={time}
           onChange={setTime}
           placeholder="Выберите время"
@@ -141,7 +142,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
         />
 
         <Select
-          label={'\u23F1\uFE0F Длительность'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Timer size={14} /> Длительность</span>}
           value={durationMin}
           onChange={setDurationMin}
           options={[
@@ -157,7 +158,7 @@ export function CreateMatch({ user, onBack, onCreated }) {
       {/* Venue & Court */}
       <Card style={{ marginBottom: 12 }}>
         <Select
-          label={'\uD83D\uDCCD Площадка'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MapPin size={14} /> Площадка</span>}
           value={venueId}
           onChange={(v) => { setVenueId(v); setCourtNumber(''); }}
           placeholder="Выберите площадку"

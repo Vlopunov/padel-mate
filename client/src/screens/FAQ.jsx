@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ArrowLeft, HelpCircle } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 
@@ -262,9 +263,9 @@ export function FAQ({ onBack }) {
             padding: 4,
           }}
         >
-          ←
+          <ArrowLeft size={20} />
         </button>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, margin: 0 }}>❓ FAQ</h2>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}><HelpCircle size={20} /> FAQ</h2>
       </div>
 
       {/* Search */}

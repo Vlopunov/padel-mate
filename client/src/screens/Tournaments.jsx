@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { Trophy, Check, Circle, ArrowLeft } from 'lucide-react';
 import { COLORS, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -335,7 +336,7 @@ export function Tournaments({ user, onNavigate }) {
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {isLive && <Badge variant="accent">{'\u{1F534}'} LIVE</Badge>}
-                  {isDone && <Badge>{'\u2705'}</Badge>}
+                  {isDone && <Badge><Check size={12} /></Badge>}
                   {t.ratingMultiplier > 1 && (
                     <Badge variant="purple">{'\u00D7'}{t.ratingMultiplier}</Badge>
                   )}
@@ -422,7 +423,7 @@ export function Tournaments({ user, onNavigate }) {
             {myRegistration && (
               <Card style={{ marginBottom: 16, borderColor: `${COLORS.accent}44`, padding: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <span style={{ fontSize: 18 }}>{'\u2705'}</span>
+                  <Check size={18} color={COLORS.accent} />
                   <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Вы записаны!</span>
                 </div>
                 <p style={{ fontSize: 13, color: COLORS.textDim }}>
@@ -575,7 +576,7 @@ export function Tournaments({ user, onNavigate }) {
                   justifyContent: 'center',
                 }}
               >
-                {'\u2190'}
+                <ArrowLeft size={16} />
               </button>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, margin: 0 }}>
                 Выберите партнёра

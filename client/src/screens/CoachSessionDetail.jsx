@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Users, MapPin, DollarSign, GraduationCap, Check, Hourglass, XCircle, Trash2 } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -123,7 +124,7 @@ export function CoachSessionDetail({ sessionId, onBack, onNavigate }) {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 16 }}>
-              {session.type === 'GROUP' ? '\u{1F46B}' : '\u{1F464}'}
+              <Users size={16} />
             </span>
             <span style={{ fontSize: 13, color: COLORS.text }}>
               {session.type === 'GROUP' ? 'Групповая' : 'Индивидуальная'}
@@ -131,13 +132,13 @@ export function CoachSessionDetail({ sessionId, onBack, onNavigate }) {
           </div>
           {session.venue && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>{'\u{1F4CD}'}</span>
+              <MapPin size={16} color={COLORS.textDim} />
               <span style={{ fontSize: 13, color: COLORS.text }}>{session.venue.name}</span>
             </div>
           )}
           {session.price > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 16 }}>{'\u{1F4B0}'}</span>
+              <DollarSign size={16} color={COLORS.accent} />
               <span style={{ fontSize: 13, color: COLORS.accent, fontWeight: 600 }}>
                 {(session.price / 100).toFixed(session.price % 100 === 0 ? 0 : 2)} BYN
               </span>
@@ -178,7 +179,7 @@ export function CoachSessionDetail({ sessionId, onBack, onNavigate }) {
       {/* Booked students */}
       <Card style={{ marginBottom: 12 }}>
         <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, marginBottom: 12 }}>
-          {'\u{1F393}'} Записанные ученики ({activeBookings.length})
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><GraduationCap size={14} /> Записанные ученики ({activeBookings.length})</span>
         </h4>
 
         {activeBookings.length === 0 ? (
@@ -214,7 +215,7 @@ export function CoachSessionDetail({ sessionId, onBack, onNavigate }) {
                   fontSize: 11,
                 }}
               >
-                {b.status === 'CONFIRMED' ? '\u2705' : '\u23F3'}
+                {b.status === 'CONFIRMED' ? <Check size={12} /> : <Hourglass size={12} />}
               </Badge>
             </div>
           ))
@@ -241,17 +242,17 @@ export function CoachSessionDetail({ sessionId, onBack, onNavigate }) {
       {isActive && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <Button variant="secondary" onClick={handleComplete} style={{ flex: 1 }}>
-            {'\u2705'} Завершить
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Завершить</span>
           </Button>
           <Button variant="danger" onClick={handleCancel} style={{ flex: 1 }}>
-            {'\u274C'} Отменить
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><XCircle size={14} /> Отменить</span>
           </Button>
         </div>
       )}
 
       {(!isActive || activeBookings.length === 0) && (
         <Button variant="danger" fullWidth onClick={handleDelete} style={{ opacity: 0.7 }}>
-          {'\u{1F5D1}'} Удалить тренировку
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trash2 size={14} /> Удалить тренировку</span>
         </Button>
       )}
     </div>

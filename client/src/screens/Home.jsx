@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Bell, PenLine, Trophy, Plus, Search, CircleDot, HelpCircle, MessageCircle, ChevronRight, Check } from 'lucide-react';
 import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getLevelByValue, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -83,6 +84,13 @@ export function Home({ user, onNavigate }) {
   const xp = getXpLevel(user.xp || 0);
   const winRate = user.matchesPlayed > 0 ? Math.min(100, Math.round((user.wins / user.matchesPlayed) * 100)) : 0;
 
+  const quickActions = [
+    { Icon: Plus, label: 'Создать матч', action: () => onNavigate('createMatch') },
+    { Icon: Search, label: 'Найти игру', action: () => onNavigate('matches') },
+    { Icon: PenLine, label: 'Записать счёт', action: () => onNavigate('score') },
+    { Icon: Trophy, label: 'Турниры', action: () => onNavigate('tournaments') },
+  ];
+
   return (
     <div style={{ paddingBottom: 80 }}>
       {/* Header */}
@@ -110,10 +118,9 @@ export function Home({ user, onNavigate }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: 16,
           }}
         >
-          {'\u{1F514}'}
+          <Bell size={18} color={COLORS.text} />
         </button>
       </div>
 
@@ -155,14 +162,14 @@ export function Home({ user, onNavigate }) {
           style={{ marginBottom: 12, cursor: 'pointer' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\u270F\uFE0F'}</span>
+            <PenLine size={20} color={COLORS.warning} />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.warning }}>Запишите счёт!</p>
               <p style={{ fontSize: 12, color: COLORS.textDim }}>
                 {pendingMatches[0].venue?.name} — {new Date(pendingMatches[0].date).toLocaleDateString('ru-RU')}
               </p>
             </div>
-            <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+            <ChevronRight size={16} color={COLORS.textDim} />
           </div>
         </Card>
       )}
@@ -175,7 +182,7 @@ export function Home({ user, onNavigate }) {
           style={{ marginBottom: 12, cursor: 'pointer' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>{'\u{1F3C6}'}</span>
+            <Trophy size={24} color={COLORS.purple} />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.purple }}>{tournament.name}</p>
               <p style={{ fontSize: 12, color: COLORS.textDim }}>
@@ -190,14 +197,11 @@ export function Home({ user, onNavigate }) {
 
       {/* Quick actions */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        {[
-          { icon: '\u2795', label: 'Создать матч', action: () => onNavigate('createMatch') },
-          { icon: '\u{1F50D}', label: 'Найти игру', action: () => onNavigate('matches') },
-          { icon: '\u270F\uFE0F', label: 'Записать счёт', action: () => onNavigate('score') },
-          { icon: '\u{1F3C6}', label: 'Турниры', action: () => onNavigate('tournaments') },
-        ].map((item) => (
+        {quickActions.map((item) => (
           <Card key={item.label} onClick={item.action} style={{ cursor: 'pointer', textAlign: 'center', padding: 16 }}>
-            <span style={{ fontSize: 24, display: 'block', marginBottom: 6 }}>{item.icon}</span>
+            <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+              <item.Icon size={24} color={COLORS.accent} />
+            </span>
             <span style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>{item.label}</span>
           </Card>
         ))}
@@ -210,12 +214,12 @@ export function Home({ user, onNavigate }) {
           style={{ marginBottom: 12, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.accent}15, ${COLORS.accent}05)` }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>{'\uD83C\uDFBE'}</span>
+            <CircleDot size={22} color={COLORS.accent} />
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.accent }}>Забронировать корт</p>
               <p style={{ fontSize: 12, color: COLORS.textDim }}>{bookableVenue.name} — посмотреть свободное время</p>
             </div>
-            <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+            <ChevronRight size={16} color={COLORS.textDim} />
           </div>
         </Card>
       )}
@@ -228,12 +232,12 @@ export function Home({ user, onNavigate }) {
         style={{ marginBottom: 16, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.accent}08, ${COLORS.purple}08)` }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>{'\u2753'}</span>
+          <HelpCircle size={20} color={COLORS.textDim} />
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>FAQ — Частые вопросы</p>
             <p style={{ fontSize: 12, color: COLORS.textDim }}>Рейтинг, матчи, достижения и другое</p>
           </div>
-          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          <ChevronRight size={16} color={COLORS.textDim} />
         </div>
       </Card>
 
@@ -243,12 +247,12 @@ export function Home({ user, onNavigate }) {
         style={{ marginBottom: 16, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.purple}12, ${COLORS.accent}08)` }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>{'\u{1F4AC}'}</span>
+          <MessageCircle size={20} color={COLORS.textDim} />
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>Вопросы и сотрудничество</p>
             <p style={{ fontSize: 12, color: COLORS.textDim }}>Напишите в Telegram — @lopunow</p>
           </div>
-          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          <ChevronRight size={16} color={COLORS.textDim} />
         </div>
       </Card>
 
@@ -272,7 +276,7 @@ export function Home({ user, onNavigate }) {
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
                   <Badge variant="accent">{getLevelByValue(match.levelMin).category}-{getLevelByValue(match.levelMax).category}</Badge>
-                  {match.courtBooked && <Badge variant="success">{'\u2705'}</Badge>}
+                  {match.courtBooked && <Badge variant="success"><Check size={12} /></Badge>}
                 </div>
               </div>
               <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 6 }}>{match.venue?.name || '—'}</p>

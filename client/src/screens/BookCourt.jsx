@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ExternalLink } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -67,7 +68,7 @@ function InfoRow({ icon, label, value, onClick }) {
         <p style={{ fontSize: 12, color: COLORS.textDim }}>{label}</p>
         <p style={{ fontSize: 14, fontWeight: 500, color: onClick ? COLORS.accent : COLORS.text }}>{value}</p>
       </div>
-      {onClick && <span style={{ color: COLORS.textDim, fontSize: 16 }}>{'\u2197'}</span>}
+      {onClick && <ExternalLink size={16} color={COLORS.textDim} />}
     </div>
   );
   if (onClick) {

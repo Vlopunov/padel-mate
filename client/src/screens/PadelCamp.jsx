@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CircleDot, Heart, Globe, Handshake, Flame, Building2, Check, ChevronRight } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -10,7 +11,7 @@ const CAMP_CONTACT = 'https://t.me/vladlopunov';
 
 const INCLUDES = [
   {
-    icon: '\u{1F3BE}',
+    Icon: CircleDot,
     title: 'Спорт',
     items: [
       '9+ часов тренировок с про-тренерами',
@@ -21,7 +22,7 @@ const INCLUDES = [
     ],
   },
   {
-    icon: '\u{1F9D8}',
+    Icon: Heart,
     title: 'Wellness',
     items: [
       '3 утренних йога / стрейчинг сессии',
@@ -30,7 +31,7 @@ const INCLUDES = [
     ],
   },
   {
-    icon: '\u{1F30D}',
+    Icon: Globe,
     title: 'Впечатления',
     items: [
       'Авторская экскурсия по Минску',
@@ -39,7 +40,7 @@ const INCLUDES = [
     ],
   },
   {
-    icon: '\u{1F91D}',
+    Icon: Handshake,
     title: 'Комьюнити',
     items: [
       'Нетворкинг с единомышленниками',
@@ -194,8 +195,8 @@ export function PadelCamp({ onBack }) {
           4 дня, которые изменят твою игру и круг общения
         </p>
         <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
-          <Badge variant="accent">{'\u{1F3BE}'} 360 Padel Arena</Badge>
-          <Badge variant="purple">{'\u{1F1E7}\u{1F1FE}'} Минск</Badge>
+          <Badge variant="accent"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CircleDot size={12} /> 360 Padel Arena</span></Badge>
+          <Badge variant="purple">Минск</Badge>
         </div>
       </div>
 
@@ -206,7 +207,7 @@ export function PadelCamp({ onBack }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
         {INCLUDES.map((section) => (
           <Card key={section.title} style={{ padding: 14 }}>
-            <span style={{ fontSize: 24, display: 'block', marginBottom: 8 }}>{section.icon}</span>
+            <section.Icon size={24} color={COLORS.accent} style={{ display: 'block', marginBottom: 8 }} />
             <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 6 }}>
               {section.title}
             </p>
@@ -251,7 +252,7 @@ export function PadelCamp({ onBack }) {
                 <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{day.title}</p>
               </div>
               <span style={{ color: COLORS.textDim, fontSize: 14, transition: 'transform 0.2s', transform: openDay === day.day ? 'rotate(90deg)' : 'none' }}>
-                {'\u203A'}
+                <ChevronRight size={14} />
               </span>
             </div>
             {openDay === day.day && (
@@ -310,7 +311,7 @@ export function PadelCamp({ onBack }) {
             </div>
             {pkg.items.map((item, i) => (
               <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 4 }}>
-                <span style={{ color: pkg.color, fontSize: 12, marginTop: 2 }}>{'\u2713'}</span>
+                <Check size={12} color={pkg.color} style={{ marginTop: 2, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, color: COLORS.textDim, lineHeight: 1.4 }}>{item}</span>
               </div>
             ))}
@@ -321,7 +322,7 @@ export function PadelCamp({ onBack }) {
       {/* Early Bird */}
       <Card style={{ marginBottom: 20, background: `${COLORS.warning}10`, borderColor: `${COLORS.warning}30` }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.warning, marginBottom: 8 }}>
-          {'\u{1F525}'} Early Bird скидки
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Flame size={14} /> Early Bird скидки</span>
         </p>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
           <span style={{ fontSize: 13, color: COLORS.textDim }}>До 1 апреля</span>
@@ -343,7 +344,7 @@ export function PadelCamp({ onBack }) {
       </h3>
       <Card style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          <span style={{ fontSize: 28 }}>{'\u{1F3DF}\u{FE0F}'}</span>
+          <Building2 size={28} color={COLORS.accent} />
           <div>
             <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.text }}>360 Padel Arena</p>
             <p style={{ fontSize: 12, color: COLORS.textDim }}>Минск, Новая Боровая</p>
@@ -359,7 +360,7 @@ export function PadelCamp({ onBack }) {
 
       {/* CTA */}
       <Button variant="purple" fullWidth size="lg" onClick={handleSignUp}>
-        {'\u{1F3BE}'} Записаться / Узнать подробности
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CircleDot size={16} /> Записаться / Узнать подробности</span>
       </Button>
       <p style={{ textAlign: 'center', fontSize: 12, color: COLORS.textDim, marginTop: 8 }}>
         Свяжемся с вами в Telegram

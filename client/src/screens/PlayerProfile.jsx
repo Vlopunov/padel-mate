@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Swords, Star, MessageCircle, Ban } from 'lucide-react';
 import { COLORS, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -73,12 +74,12 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
           title="Профиль"
           leftAction={
             <button onClick={onBack} style={backBtnStyle}>
-              {'\u2190'}
+              <ArrowLeft size={16} />
             </button>
           }
         />
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <span style={{ fontSize: 48 }}>{'\u{1F6AB}'}</span>
+          <Ban size={48} color={COLORS.textDim} />
           <p style={{ color: COLORS.textDim, marginTop: 12 }}>Игрок не найден</p>
         </div>
       </div>
@@ -101,7 +102,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
         title={isMe ? 'Мой профиль' : 'Профиль игрока'}
         leftAction={
           <button onClick={onBack} style={backBtnStyle}>
-            {'\u2190'}
+            <ArrowLeft size={16} />
           </button>
         }
       />
@@ -119,7 +120,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
           {player.isVip && (
-            <Badge style={{ background: `${COLORS.gold}25`, color: COLORS.gold, fontWeight: 700 }}>⭐ VIP</Badge>
+            <Badge style={{ background: `${COLORS.gold}25`, color: COLORS.gold, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Star size={12} fill={COLORS.gold} /> VIP</Badge>
           )}
           <Badge variant="accent">{level.category} — {level.name}</Badge>
           {cityLabel && <Badge>{cityLabel}</Badge>}
@@ -161,7 +162,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
       {!isMe && h2h && h2h.totalMatches > 0 && (
         <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}33` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 18 }}>{'\u2694\uFE0F'}</span>
+            <Swords size={18} color={COLORS.purple} />
             <span style={{ fontSize: 14, fontWeight: 700, color: COLORS.text }}>
               {'Вы и '}{player.firstName}
             </span>
@@ -370,7 +371,7 @@ export function PlayerProfile({ userId, currentUser, onBack, onNavigate }) {
             size="lg"
             onClick={() => openTelegramLink(`https://t.me/${player.username}`)}
           >
-            {'\u{1F4AC}'} Написать в Telegram
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MessageCircle size={16} /> Написать в Telegram</span>
           </Button>
         ) : !isMe ? (
           <Button fullWidth variant="secondary" size="lg" disabled>

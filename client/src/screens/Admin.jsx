@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Settings, BarChart3, Users, CircleDot, Trophy, Hourglass, Check, CheckCircle, XCircle, Star, Ban, Trash2, PenLine, Plus, Calendar, TrendingUp, MapPin, ChevronRight, Building2, MessageCircle, Crown, Clock, Timer, RefreshCw, Pause, FlaskConical, DollarSign, Tv, Link2, ArrowRight, Medal, AlertTriangle, Clipboard } from 'lucide-react';
 import { COLORS, LEVELS, getLevel, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -396,11 +397,11 @@ export function Admin({ onBack }) {
             fontSize: 20, cursor: 'pointer', padding: '4px 8px',
           }}
         >
-          {'\u2190'}
+          <ArrowLeft size={20} />
         </button>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, margin: 0 }}>
-            {'\u2699\uFE0F'} Админ-панель
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Settings size={20} /> Админ-панель
           </h2>
         </div>
       </div>
@@ -411,10 +412,10 @@ export function Admin({ onBack }) {
         borderRadius: 14, padding: 4,
       }}>
         {[
-          { key: 'stats', label: 'Обзор', icon: '\uD83D\uDCCA' },
-          { key: 'users', label: 'Игроки', icon: '\uD83D\uDC65' },
-          { key: 'matches', label: 'Матчи', icon: '\uD83C\uDFBE' },
-          { key: 'tournaments', label: 'Турниры', icon: '\uD83C\uDFC6' },
+          { key: 'stats', label: 'Обзор', Icon: BarChart3 },
+          { key: 'users', label: 'Игроки', Icon: Users },
+          { key: 'matches', label: 'Матчи', Icon: CircleDot },
+          { key: 'tournaments', label: 'Турниры', Icon: Trophy },
         ].map((t) => (
           <button
             key={t.key}
@@ -433,14 +434,14 @@ export function Admin({ onBack }) {
               transition: 'all 0.2s',
             }}
           >
-            {t.icon} {t.label}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}><t.Icon size={13} /> {t.label}</span>
           </button>
         ))}
       </div>
 
       {loading && (
         <div style={{ textAlign: 'center', padding: 60, color: COLORS.textDim }}>
-          <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>{'\u23F3'}</span>
+          <Hourglass size={32} color={COLORS.textDim} style={{ display: 'block', margin: '0 auto 8px' }} />
           Загрузка...
         </div>
       )}
@@ -450,21 +451,21 @@ export function Admin({ onBack }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {/* Totals grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <StatCard icon={'\uD83D\uDC65'} label="Игроков" value={stats.totalUsers} color={COLORS.accent} />
-            <StatCard icon={'\uD83C\uDFBE'} label="Матчей" value={stats.totalMatches} color={COLORS.purple} />
-            <StatCard icon={'\u{1F7E2}'} label="Активных" value={stats.activeMatches} color="#4CAF50" />
-            <StatCard icon={'\u2705'} label="Завершённых" value={stats.completedMatches} color={COLORS.accent} />
+            <StatCard icon={<Users size={16} />} label="Игроков" value={stats.totalUsers} color={COLORS.accent} />
+            <StatCard icon={<CircleDot size={16} />} label="Матчей" value={stats.totalMatches} color={COLORS.purple} />
+            <StatCard icon={<Circle size={16} fill="#4CAF50" color="#4CAF50" />} label="Активных" value={stats.activeMatches} color="#4CAF50" />
+            <StatCard icon={<CheckCircle size={16} />} label="Завершённых" value={stats.completedMatches} color={COLORS.accent} />
           </div>
 
           {stats.totalTournaments > 0 && (
-            <StatCard icon={'\uD83C\uDFC6'} label="Турниров" value={stats.totalTournaments} color={COLORS.warning} />
+            <StatCard icon={<Trophy size={16} />} label="Турниров" value={stats.totalTournaments} color={COLORS.warning} />
           )}
 
           {/* Today summary with comparison */}
           {stats.today && (
             <Card style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 12 }}>
-                {'\uD83D\uDCC5'} Сегодня
+                {<Calendar size={14} />} Сегодня
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                 <TodayStat label="Новых" value={stats.today.newUsers} prev={stats.yesterday?.newUsers} />
@@ -473,7 +474,7 @@ export function Admin({ onBack }) {
               </div>
               {stats.today.topRatingChange > 0 && (
                 <div style={{ marginTop: 10, fontSize: 12, color: COLORS.textDim }}>
-                  {'\uD83D\uDCC8'} Лучший рейтинг-скачок: <span style={{ color: COLORS.accent, fontWeight: 700 }}>+{stats.today.topRatingChange}</span>
+                  {<TrendingUp size={14} />} Лучший рейтинг-скачок: <span style={{ color: COLORS.accent, fontWeight: 700 }}>+{stats.today.topRatingChange}</span>
                 </div>
               )}
             </Card>
@@ -483,7 +484,7 @@ export function Admin({ onBack }) {
           {analytics.length >= 2 && (
             <Card style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
-                {'\uD83D\uDC65'} Рост игроков
+                {<Users size={14} />} Рост игроков
               </div>
               <MiniChart
                 data={analytics.map((d) => ({
@@ -499,7 +500,7 @@ export function Admin({ onBack }) {
           {analytics.length >= 2 && (
             <Card style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
-                {'\uD83C\uDFBE'} Матчей в день
+                {<CircleDot size={14} />} Матчей в день
               </div>
               <MiniChart
                 data={analytics.map((d) => ({
@@ -515,7 +516,7 @@ export function Admin({ onBack }) {
           {stats.today?.regionCounts && Object.keys(stats.today.regionCounts).length > 0 && (
             <Card style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-                {'\uD83C\uDFD9\uFE0F'} По регионам
+                {<Building2 size={14} />} По регионам
               </div>
               {Object.entries(stats.today.regionCounts).map(([regionName, count]) => (
                 <div key={regionName} style={{
@@ -540,7 +541,7 @@ export function Admin({ onBack }) {
             fontSize: 13, color: COLORS.textDim, marginBottom: 12,
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           }}>
-            <span>{'\uD83D\uDC65'} Всего: {users.length}</span>
+            <span>{<Users size={14} />} Всего: {users.length}</span>
             <div style={{ display: 'flex', gap: 6 }}>
               <button
                 type="button"
@@ -577,7 +578,7 @@ export function Admin({ onBack }) {
                   fontSize: 11, fontWeight: 600, cursor: 'pointer',
                 }}
               >
-                {'\uD83D\uDDD1'} Удалить тест
+                {<Trash2 size={14} />} Удалить тест
               </button>
             </div>
           </div>
@@ -604,7 +605,7 @@ export function Admin({ onBack }) {
                           fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
                           background: `${COLORS.gold}25`, color: COLORS.gold,
                         }}>
-                          {'\u2B50'} VIP
+                          {<Star size={14} />} VIP
                         </span>
                       )}
                       {u.isCoach && (
@@ -612,7 +613,7 @@ export function Admin({ onBack }) {
                           fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
                           background: `${COLORS.purple}20`, color: COLORS.purple,
                         }}>
-                          {'\u{1F3BE}'} ТРЕНЕР
+                          {<CircleDot size={14} />} ТРЕНЕР
                         </span>
                       )}
                       {!u.onboarded && (
@@ -628,7 +629,7 @@ export function Admin({ onBack }) {
                           fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6,
                           background: `${COLORS.danger}20`, color: COLORS.danger,
                         }}>
-                          {'\uD83D\uDEAB'} СКРЫТ
+                          {<Ban size={14} />} СКРЫТ
                         </span>
                       )}
                     </div>
@@ -648,11 +649,11 @@ export function Admin({ onBack }) {
                   display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim, marginBottom: 10,
                   padding: '6px 10px', background: `${COLORS.bg}80`, borderRadius: 8,
                 }}>
-                  <span>{'\uD83C\uDFD9\uFE0F'} {u.region?.country?.flag ? `${u.region.country.flag} ` : ''}{u.region?.name || '\u2014'}</span>
-                  <span>{'\uD83C\uDFBE'} {u.matchesPlayed}</span>
-                  <span style={{ color: '#4CAF50' }}>{'\u2705'} {u.wins}</span>
-                  <span style={{ color: COLORS.danger }}>{'\u274C'} {u.losses}</span>
-                  <span>{'\u2B50'} {u.xp}</span>
+                  <span>{<Building2 size={14} />} {u.region?.country?.flag ? `${u.region.country.flag} ` : ''}{u.region?.name || '\u2014'}</span>
+                  <span>{<CircleDot size={14} />} {u.matchesPlayed}</span>
+                  <span style={{ color: '#4CAF50' }}>{<Check size={14} />} {u.wins}</span>
+                  <span style={{ color: COLORS.danger }}>{<XCircle size={14} />} {u.losses}</span>
+                  <span>{<Star size={14} />} {u.xp}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button
@@ -663,7 +664,7 @@ export function Admin({ onBack }) {
                       cursor: 'pointer',
                     }}
                   >
-                    {'\u270F\uFE0F'} Рейтинг
+                    {<PenLine size={14} />} Рейтинг
                   </button>
                   <button
                     onClick={() => handleToggleAdmin(u.id, u.isAdmin)}
@@ -673,7 +674,7 @@ export function Admin({ onBack }) {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {u.isAdmin ? '\uD83D\uDEAB Убрать' : '\uD83D\uDC51 Админ'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{u.isAdmin ? <><Ban size={12} /> Убрать</> : <><Crown size={12} /> Админ</>}</span>
                   </button>
                   <button
                     onClick={() => handleToggleVip(u.id, u.isVip)}
@@ -683,7 +684,7 @@ export function Admin({ onBack }) {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {u.isVip ? '\u{1F6AB} VIP' : '\u2B50 VIP'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{u.isVip ? <><Ban size={12} /> VIP</> : <><Star size={12} /> VIP</>}</span>
                   </button>
                   <button
                     onClick={() => handleToggleCoach(u.id, u.isCoach)}
@@ -694,7 +695,7 @@ export function Admin({ onBack }) {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {u.isCoach ? '\u{1F6AB} Тренер' : '\u{1F3BE} Тренер'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{u.isCoach ? <><Ban size={12} /> Тренер</> : <><CircleDot size={12} /> Тренер</>}</span>
                   </button>
                   <button
                     onClick={() => handleDeleteUser(u.id, u.firstName)}
@@ -704,7 +705,7 @@ export function Admin({ onBack }) {
                       fontSize: 12, fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    {'\uD83D\uDDD1\uFE0F'}
+                    {<Trash2 size={14} />}
                   </button>
                 </div>
               </Card>
@@ -744,7 +745,7 @@ export function Admin({ onBack }) {
           </div>
 
           <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 12 }}>
-            {'\uD83C\uDFBE'} {filteredMatches.length} {matchFilter === 'all' ? `из ${matches.length}` : ''} матчей
+            {<CircleDot size={14} />} {filteredMatches.length} {matchFilter === 'all' ? `из ${matches.length}` : ''} матчей
           </div>
 
           {filteredMatches.length === 0 && (
@@ -784,14 +785,14 @@ export function Admin({ onBack }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: 10, fontSize: 12, color: COLORS.textDim, marginBottom: 4, flexWrap: 'wrap' }}>
-                  <span>{'\uD83D\uDCCD'} {m.venue?.name || '\u2014'}</span>
-                  <span>{m.matchType === 'RATED' ? '\uD83C\uDFC6' : '\uD83D\uDE0A'} {m.matchType === 'RATED' ? 'Рейтинг' : 'Друж.'}</span>
+                  <span>{<MapPin size={14} />} {m.venue?.name || '\u2014'}</span>
+                  <span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{m.matchType === 'RATED' ? <Trophy size={12} /> : <CircleDot size={12} />} {m.matchType === 'RATED' ? 'Рейтинг' : 'Друж.'}</span></span>
                   <span>Ур. {getLevelByValue(m.levelMin).category}\u2014{getLevelByValue(m.levelMax).category}</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                   <span style={{ color: COLORS.textDim }}>
-                    {'\uD83D\uDC65'} {approvedPlayers.length}/4
+                    {<Users size={14} />} {approvedPlayers.length}/4
                   </span>
                   <span style={{ color: COLORS.textDim, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {approvedPlayers.map((p) => p.user.firstName).join(', ') || '\u2014'}
@@ -801,7 +802,7 @@ export function Admin({ onBack }) {
                       {m.sets.map((s) => `${s.team1Score}:${s.team2Score}`).join(' ')}
                     </span>
                   )}
-                  <span style={{ color: COLORS.textDim, fontSize: 16 }}>{'\u203A'}</span>
+                  <span style={{ color: COLORS.textDim, fontSize: 16 }}>{<ChevronRight size={16} />}</span>
                 </div>
               </Card>
             );
@@ -846,7 +847,7 @@ export function Admin({ onBack }) {
               cursor: 'pointer', marginBottom: 10,
             }}
           >
-            {'\u2795'} Создать турнир
+            {<Plus size={14} />} Создать турнир
           </button>
 
           {/* Test seed buttons */}
@@ -867,7 +868,7 @@ export function Admin({ onBack }) {
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {'\uD83E\uDDEA'} Создать тестовые
+              {<FlaskConical size={14} />} Создать тестовые
             </button>
             <button
               type="button"
@@ -885,13 +886,13 @@ export function Admin({ onBack }) {
                 fontSize: 12, fontWeight: 600, cursor: 'pointer',
               }}
             >
-              {'\uD83D\uDDD1'} Удалить тестовые
+              {<Trash2 size={14} />} Удалить тестовые
             </button>
           </div>
 
           {tournaments.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: COLORS.textDim }}>
-              {'\uD83C\uDFC6'} Турниров пока нет
+              {<Trophy size={14} />} Турниров пока нет
             </div>
           )}
 
@@ -907,7 +908,7 @@ export function Admin({ onBack }) {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {'\uD83C\uDFC6'} {t.name}
+                    {<Trophy size={14} />} {t.name}
                   </span>
                   <span style={{
                     fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 8,
@@ -918,15 +919,15 @@ export function Admin({ onBack }) {
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim, marginBottom: 4, flexWrap: 'wrap' }}>
-                  <span>{'\uD83D\uDCC5'} {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                  <span>{'\uD83D\uDCCD'} {t.venue?.name || '\u2014'}</span>
+                  <span>{<Calendar size={14} />} {date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  <span>{<MapPin size={14} />} {t.venue?.name || '\u2014'}</span>
                 </div>
 
                 <div style={{ display: 'flex', gap: 12, fontSize: 12, color: COLORS.textDim }}>
-                  <span>{'\uD83D\uDC65'} {t.teamsRegistered}/{t.maxTeams} пар</span>
-                  <span>{'\uD83C\uDFBE'} {FORMAT_LABELS[t.format] || t.format}</span>
+                  <span>{<Users size={14} />} {t.teamsRegistered}/{t.maxTeams} пар</span>
+                  <span>{<CircleDot size={14} />} {FORMAT_LABELS[t.format] || t.format}</span>
                   <span>Ур. {getLevelByValue(t.levelMin).category}\u2014{getLevelByValue(t.levelMax).category}</span>
-                  {t.price && <span>{'\uD83D\uDCB0'} {t.price}</span>}
+                  {t.price && <span>{<DollarSign size={14} />} {t.price}</span>}
                 </div>
               </Card>
             );
@@ -961,16 +962,16 @@ export function Admin({ onBack }) {
                 color: COLORS.textDim, fontSize: 16,
               }}
             >
-              {'\u2190'}
+              {<ArrowLeft size={16} />}
             </button>
             <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text }}>
-              {editingTournament ? '\u270F\uFE0F Редактирование' : '\u2795 Новый турнир'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{editingTournament ? <><PenLine size={14} /> Редактирование</> : <><Plus size={14} /> Новый турнир</>}</span>
             </span>
           </div>
 
           <Card style={{ marginBottom: 12 }}>
             <Input
-              label={'\uD83C\uDFC6 Название'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Trophy size={14} /> Название</span>}
               value={tForm.name}
               onChange={(v) => setTForm({ ...tForm, name: v })}
               placeholder="Название турнира"
@@ -986,7 +987,7 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Input
-              label={'\uD83D\uDCC5 Дата начала'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> Дата начала</span>}
               type="date"
               value={tForm.date}
               onChange={(v) => setTForm({ ...tForm, date: v })}
@@ -1001,7 +1002,7 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Select
-              label={'\uD83C\uDFD9\uFE0F Регион'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building2 size={14} /> Регион</span>}
               value={tForm.regionId}
               onChange={(v) => setTForm({ ...tForm, regionId: v, venueId: '' })}
               options={regions.flatMap(c =>
@@ -1012,7 +1013,7 @@ export function Admin({ onBack }) {
               )}
             />
             <Select
-              label={'\uD83D\uDCCD Площадка'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={14} /> Площадка</span>}
               value={tForm.venueId}
               onChange={(v) => setTForm({ ...tForm, venueId: v })}
               placeholder="Выберите площадку"
@@ -1022,7 +1023,7 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Select
-              label={'\uD83C\uDFBE Формат'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><CircleDot size={14} /> Формат</span>}
               value={tForm.format}
               onChange={(v) => {
                 const isLiveFormat = v === 'americano' || v === 'mexicano';
@@ -1072,14 +1073,14 @@ export function Admin({ onBack }) {
                   background: `${COLORS.accent}08`, border: `1px solid ${COLORS.accent}20`,
                 }}>
                   <p style={{ fontSize: 12, fontWeight: 600, color: COLORS.accent, marginBottom: 4 }}>
-                    {'\uD83D\uDCCA'} Предпросмотр
+                    {<BarChart3 size={14} />} Предпросмотр
                   </p>
                   <p style={{ fontSize: 12, color: COLORS.textDim, lineHeight: 1.6, margin: 0 }}>
-                    {'\uD83D\uDC65'} {players} игроков, {courts} корт(ов)
-                    {'\n'}{'\u{1F3BE}'} {matchesPerRound} матч(ей) за раунд
-                    {estRounds && <>{'\n'}{'\uD83D\uDD04'} ~{estRounds} раундов, ~{estMatches} матчей всего</>}
-                    {!estRounds && <>{'\n'}{'\uD83D\uDD04'} Раунды генерируются динамически (Mexicano)</>}
-                    {sitOuts > 0 && <>{'\n'}{'\u23F8\uFE0F'} {sitOuts} игроков отдыхают каждый раунд</>}
+                    {<Users size={14} />} {players} игроков, {courts} корт(ов)
+                    {'\n'}{<CircleDot size={14} />} {matchesPerRound} матч(ей) за раунд
+                    {estRounds && <>{'\n'}{<RefreshCw size={14} />} ~{estRounds} раундов, ~{estMatches} матчей всего</>}
+                    {!estRounds && <>{'\n'}{<RefreshCw size={14} />} Раунды генерируются динамически (Mexicano)</>}
+                    {sitOuts > 0 && <>{'\n'}{<Pause size={14} />} {sitOuts} игроков отдыхают каждый раунд</>}
                   </p>
                 </div>
               );
@@ -1104,14 +1105,14 @@ export function Admin({ onBack }) {
 
           <Card style={{ marginBottom: 12 }}>
             <Input
-              label={tForm.registrationMode === 'INDIVIDUAL' ? '\uD83D\uDC65 Макс. игроков' : '\uD83D\uDC65 Макс. пар'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Users size={14} /> {tForm.registrationMode === 'INDIVIDUAL' ? 'Макс. игроков' : 'Макс. пар'}</span>}
               type="number"
               value={tForm.maxTeams}
               onChange={(v) => setTForm({ ...tForm, maxTeams: v })}
               placeholder="16"
             />
             <Input
-              label={'\uD83D\uDCB0 Цена (необязательно)'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><DollarSign size={14} /> Цена (необязательно)</span>}
               value={tForm.price}
               onChange={(v) => setTForm({ ...tForm, price: v })}
               placeholder="Напр: 50 BYN / пара"
@@ -1143,7 +1144,7 @@ export function Admin({ onBack }) {
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {editingTournament ? '\u2705 Сохранить' : '\uD83C\uDFC6 Создать турнир'}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{editingTournament ? <><Check size={14} /> Сохранить</> : <><Trophy size={14} /> Создать турнир</>}</span>
           </button>
         </div>
       )}
@@ -1166,7 +1167,7 @@ export function Admin({ onBack }) {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 4 }}>
-              {'\u270F\uFE0F'} Изменить рейтинг
+              {<PenLine size={14} />} Изменить рейтинг
             </h3>
             <p style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 20 }}>
               {editingUser.firstName} {editingUser.lastName || ''} — текущий: {editingUser.rating}
@@ -1258,7 +1259,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
             color: COLORS.textDim, fontSize: 16,
           }}
         >
-          {'\u2190'}
+          {<ArrowLeft size={16} />}
         </button>
         <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, flex: 1 }}>
           Матч #{m.id}
@@ -1274,21 +1275,21 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
       {/* Info */}
       <Card style={{ marginBottom: 12, padding: 14 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <InfoRow icon={'\uD83D\uDCC5'} label="Дата" value={date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
+          <InfoRow icon={<Calendar size={14} />} label="Дата" value={date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
           <InfoRow
-            icon={'\uD83D\uDD52'}
+            icon={<Clock size={14} />}
             label="Время"
             value={`${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} \u2014 ${endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} (${m.durationMin} мин)`}
           />
-          <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={m.venue?.name || '\u2014'} />
+          <InfoRow icon={<MapPin size={14} />} label="Площадка" value={m.venue?.name || '\u2014'} />
           {m.courtBooked && (
-            <InfoRow icon={'\u2705'} label="Корт" value={m.courtNumber ? `#${m.courtNumber} (забронирован)` : 'Забронирован'} />
+            <InfoRow icon={<CheckCircle size={16} />} label="Корт" value={m.courtNumber ? `#${m.courtNumber} (забронирован)` : 'Забронирован'} />
           )}
-          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(m.levelMin).category} \u2014 ${getLevelByValue(m.levelMax).category}`} />
-          <InfoRow icon={'\uD83C\uDFC6'} label="Тип" value={m.matchType === 'RATED' ? 'Рейтинговый' : 'Дружеский'} />
-          <InfoRow icon={'\uD83D\uDC64'} label="Создатель" value={m.creator ? `${m.creator.firstName} ${m.creator.lastName || ''} (${m.creator.rating})` : `ID: ${m.creatorId}`} />
-          {m.notes && <InfoRow icon={'\uD83D\uDCDD'} label="Заметки" value={m.notes} />}
-          <InfoRow icon={'\uD83D\uDD50'} label="Создан" value={new Date(m.createdAt).toLocaleString('ru-RU')} />
+          <InfoRow icon={<BarChart3 size={14} />} label="Уровень" value={`${getLevelByValue(m.levelMin).category} \u2014 ${getLevelByValue(m.levelMax).category}`} />
+          <InfoRow icon={<Trophy size={16} />} label="Тип" value={m.matchType === 'RATED' ? 'Рейтинговый' : 'Дружеский'} />
+          <InfoRow icon={<Users size={14} />} label="Создатель" value={m.creator ? `${m.creator.firstName} ${m.creator.lastName || ''} (${m.creator.rating})` : `ID: ${m.creatorId}`} />
+          {m.notes && <InfoRow icon={<PenLine size={14} />} label="Заметки" value={m.notes} />}
+          <InfoRow icon={<Clock size={14} />} label="Создан" value={new Date(m.createdAt).toLocaleString('ru-RU')} />
         </div>
       </Card>
 
@@ -1321,7 +1322,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
       {/* Players */}
       <Card style={{ marginBottom: 12, padding: 14 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-          {'\uD83D\uDC65'} Игроки ({m.players?.length || 0})
+          {<Users size={14} />} Игроки ({m.players?.length || 0})
         </p>
 
         {/* Approved players (with or without teams) */}
@@ -1395,7 +1396,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
       {m.sets && m.sets.length > 0 && (
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-            {'\uD83D\uDCCB'} Счёт
+            {<Clipboard size={14} />} Счёт
           </p>
           <div style={{
             display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 0,
@@ -1459,14 +1460,14 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
       {m.confirmations && m.confirmations.length > 0 && (
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-            {'\u2705'} Подтверждения ({m.confirmations.length})
+            {<Check size={14} />} Подтверждения ({m.confirmations.length})
           </p>
           {m.confirmations.map((c) => (
             <div key={c.id} style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '6px 10px', borderRadius: 8, background: COLORS.surface, marginBottom: 4,
             }}>
-              <span style={{ fontSize: 14 }}>{c.confirmed ? '\u2705' : '\u23F3'}</span>
+              <span style={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>{c.confirmed ? <Check size={14} color={COLORS.accent} /> : <Hourglass size={14} color={COLORS.textDim} />}</span>
               <span style={{ fontSize: 13, color: COLORS.text }}>{c.user?.firstName || `ID: ${c.userId}`}</span>
               <span style={{ fontSize: 11, color: COLORS.textDim, marginLeft: 'auto' }}>
                 {new Date(c.createdAt).toLocaleString('ru-RU')}
@@ -1480,7 +1481,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
       {m.comments && m.comments.length > 0 && (
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-            {'\uD83D\uDCAC'} Комментарии ({m.comments.length})
+            {<MessageCircle size={14} />} Комментарии ({m.comments.length})
           </p>
           {m.comments.map((c) => (
             <div key={c.id} style={{
@@ -1510,7 +1511,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {'\u270F\uFE0F'} Редактировать
+          {<PenLine size={14} />} Редактировать
         </button>
         <button
           onClick={onDelete}
@@ -1520,7 +1521,7 @@ function MatchDetail({ match, venues, onBack, onEdit, onDelete, onChangeStatus, 
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {'\uD83D\uDDD1\uFE0F'} Удалить
+          {<Trash2 size={14} />} Удалить
         </button>
       </div>
     </div>
@@ -1591,7 +1592,7 @@ function PlayerRow({ player, onRemove, isCreator }) {
           fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
         }}
       >
-        {'\u274C'}
+        {<XCircle size={14} />}
       </button>
     </div>
   );
@@ -1670,29 +1671,29 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
             color: COLORS.textDim, fontSize: 16,
           }}
         >
-          {'\u2190'}
+          {<ArrowLeft size={16} />}
         </button>
         <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text }}>
-          {'\u270F\uFE0F'} Редактирование матча #{m.id}
+          {<PenLine size={14} />} Редактирование матча #{m.id}
         </span>
       </div>
 
       {/* Date & Time */}
       <Card style={{ marginBottom: 12 }}>
         <Input
-          label={'\uD83D\uDCC5 Дата'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Calendar size={14} /> Дата</span>}
           type="date"
           value={form.date}
           onChange={(v) => setForm({ ...form, date: v })}
         />
         <Select
-          label={'\uD83D\uDD52 Время начала'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Clock size={14} /> Время начала</span>}
           value={form.time}
           onChange={(v) => setForm({ ...form, time: v })}
           options={TIME_SLOTS}
         />
         <Select
-          label={'\u23F1\uFE0F Длительность'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Timer size={14} /> Длительность</span>}
           value={form.durationMin}
           onChange={(v) => setForm({ ...form, durationMin: v })}
           options={[
@@ -1708,7 +1709,7 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
       {/* Venue & Court */}
       <Card style={{ marginBottom: 12 }}>
         <Select
-          label={'\uD83D\uDCCD Площадка'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><MapPin size={14} /> Площадка</span>}
           value={form.venueId}
           onChange={(v) => { setForm({ ...form, venueId: v, courtNumber: '' }); }}
           options={venues.map((v) => ({ value: String(v.id), label: v.name }))}
@@ -1753,8 +1754,8 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
           value={form.matchType}
           onChange={(v) => setForm({ ...form, matchType: v })}
           options={[
-            { value: 'RATED', label: '\uD83C\uDFC6 Рейтинговый' },
-            { value: 'FRIENDLY', label: '\uD83D\uDE0A Дружеский' },
+            { value: 'RATED', label: 'Рейтинговый' },
+            { value: 'FRIENDLY', label: 'Дружеский' },
           ]}
         />
       </Card>
@@ -1790,7 +1791,7 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
           fontSize: 15, fontWeight: 700, cursor: 'pointer',
         }}
       >
-        {saving ? 'Сохранение...' : '\u2705 Сохранить'}
+        {saving ? 'Сохранение...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Check size={14} /> Сохранить</span>}
       </button>
     </div>
   );
@@ -1929,7 +1930,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
             color: COLORS.textDim, fontSize: 16,
           }}
         >
-          {'\u2190'}
+          {<ArrowLeft size={16} />}
         </button>
         <span style={{ fontSize: 17, fontWeight: 700, color: COLORS.text, flex: 1 }}>
           {t.name}
@@ -1961,7 +1962,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                 fontSize: 11, fontWeight: 700,
                 color: isCurrent ? clr : isPast ? COLORS.accent : COLORS.textMuted,
               }}>
-                {isPast ? '\u2705' : ''} {T_STATUS_LABELS[s]}
+                {isPast ? <Check size={12} style={{ verticalAlign: 'middle' }} /> : ''} {T_STATUS_LABELS[s]}
               </div>
             );
           })}
@@ -1976,18 +1977,18 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
           </p>
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <InfoRow icon={'\uD83D\uDCC5'} label="Дата" value={date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
+          <InfoRow icon={<Calendar size={14} />} label="Дата" value={date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
           {t.endDate && (
-            <InfoRow icon={'\uD83D\uDCC5'} label="До" value={new Date(t.endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
+            <InfoRow icon={<Calendar size={14} />} label="До" value={new Date(t.endDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })} />
           )}
-          <InfoRow icon={'\uD83D\uDCCD'} label="Площадка" value={t.venue?.name || '\u2014'} />
-          <InfoRow icon={'\uD83C\uDFBE'} label="Формат" value={FORMAT_LABELS[t.format] || t.format} />
-          <InfoRow icon={'\uD83D\uDCCA'} label="Уровень" value={`${getLevelByValue(t.levelMin).category} \u2014 ${getLevelByValue(t.levelMax).category}`} />
-          <InfoRow icon={'\uD83D\uDC65'} label={isIndividual ? 'Игроков' : 'Пар'} value={`${t.teamsRegistered}/${t.maxTeams}`} />
-          {isLiveFormat && <InfoRow icon={'\u{1F3BE}'} label="Очков/матч" value={t.pointsPerMatch || 24} />}
-          {isLiveFormat && <InfoRow icon={'\u{1F3DF}\uFE0F'} label="Кортов" value={t.courtsCount || 1} />}
-          {t.price && <InfoRow icon={'\uD83D\uDCB0'} label="Цена" value={t.price} />}
-          {t.ratingMultiplier !== 1.0 && <InfoRow icon={'\u2B50'} label="Множитель" value={`x${t.ratingMultiplier}`} />}
+          <InfoRow icon={<MapPin size={14} />} label="Площадка" value={t.venue?.name || '\u2014'} />
+          <InfoRow icon={<CircleDot size={16} />} label="Формат" value={FORMAT_LABELS[t.format] || t.format} />
+          <InfoRow icon={<BarChart3 size={14} />} label="Уровень" value={`${getLevelByValue(t.levelMin).category} \u2014 ${getLevelByValue(t.levelMax).category}`} />
+          <InfoRow icon={<Users size={16} />} label={isIndividual ? 'Игроков' : 'Пар'} value={`${t.teamsRegistered}/${t.maxTeams}`} />
+          {isLiveFormat && <InfoRow icon={<CircleDot size={14} />} label="Очков/матч" value={t.pointsPerMatch || 24} />}
+          {isLiveFormat && <InfoRow icon={<Building2 size={14} />} label="Кортов" value={t.courtsCount || 1} />}
+          {t.price && <InfoRow icon={<DollarSign size={14} />} label="Цена" value={t.price} />}
+          {t.ratingMultiplier !== 1.0 && <InfoRow icon={<Star size={14} />} label="Множитель" value={`x${t.ratingMultiplier}`} />}
         </div>
       </Card>
 
@@ -1995,7 +1996,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       {isLiveFormat && isRegistration && (
         <Card style={{ marginBottom: 12, padding: 16, textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
-            {'\u{1F680}'} Готовы к старту?
+            {<Rocket size={14} />} Готовы к старту?
           </p>
           <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 14 }}>
             {t.teamsRegistered} {isIndividual ? 'игроков' : 'пар'} зарегистрировано (минимум 4 игрока)
@@ -2010,7 +2011,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {actionLoading ? 'Запуск...' : '\u{1F680} Запустить турнир'}
+            {actionLoading ? 'Запуск...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Rocket size={14} /> Запустить турнир</span>}
           </button>
         </Card>
       )}
@@ -2049,7 +2050,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                           position: 'relative',
                         }}
                       >
-                        {isDone && !isActive ? '\u2705 ' : ''}R{round.roundNumber}
+                        {isDone && !isActive ? <Check size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} /> : ''}R{round.roundNumber}
                         {isCurrent && isInProgress && !isActive && (
                           <span style={{
                             position: 'absolute', top: -2, right: -2,
@@ -2067,9 +2068,9 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               {currentRoundData?.matches?.length > 0 && (
                 <Card style={{ marginBottom: 12, padding: 12 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-                    {'\u{1F3BE}'} Раунд {selectedRound} — {currentRoundData.matches.length} матч(ей)
+                    {<CircleDot size={14} />} Раунд {selectedRound} — {currentRoundData.matches.length} матч(ей)
                     {currentRoundData.status === 'COMPLETED' && (
-                      <span style={{ color: COLORS.accent, marginLeft: 6 }}>{'\u2705'}</span>
+                      <span style={{ color: COLORS.accent, marginLeft: 6 }}>{<Check size={14} />}</span>
                     )}
                   </p>
 
@@ -2185,7 +2186,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                                   fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
                                 }}
                               >
-                                {submittingScore === match.id ? '...' : '\u2713'}
+                                {submittingScore === match.id ? '...' : <Check size={14} />}
                               </button>
                             </div>
                             {sc.team1 !== '' && sc.team2 !== '' && !sumOk && (
@@ -2202,7 +2203,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                   {/* Round incomplete warning */}
                   {isInProgress && currentRoundPending?.length > 0 && (
                     <p style={{ fontSize: 12, color: COLORS.warning, textAlign: 'center', marginTop: 4 }}>
-                      {'\u26A0\uFE0F'} Осталось {currentRoundPending.length} незавершённых матч(ей)
+                      {<AlertTriangle size={14} />} Осталось {currentRoundPending.length} незавершённых матч(ей)
                     </p>
                   )}
                 </Card>
@@ -2212,7 +2213,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               {liveData.standings?.length > 0 && (
                 <Card style={{ marginBottom: 12, padding: 12 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-                    {'\uD83D\uDCCA'} Таблица
+                    {<BarChart3 size={14} />} Таблица
                   </p>
                   <div style={{ fontSize: 11, color: COLORS.textMuted, display: 'grid', gridTemplateColumns: '28px 1fr 44px 44px 40px', gap: 0, padding: '4px 0', marginBottom: 4 }}>
                     <span>#</span><span>Игрок</span><span style={{ textAlign: 'center' }}>Очки</span><span style={{ textAlign: 'center' }}>W/L</span><span style={{ textAlign: 'center' }}>+/-</span>
@@ -2226,7 +2227,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                         borderTop: `1px solid ${COLORS.border}`,
                       }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: idx < 3 ? [COLORS.gold, '#C0C0C0', '#CD7F32'][idx] : COLORS.textDim }}>
-                          {idx < 3 ? ['\u{1F947}', '\u{1F948}', '\u{1F949}'][idx] : idx + 1}
+                          {idx < 3 ? <Medal size={14} color={[COLORS.gold, '#C0C0C0', '#CD7F32'][idx]} fill={[COLORS.gold, '#C0C0C0', '#CD7F32'][idx]} /> : idx + 1}
                         </span>
                         <span style={{ fontSize: 12, fontWeight: 600, color: COLORS.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.user?.firstName}
@@ -2246,7 +2247,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               {isCompleted && liveData.ratingChanges?.length > 0 && (
                 <Card style={{ marginBottom: 12, padding: 12 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-                    {'\uD83D\uDCC8'} Рейтинговые изменения
+                    {<TrendingUp size={14} />} Рейтинговые изменения
                   </p>
                   {liveData.ratingChanges.map(rc => (
                     <div key={rc.id} style={{
@@ -2256,7 +2257,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                       <span style={{ fontSize: 12, color: COLORS.text }}>{rc.user?.firstName} {rc.user?.lastName || ''}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{ fontSize: 11, color: COLORS.textDim }}>{rc.oldRating}</span>
-                        <span style={{ fontSize: 11, color: COLORS.textDim }}>{'\u2192'}</span>
+                        <span style={{ fontSize: 11, color: COLORS.textDim }}>{<ArrowRight size={11} />}</span>
                         <span style={{ fontSize: 11, fontWeight: 700, color: COLORS.text }}>{rc.newRating}</span>
                         <span style={{
                           fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
@@ -2285,7 +2286,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                         fontSize: 14, fontWeight: 700, cursor: 'pointer',
                       }}
                     >
-                      {actionLoading ? 'Генерация...' : '\u27A1\uFE0F Следующий раунд'}
+                      {actionLoading ? 'Генерация...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowRight size={14} /> Следующий раунд</span>}
                     </button>
                   )}
                   <button
@@ -2297,7 +2298,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                       color: COLORS.warning, fontSize: 14, fontWeight: 700, cursor: 'pointer',
                     }}
                   >
-                    {actionLoading ? 'Завершение...' : '\u{1F3C1} Завершить турнир'}
+                    {actionLoading ? 'Завершение...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Flag size={14} /> Завершить турнир</span>}
                   </button>
                 </div>
               )}
@@ -2337,7 +2338,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       {/* Registrations */}
       <Card style={{ marginBottom: 12, padding: 14 }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>
-          {'\uD83D\uDC65'} {isIndividual ? 'Участники' : 'Зарегистрированные пары'} ({t.registrations?.length || 0})
+          {<Users size={14} />} {isIndividual ? 'Участники' : 'Зарегистрированные пары'} ({t.registrations?.length || 0})
         </p>
 
         {/* Add player (admin) */}
@@ -2451,7 +2452,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                   fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
                 }}
               >
-                {'\u274C'}
+                {<XCircle size={14} />}
               </button>
             )}
           </div>
@@ -2462,7 +2463,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       {(
         <Card style={{ marginBottom: 12, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\uD83D\uDCFA'}</span>
+            <span style={{ fontSize: 20 }}>{<Tv size={14} />}</span>
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text }}>TV-экран</p>
               <p style={{ fontSize: 11, color: COLORS.textDim, wordBreak: 'break-all' }}>
@@ -2490,7 +2491,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
                 fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
               }}
             >
-              {'\uD83D\uDD17'} Копировать
+              {<Link2 size={14} />} Копировать
             </button>
           </div>
         </Card>
@@ -2506,7 +2507,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {'\u270F\uFE0F'} Редактировать
+          {<PenLine size={14} />} Редактировать
         </button>
         <button
           onClick={onDelete}
@@ -2516,7 +2517,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
             fontSize: 14, fontWeight: 600, cursor: 'pointer',
           }}
         >
-          {'\uD83D\uDDD1\uFE0F'} Удалить
+          {<Trash2 size={14} />} Удалить
         </button>
       </div>
     </div>

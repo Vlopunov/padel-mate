@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { GraduationCap, Calendar, CheckCircle, DollarSign, CreditCard, Lock, Star, PenLine, Plus, ArrowRight, MapPin, Users as UsersIcon, Check, XCircle, Trash2, Package, BarChart3, TrendingUp, TrendingDown, Hourglass, Minus } from 'lucide-react';
 import { COLORS, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -85,7 +86,7 @@ export function CoachPanel({ user, onBack, onNavigate }) {
           variant={dashboard.tier === 'PAID' ? 'accent' : 'default'}
           style={dashboard.tier === 'PAID' ? { background: `${COLORS.accent}20`, color: COLORS.accent } : {}}
         >
-          {dashboard.tier === 'PAID' ? '\u2B50 PRO' : '\u{1F193} FREE'}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{dashboard.tier === 'PAID' ? <><Star size={12} /> PRO</> : <>FREE</>}</span>
         </Badge>
         {dashboard.tier === 'FREE' && (
           <span style={{ fontSize: 12, color: COLORS.textDim }}>
@@ -162,26 +163,26 @@ function OverviewTab({ dashboard, onReloadDashboard }) {
       {/* Stats grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
         <StatCard
-          icon={'\u{1F393}'}
+          icon={<GraduationCap size={16} />}
           label="Ученики"
           value={dashboard.studentCount}
           color={COLORS.accent}
         />
         <StatCard
-          icon={'\u{1F4C5}'}
+          icon={<Calendar size={16} />}
           label="Тренировки"
           value={dashboard.upcomingSessions}
           subtitle="предстоит"
           color={COLORS.purple}
         />
         <StatCard
-          icon={'\u2705'}
+          icon={<Check size={14} />}
           label="Проведено"
           value={dashboard.completedSessions}
           color={COLORS.accent}
         />
         <StatCard
-          icon={'\u{1F4B0}'}
+          icon={<DollarSign size={16} />}
           label="Доход/мес"
           value={formatBYN(dashboard.revenueThisMonth)}
           color={COLORS.gold || '#FFD700'}
@@ -192,7 +193,7 @@ function OverviewTab({ dashboard, onReloadDashboard }) {
       {dashboard.pendingPayments > 0 && (
         <Card variant="warning" style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F4B3}'}</span>
+            <span style={{ fontSize: 20 }}>{<CreditCard size={20} />}</span>
             <div>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.warning }}>
                 Ожидают оплаты
@@ -214,7 +215,7 @@ function OverviewTab({ dashboard, onReloadDashboard }) {
           <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, margin: 0 }}>
             Публичный профиль
           </h4>
-          <span style={{ fontSize: 13, color: COLORS.accent }}>{'\u270F\uFE0F'} Редактировать</span>
+          <span style={{ fontSize: 13, color: COLORS.accent, display: 'inline-flex', alignItems: 'center', gap: 4 }}><PenLine size={13} /> Редактировать</span>
         </div>
         {dashboard.coach.bio ? (
           <p style={{ fontSize: 13, color: COLORS.text, marginBottom: 8 }}>{dashboard.coach.bio}</p>
@@ -232,7 +233,7 @@ function OverviewTab({ dashboard, onReloadDashboard }) {
           )}
           {dashboard.coach.rating && (
             <Badge style={{ background: `${COLORS.gold || '#FFD700'}20`, color: COLORS.gold || '#FFD700' }}>
-              {'\u2B50'} {dashboard.coach.rating.toFixed(1)} ({dashboard.coach.reviewCount})
+              <Star size={12} fill={COLORS.gold} color={COLORS.gold} /> {dashboard.coach.rating.toFixed(1)} ({dashboard.coach.reviewCount})
             </Badge>
           )}
         </div>
@@ -242,7 +243,7 @@ function OverviewTab({ dashboard, onReloadDashboard }) {
       {dashboard.isLimited && (
         <Card style={{ marginBottom: 12, border: `1px solid ${COLORS.purple}40` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F512}'}</span>
+            <span style={{ fontSize: 20 }}>{<Lock size={20} />}</span>
             <div>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.purple }}>
                 Лимит бесплатного тарифа
@@ -407,14 +408,14 @@ function StudentsTab({ dashboard, onNavigate }) {
       {/* Add student button */}
       {!dashboard.isLimited && (
         <Button fullWidth variant="secondary" onClick={() => setShowAddModal(true)} style={{ marginBottom: 12 }}>
-          {'\u2795'} Добавить ученика
+          {<Plus size={14} />} Добавить ученика
         </Button>
       )}
 
       {/* Student list */}
       {students.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: 32 }}>
-          <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u{1F393}'}</span>
+          <GraduationCap size={48} color={COLORS.textDim} style={{ display: 'block', margin: '0 auto 12px' }} />
           <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.text, marginBottom: 6 }}>
             Нет учеников
           </p>
@@ -455,7 +456,7 @@ function StudentsTab({ dashboard, onNavigate }) {
                   <MiniChart data={s.recentHistory.map((h) => h.newRating)} color={COLORS.accent} />
                 </div>
               )}
-              <span style={{ color: COLORS.textDim, fontSize: 14 }}>{'\u2192'}</span>
+              <span style={{ color: COLORS.textDim, fontSize: 14 }}>{<ArrowRight size={14} />}</span>
             </div>
           </Card>
         ))
@@ -496,7 +497,7 @@ function StudentsTab({ dashboard, onNavigate }) {
                   {u.rating} ELO {u.username ? `· @${u.username}` : ''}
                 </p>
               </div>
-              <span style={{ color: COLORS.accent, fontSize: 18 }}>{'\u2795'}</span>
+              <span style={{ color: COLORS.accent, fontSize: 18 }}>{<Plus size={14} />}</span>
             </div>
           ))}
           {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
@@ -652,13 +653,13 @@ function ScheduleTab({ dashboard, onNavigate }) {
 
       {/* Create button */}
       <Button fullWidth variant="secondary" onClick={() => setShowCreateModal(true)} style={{ marginBottom: 12 }}>
-        {'\u2795'} Создать тренировку
+        {<Plus size={14} />} Создать тренировку
       </Button>
 
       {/* Session list */}
       {filtered.length === 0 ? (
         <Card style={{ textAlign: 'center', padding: 32 }}>
-          <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{'\u{1F4C5}'}</span>
+          <Calendar size={40} color={COLORS.textDim} style={{ display: 'block', margin: '0 auto 10px' }} />
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
             {filter === 'upcoming' ? 'Нет предстоящих тренировок' : 'Нет прошедших тренировок'}
           </p>
@@ -696,7 +697,7 @@ function ScheduleTab({ dashboard, onNavigate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 16 }}>
-                    {s.type === 'GROUP' ? '\u{1F46B}' : '\u{1F464}'}
+                    {s.type === 'GROUP' ? <UsersIcon size={14} /> : <UsersIcon size={14} />}
                   </span>
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, margin: 0 }}>
@@ -714,14 +715,14 @@ function ScheduleTab({ dashboard, onNavigate }) {
 
               {s.venue && (
                 <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 4 }}>
-                  {'\u{1F4CD}'} {s.venue.name}
+                  {<MapPin size={14} />} {s.venue.name}
                 </p>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <span style={{ fontSize: 12, color: COLORS.textDim }}>
-                    {'\u{1F464}'} {s.bookedCount}/{s.maxStudents}
+                    {<UsersIcon size={14} />} {s.bookedCount}/{s.maxStudents}
                   </span>
                   {s.price > 0 && (
                     <span style={{ fontSize: 12, color: COLORS.accent, fontWeight: 600 }}>
@@ -736,12 +737,12 @@ function ScheduleTab({ dashboard, onNavigate }) {
                         onClick={() => handleComplete(s.id)}
                         style={{ background: 'none', border: 'none', color: COLORS.accent, fontSize: 18, cursor: 'pointer', padding: 4 }}
                         title="Завершить"
-                      >{'\u2705'}</button>
+                      >{<Check size={14} />}</button>
                       <button
                         onClick={() => handleCancel(s.id)}
                         style={{ background: 'none', border: 'none', color: COLORS.danger, fontSize: 18, cursor: 'pointer', padding: 4 }}
                         title="Отменить"
-                      >{'\u274C'}</button>
+                      >{<XCircle size={14} />}</button>
                     </>
                   )}
                   {(s.status === 'CANCELLED' || (s.status !== 'COMPLETED' && s.bookedCount === 0)) && (
@@ -749,7 +750,7 @@ function ScheduleTab({ dashboard, onNavigate }) {
                       onClick={() => handleDelete(s.id)}
                       style={{ background: 'none', border: 'none', color: COLORS.textDim, fontSize: 16, cursor: 'pointer', padding: 4 }}
                       title="Удалить"
-                    >{'\u{1F5D1}'}</button>
+                    >{<Trash2 size={14} />}</button>
                   )}
                 </div>
               </div>
@@ -766,8 +767,8 @@ function ScheduleTab({ dashboard, onNavigate }) {
       >
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           {[
-            { value: 'INDIVIDUAL', label: '\u{1F464} Индивид.' },
-            { value: 'GROUP', label: '\u{1F46B} Групповая' },
+            { value: 'INDIVIDUAL', label: 'Индивид.' },
+            { value: 'GROUP', label: 'Групповая' },
           ].map((t) => (
             <button
               key={t.value}
@@ -1015,9 +1016,9 @@ function PaymentsTab({ dashboard }) {
       {/* Sub-tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         {[
-          { id: 'overview', label: '\u{1F4CA} Сводка' },
-          { id: 'payments', label: '\u{1F4B3} Оплаты' },
-          { id: 'packages', label: '\u{1F4E6} Пакеты' },
+          { id: 'overview', label: 'Сводка' },
+          { id: 'payments', label: 'Оплаты' },
+          { id: 'packages', label: 'Пакеты' },
         ].map((t) => (
           <button
             key={t.id}
@@ -1064,7 +1065,7 @@ function PaymentsTab({ dashboard }) {
             <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}08, ${COLORS.purple}08)` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 20 }}>
-                  {summary.thisMonth >= summary.prevMonth ? '\u{1F4C8}' : '\u{1F4C9}'}
+                  {summary.thisMonth >= summary.prevMonth ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                 </span>
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, margin: 0 }}>
@@ -1084,7 +1085,7 @@ function PaymentsTab({ dashboard }) {
           {summary.totalAwaiting > 0 && (
             <Card variant="warning" style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 20 }}>{'\u23F3'}</span>
+                <span style={{ fontSize: 20 }}>{<Hourglass size={14} />}</span>
                 <div>
                   <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.warning, margin: 0 }}>
                     Ожидают оплаты: {formatBYN(summary.totalAwaiting)} BYN
@@ -1130,11 +1131,11 @@ function PaymentsTab({ dashboard }) {
                       )}
                       {s.packageSessionsLeft > 0 && (
                         <p style={{ fontSize: 11, color: COLORS.purple, margin: 0 }}>
-                          {'\u{1F4E6}'} {s.packageSessionsLeft} тр.
+                          {<Package size={14} />} {s.packageSessionsLeft} тр.
                         </p>
                       )}
                       {s.awaiting === 0 && s.packageSessionsLeft === 0 && (
-                        <Badge variant="accent" style={{ fontSize: 10 }}>{'\u2705'}</Badge>
+                        <Badge variant="accent" style={{ fontSize: 10 }}>{<Check size={14} />}</Badge>
                       )}
                     </div>
                   </div>
@@ -1149,12 +1150,12 @@ function PaymentsTab({ dashboard }) {
       {subTab === 'payments' && (
         <div>
           <Button fullWidth variant="secondary" onClick={() => setShowPaymentModal(true)} style={{ marginBottom: 12 }}>
-            {'\u2795'} Записать оплату
+            {<Plus size={14} />} Записать оплату
           </Button>
 
           {payments.length === 0 ? (
             <Card style={{ textAlign: 'center', padding: 32 }}>
-              <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{'\u{1F4B3}'}</span>
+              <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{<CreditCard size={20} />}</span>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>Нет записей об оплатах</p>
               <p style={{ fontSize: 13, color: COLORS.textDim }}>
                 Записывайте оплаты учеников для учёта
@@ -1177,7 +1178,7 @@ function PaymentsTab({ dashboard }) {
                           {statusLabel}
                         </Badge>
                         {p.type === 'PACKAGE' && (
-                          <Badge style={{ fontSize: 10 }}>{'\u{1F4E6}'}</Badge>
+                          <Badge style={{ fontSize: 10 }}>{<Package size={14} />}</Badge>
                         )}
                       </div>
                       <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
@@ -1195,13 +1196,13 @@ function PaymentsTab({ dashboard }) {
                           onClick={() => handleMarkPaid(p.id)}
                           style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', padding: 4 }}
                           title="Отметить оплаченным"
-                        >{'\u2705'}</button>
+                        >{<Check size={14} />}</button>
                       )}
                       <button
                         onClick={() => handleDeletePayment(p.id)}
                         style={{ background: 'none', border: 'none', color: COLORS.textDim, fontSize: 14, cursor: 'pointer', padding: 4 }}
                         title="Удалить"
-                      >{'\u{1F5D1}'}</button>
+                      >{<Trash2 size={14} />}</button>
                     </div>
                   </div>
                 </Card>
@@ -1215,12 +1216,12 @@ function PaymentsTab({ dashboard }) {
       {subTab === 'packages' && (
         <div>
           <Button fullWidth variant="secondary" onClick={() => setShowPackageModal(true)} style={{ marginBottom: 12 }}>
-            {'\u2795'} Создать пакет
+            {<Plus size={14} />} Создать пакет
           </Button>
 
           {packages.length === 0 ? (
             <Card style={{ textAlign: 'center', padding: 32 }}>
-              <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{'\u{1F4E6}'}</span>
+              <span style={{ fontSize: 40, display: 'block', marginBottom: 10 }}>{<Package size={14} />}</span>
               <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>Нет пакетов</p>
               <p style={{ fontSize: 13, color: COLORS.textDim }}>
                 Создайте пакет тренировок для ученика со скидкой
@@ -1275,11 +1276,11 @@ function PaymentsTab({ dashboard }) {
                     <div style={{ display: 'flex', gap: 6 }}>
                       {remaining > 0 && (
                         <Button size="sm" variant="outline" onClick={() => handleUsePackageSession(pkg.id)} style={{ flex: 1 }}>
-                          {'\u2796'} Списать тренировку
+                          {<Minus size={14} />} Списать тренировку
                         </Button>
                       )}
                       <Button size="sm" variant="outline" onClick={() => handleDeactivatePackage(pkg.id)}>
-                        {'\u274C'}
+                        {<XCircle size={14} />}
                       </Button>
                     </div>
                   )}
@@ -1335,8 +1336,8 @@ function PaymentsTab({ dashboard }) {
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           {[
-            { value: 'AWAITING', label: '\u23F3 Ожидает' },
-            { value: 'PAID', label: '\u2705 Оплачено' },
+            { value: 'AWAITING', label: 'Ожидает' },
+            { value: 'PAID', label: 'Оплачено' },
           ].map((s) => (
             <button
               key={s.value}

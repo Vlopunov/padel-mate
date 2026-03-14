@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { COLORS, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -82,13 +83,12 @@ export function Stats({ user, onBack, onNavigate }) {
               height: 32,
               cursor: 'pointer',
               color: COLORS.textDim,
-              fontSize: 16,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            {'\u2190'}
+            <ArrowLeft size={16} />
           </button>
         }
       />

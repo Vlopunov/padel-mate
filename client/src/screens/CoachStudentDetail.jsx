@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Star, Plus, FileText, Trash2, Check, Hourglass, Package, ArrowRight } from 'lucide-react';
 import { COLORS, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -71,7 +72,7 @@ export function CoachStudentDetail({ studentId, onBack, onNavigate }) {
               <span style={{ fontSize: 18, fontWeight: 700, color: COLORS.text }}>
                 {data.firstName} {data.lastName || ''}
               </span>
-              {data.isVip && <Badge style={{ background: `${COLORS.gold || '#FFD700'}25`, color: COLORS.gold || '#FFD700' }}>{'\u2B50'} VIP</Badge>}
+              {data.isVip && <Badge style={{ background: `${COLORS.gold || '#FFD700'}25`, color: COLORS.gold || '#FFD700' }}><Star size={10} fill={COLORS.gold} color={COLORS.gold} /> VIP</Badge>}
             </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <Badge variant="accent">{data.levelCategory} — {data.levelName}</Badge>
@@ -292,7 +293,7 @@ function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
   return (
     <div>
       <Button fullWidth variant="secondary" onClick={() => setShowAddModal(true)} style={{ marginBottom: 12 }}>
-        {'\u2795'} Добавить заметку
+        {<Plus size={14} />} Добавить заметку
       </Button>
 
       {notes.length > 0 ? (
@@ -304,13 +305,13 @@ function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
               </span>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {note.isHomework && (
-                  <Badge variant="warning" style={{ fontSize: 11 }}>{'\u{1F4DD}'} Домашка</Badge>
+                  <Badge variant="warning" style={{ fontSize: 11 }}>{<FileText size={14} />} Домашка</Badge>
                 )}
                 <button
                   onClick={() => handleDeleteNote(note.id)}
                   style={{ background: 'none', border: 'none', color: COLORS.textDim, fontSize: 14, cursor: 'pointer', padding: 2 }}
                 >
-                  {'\u{1F5D1}'}
+                  {<Trash2 size={14} />}
                 </button>
               </div>
             </div>
@@ -321,7 +322,7 @@ function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
         ))
       ) : (
         <Card style={{ textAlign: 'center', padding: 24 }}>
-          <span style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>{'\u{1F4DD}'}</span>
+          <span style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>{<FileText size={14} />}</span>
           <p style={{ color: COLORS.textDim, fontSize: 13 }}>Нет заметок</p>
           <p style={{ color: COLORS.textDim, fontSize: 12 }}>
             Добавьте заметку или домашнее задание для ученика
@@ -374,10 +375,10 @@ function NotesSection({ studentId, notes: initialNotes, onRefresh }) {
             justifyContent: 'center',
             fontSize: 14,
           }}>
-            {isHomework ? '\u2705' : ''}
+            {isHomework ? <Check size={14} color={COLORS.accent} /> : ''}
           </div>
           <span style={{ fontSize: 14, color: COLORS.text }}>
-            {'\u{1F4DD}'} Домашнее задание
+            {<FileText size={14} />} Домашнее задание
           </span>
           <span style={{ fontSize: 12, color: COLORS.textDim }}>
             (ученик получит уведомление)
@@ -488,14 +489,14 @@ function PaymentsSection({ studentId }) {
       )}
 
       <Button fullWidth variant="secondary" onClick={() => setShowPaymentModal(true)} style={{ marginBottom: 12 }}>
-        {'\u2795'} Записать оплату
+        {<Plus size={14} />} Записать оплату
       </Button>
 
       {/* Active packages */}
       {packages.filter((p) => p.active).length > 0 && (
         <>
           <h4 style={{ fontSize: 13, fontWeight: 600, color: COLORS.textDim, marginBottom: 6 }}>
-            {'\u{1F4E6}'} Активные пакеты
+            {<Package size={14} />} Активные пакеты
           </h4>
           {packages.filter((p) => p.active).map((pkg) => {
             const remaining = pkg.totalSessions - pkg.usedSessions;
@@ -535,11 +536,11 @@ function PaymentsSection({ studentId }) {
       ) : (
         payments.map((p) => {
           const statusColor = p.status === 'PAID' ? COLORS.accent : p.status === 'AWAITING' ? COLORS.warning : COLORS.danger;
-          const statusLabel = p.status === 'PAID' ? '\u2705' : p.status === 'AWAITING' ? '\u23F3' : '\u21A9\uFE0F';
+          const StatusIcon = p.status === 'PAID' ? Check : p.status === 'AWAITING' ? Hourglass : ArrowRight;
           return (
             <Card key={p.id} style={{ marginBottom: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 16 }}>{statusLabel}</span>
+                <StatusIcon size={16} color={statusColor} />
                 <div style={{ flex: 1 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>
                     {formatBYN(p.amount)} BYN
@@ -555,7 +556,7 @@ function PaymentsSection({ studentId }) {
                   <button
                     onClick={() => handleMarkPaid(p.id)}
                     style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', padding: 4 }}
-                  >{'\u2705'}</button>
+                  >{<Check size={14} />}</button>
                 )}
               </div>
             </Card>
@@ -584,8 +585,8 @@ function PaymentsSection({ studentId }) {
         />
         <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
           {[
-            { value: 'AWAITING', label: '\u23F3 Ожидает' },
-            { value: 'PAID', label: '\u2705 Оплачено' },
+            { value: 'AWAITING', label: 'Ожидает' },
+            { value: 'PAID', label: 'Оплачено' },
           ].map((s) => (
             <button
               key={s.value}

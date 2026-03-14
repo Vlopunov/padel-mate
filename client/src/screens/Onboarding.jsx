@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CircleDot } from 'lucide-react';
 import { COLORS, APP_NAME, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -142,7 +143,7 @@ export function Onboarding({ onComplete }) {
       <div style={containerStyle}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
-            <span style={{ fontSize: 48 }}>{'\u{1F3BE}'}</span>
+            <CircleDot size={48} color={COLORS.accent} />
             <h1 style={{ fontSize: 28, fontWeight: 800, color: COLORS.text, marginTop: 12 }}>
               {APP_NAME}
             </h1>
@@ -437,7 +438,7 @@ export function Onboarding({ onComplete }) {
         </div>
 
         <Button fullWidth onClick={() => finishOnboarding('survey')} size="lg">
-          {'\u{1F3BE}'} Начать играть!
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><CircleDot size={16} /> Начать играть!</span>
         </Button>
       </div>
     );

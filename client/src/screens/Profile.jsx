@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { CircleDot, Megaphone, MessageCircle, BarChart3, HelpCircle, Settings, ChevronRight, Bell, Globe, MapPin, Clock, Users, PenLine, Star } from 'lucide-react';
 import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -71,7 +72,9 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         </h2>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           {user.isVip && (
-            <Badge style={{ background: `${COLORS.gold}25`, color: COLORS.gold, fontWeight: 700 }}>⭐ VIP</Badge>
+            <Badge style={{ background: `${COLORS.gold}25`, color: COLORS.gold, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Star size={12} fill={COLORS.gold} /> VIP
+            </Badge>
           )}
           <Badge variant="accent">{user.rating} — {level.category} {level.name}</Badge>
           <Badge>{xp.current.icon} {xp.current.name}</Badge>
@@ -84,15 +87,15 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
       {/* Community banner */}
       <Card style={{ marginBottom: 12, background: `linear-gradient(135deg, ${COLORS.accent}10, ${COLORS.purple}10)` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <span style={{ fontSize: 20 }}>{'\u{1F3BE}'}</span>
+          <CircleDot size={20} color={COLORS.accent} />
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{APP_NAME} Community</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHANNEL)} style={{ flex: 1 }}>
-            {'\u{1F4E2}'} Канал
+          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHANNEL)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Megaphone size={14} /> Канал
           </Button>
-          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHAT)} style={{ flex: 1 }}>
-            {'\u{1F4AC}'} Чат
+          <Button size="sm" variant="outline" onClick={() => openTelegramLink(TG_CHAT)} style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <MessageCircle size={14} /> Чат
           </Button>
         </div>
       </Card>
@@ -159,10 +162,10 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
       <Card onClick={() => onNavigate('stats')} style={{ marginBottom: 12, cursor: 'pointer' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\u{1F4CA}'}</span>
+            <BarChart3 size={20} color={COLORS.accent} />
             <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>Статистика и достижения</span>
           </div>
-          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          <ChevronRight size={16} color={COLORS.textDim} />
         </div>
       </Card>
 
@@ -170,10 +173,10 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
       <Card onClick={() => onNavigate('faq')} style={{ marginBottom: 12, cursor: 'pointer' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>{'\u2753'}</span>
+            <HelpCircle size={20} color={COLORS.textDim} />
             <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>FAQ — Частые вопросы</span>
           </div>
-          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+          <ChevronRight size={16} color={COLORS.textDim} />
         </div>
       </Card>
 
@@ -184,10 +187,10 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         <Card onClick={() => onNavigate('admin')} style={{ marginBottom: 12, cursor: 'pointer', border: `1px solid ${COLORS.accent}40` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>{'\u2699\uFE0F'}</span>
+              <Settings size={20} color={COLORS.accent} />
               <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.accent }}>Админ-панель</span>
             </div>
-            <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+            <ChevronRight size={16} color={COLORS.textDim} />
           </div>
         </Card>
       )}
@@ -197,7 +200,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         <h4 style={{ fontSize: 14, fontWeight: 600, color: COLORS.textDim, marginBottom: 12 }}>Настройки</h4>
 
         <Select
-          label={'\u{1F514} Напоминание о матче'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Bell size={14} /> Напоминание о матче</span>}
           value={String(user.reminderMinutes)}
           onChange={(v) => handleUpdate('reminderMinutes', parseInt(v))}
           options={[
@@ -209,7 +212,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         />
 
         <Select
-          label={'\u{1F30D} Страна'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Globe size={14} /> Страна</span>}
           value={selectedCountryId}
           onChange={(v) => {
             setSelectedCountryId(v);
@@ -230,7 +233,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           if (!country || country.regions.length <= 1) return null;
           return (
             <Select
-              label={'\u{1F4CD} Город'}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MapPin size={14} /> Город</span>}
               value={String(user.regionId || '')}
               onChange={(v) => handleUpdate('regionId', parseInt(v))}
               options={country.regions.map(r => ({
@@ -242,7 +245,7 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         })()}
 
         <Select
-          label={'\u{1F550} Предпочтительное время'}
+          label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> Предпочтительное время</span>}
           value={user.preferredTime || 'ANY'}
           onChange={(v) => handleUpdate('preferredTime', v)}
           options={[
@@ -254,7 +257,9 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         />
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 12 }}>
-          <span style={{ fontSize: 14, color: COLORS.text }}>{'\u{1F465}'} Видимость в поиске</span>
+          <span style={{ fontSize: 14, color: COLORS.text, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Users size={14} /> Видимость в поиске
+          </span>
           <button
             onClick={() => handleUpdate('isVisible', !user.isVisible)}
             style={{
@@ -284,8 +289,8 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         </div>
 
         {!user.ratingEditUsed && (
-          <Button variant="secondary" fullWidth onClick={() => setShowRatingEdit(true)} size="sm">
-            {'\u270F\uFE0F'} Редактировать рейтинг (1 раз)
+          <Button variant="secondary" fullWidth onClick={() => setShowRatingEdit(true)} size="sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <PenLine size={14} /> Редактировать рейтинг (1 раз)
           </Button>
         )}
       </Card>

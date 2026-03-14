@@ -1,12 +1,13 @@
 import React from 'react';
+import { Home, CircleDot, Trophy, BarChart3, User } from 'lucide-react';
 import { COLORS } from '../../config';
 
 const tabs = [
-  { id: 'home', icon: '\u{1F3E0}', label: 'Главная' },
-  { id: 'matches', icon: '\u{1F3BE}', label: 'Матчи' },
-  { id: 'tournaments', icon: '\u{1F3C6}', label: 'Турниры' },
-  { id: 'leaderboard', icon: '\u{1F4CA}', label: 'Рейтинг' },
-  { id: 'profile', icon: '\u{1F464}', label: 'Профиль' },
+  { id: 'home', Icon: Home, label: 'Главная' },
+  { id: 'matches', Icon: CircleDot, label: 'Матчи' },
+  { id: 'tournaments', Icon: Trophy, label: 'Турниры' },
+  { id: 'leaderboard', Icon: BarChart3, label: 'Рейтинг' },
+  { id: 'profile', Icon: User, label: 'Профиль' },
 ];
 
 export function TabBar({ activeTab, onTabChange }) {
@@ -47,13 +48,15 @@ export function TabBar({ activeTab, onTabChange }) {
               minWidth: 56,
             }}
           >
-            <span style={{
-              fontSize: 20, filter: active ? 'none' : 'grayscale(100%)', opacity: active ? 1 : 0.5,
-              transition: 'all 0.2s',
-              transform: active ? 'scale(1.1)' : 'scale(1)',
-            }}>
-              {tab.icon}
-            </span>
+            <tab.Icon
+              size={22}
+              color={active ? COLORS.accent : COLORS.textMuted}
+              strokeWidth={active ? 2.5 : 1.8}
+              style={{
+                transition: 'all 0.2s',
+                transform: active ? 'scale(1.1)' : 'scale(1)',
+              }}
+            />
             <span
               style={{
                 fontSize: 10,

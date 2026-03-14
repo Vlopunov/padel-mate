@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Star, Calendar, MessageCircle } from 'lucide-react';
 import { COLORS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Header } from '../components/ui/Header';
@@ -92,7 +93,7 @@ export function CoachProfile({ coachId, currentUser, onBack, onNavigate }) {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
               {coach.rating && (
                 <Badge style={{ background: `${COLORS.gold || '#FFD700'}20`, color: COLORS.gold || '#FFD700' }}>
-                  {'\u2B50'} {coach.rating.toFixed(1)} ({coach.reviewCount})
+                  {<Star size={12} fill={COLORS.gold} color={COLORS.gold} />} {coach.rating.toFixed(1)} ({coach.reviewCount})
                 </Badge>
               )}
               {coach.hourlyRate > 0 && (
@@ -151,7 +152,7 @@ export function CoachProfile({ coachId, currentUser, onBack, onNavigate }) {
       {coach.upcomingSessions && coach.upcomingSessions.length > 0 && (
         <>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
-            {'\u{1F4C5}'} Ближайшие тренировки
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Calendar size={15} /> Ближайшие тренировки</span>
           </h3>
           {coach.upcomingSessions.map((s) => {
             const d = new Date(s.date);
@@ -191,7 +192,7 @@ export function CoachProfile({ coachId, currentUser, onBack, onNavigate }) {
       {/* Reviews */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: COLORS.text, margin: 0 }}>
-          {'\u{1F4AC}'} Отзывы ({coach.reviewCount || 0})
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><MessageCircle size={15} /> Отзывы ({coach.reviewCount || 0})</span>
         </h3>
         {canReview && (
           <Button size="sm" variant="outline" onClick={() => setShowReviewModal(true)}>
@@ -222,7 +223,7 @@ export function CoachProfile({ coachId, currentUser, onBack, onNavigate }) {
               <div style={{ display: 'flex', gap: 2 }}>
                 {Array.from({ length: 5 }).map((_, i) => (
                   <span key={i} style={{ fontSize: 12, color: i < review.rating ? '#FFD700' : COLORS.border }}>
-                    {'\u2B50'}
+                    {<Star size={12} fill={COLORS.gold} color={COLORS.gold} />}
                   </span>
                 ))}
               </div>
@@ -262,7 +263,7 @@ export function CoachProfile({ coachId, currentUser, onBack, onNavigate }) {
                 padding: 0,
               }}
             >
-              {'\u2B50'}
+              {<Star size={12} fill={COLORS.gold} color={COLORS.gold} />}
             </button>
           ))}
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { COLORS } from '../../config';
 
 export function Header({ title, subtitle, onBack, leftAction, rightAction }) {
@@ -26,12 +27,11 @@ export function Header({ title, subtitle, onBack, leftAction, rightAction }) {
               alignItems: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
-              fontSize: 16,
               color: COLORS.text,
               flexShrink: 0,
             }}
           >
-            {'\u2190'}
+            <ArrowLeft size={18} />
           </button>
         )}
         {leftAction}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, Component } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { COLORS } from './config';
 
 class ErrorBoundary extends Component {
@@ -12,7 +13,7 @@ class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div style={{ padding: 40, textAlign: 'center', color: '#FF4757', background: '#0A0E1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</p>
+          <p style={{ fontSize: 48, marginBottom: 16 }}><AlertTriangle size={48} color="#FF4757" /></p>
           <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Произошла ошибка</p>
           <p style={{ fontSize: 14, color: '#8a8fa8', marginBottom: 20 }}>Попробуйте перезагрузить приложение</p>
           <button onClick={() => window.location.reload()} style={{ padding: '10px 24px', borderRadius: 10, background: '#00E68A', color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
@@ -210,7 +211,7 @@ export default function App() {
       <ErrorBoundary>
         <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', padding: 20 }}>
-            <span style={{ fontSize: 48, display: 'block', marginBottom: 16 }}>{'\u26A0\uFE0F'}</span>
+            <span style={{ display: 'block', marginBottom: 16 }}><AlertTriangle size={48} color={COLORS.danger} /></span>
             <p style={{ color: COLORS.danger, fontSize: 16, fontWeight: 600 }}>Ошибка</p>
             <p style={{ color: COLORS.textDim, fontSize: 14, marginTop: 8, whiteSpace: 'pre-line' }}>{error}</p>
           </div>

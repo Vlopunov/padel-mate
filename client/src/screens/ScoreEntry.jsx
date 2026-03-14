@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, PenLine, FileText, X, Check, CheckCircle, ArrowRight } from 'lucide-react';
 import { COLORS, LEVELS } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -372,7 +373,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
               justifyContent: 'center',
             }}
           >
-            {'\u2190'}
+            <ArrowLeft size={16} />
           </button>
         }
       />
@@ -403,7 +404,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
           {/* No eligible matches — show options */}
           {!initialLoading && allMatches.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40 }}>
-              <span style={{ fontSize: 48 }}>{'\u270F\uFE0F'}</span>
+              <PenLine size={48} color={COLORS.textDim} />
               <p style={{ color: COLORS.textDim, marginTop: 12 }}>Нет матчей для записи счёта</p>
               <p style={{ color: COLORS.textMuted, fontSize: 13, marginTop: 4, marginBottom: 24 }}>
                 Создайте матч и дождитесь набора 4 игроков
@@ -423,7 +424,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                   padding: 20,
                 }}
               >
-                <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>{'\u{1F4DD}'}</span>
+                <FileText size={32} color={COLORS.purple} style={{ display: 'block', marginBottom: 8, margin: '0 auto 8px' }} />
                 <p style={{ fontSize: 16, fontWeight: 700, color: COLORS.purple, marginBottom: 4 }}>
                   Записать сыгранный матч
                 </p>
@@ -538,7 +539,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                     cursor: 'pointer', fontSize: 14, padding: '2px 6px',
                   }}
                 >
-                  {'\u2715'}
+                  <X size={14} />
                 </button>
               </div>
             ))}
@@ -732,7 +733,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
               background: COLORS.accent, color: '#000',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 700, fontSize: 13,
-            }}>{'\u2713'}</div>
+            }}><Check size={14} /></div>
             <div style={{ width: 40, height: 2, background: COLORS.accent, alignSelf: 'center' }} />
             <div style={{
               width: 28, height: 28, borderRadius: '50%',
@@ -805,7 +806,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                         fontSize: 16,
                       }}
                     >
-                      {'\u2715'}
+                      <X size={14} />
                     </button>
                   )}
                 </div>
@@ -853,7 +854,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
       {/* Step: Preview result */}
       {step === 'preview' && preview && (
         <Card variant="accent" style={{ textAlign: 'center' }}>
-          <span style={{ fontSize: 48, display: 'block', marginBottom: 12 }}>{'\u2705'}</span>
+          <CheckCircle size={48} color={COLORS.accent} style={{ display: 'block', margin: '0 auto 12px' }} />
           <h3 style={{ fontSize: 18, fontWeight: 700, color: COLORS.text, marginBottom: 8 }}>
             Счёт записан!
           </h3>
@@ -873,7 +874,7 @@ export function ScoreEntry({ user, matchId, onBack, onDone, onNavigate }) {
                   <div key={c.userId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <span style={{ fontSize: 13, color: COLORS.text }}>{player?.user.firstName}</span>
                     <span style={{ fontSize: 13, fontWeight: 700, color: c.change > 0 ? COLORS.accent : COLORS.danger }}>
-                      {c.change > 0 ? '+' : ''}{c.change} ({c.oldRating} {'\u2192'} {c.newRating})
+                      {c.change > 0 ? '+' : ''}{c.change} ({c.oldRating} <ArrowRight size={11} style={{ verticalAlign: 'middle', margin: '0 2px' }} /> {c.newRating})
                     </span>
                   </div>
                 );

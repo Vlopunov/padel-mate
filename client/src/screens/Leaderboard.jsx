@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { BarChart3, Medal, Star } from 'lucide-react';
 import { COLORS, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -8,6 +9,7 @@ import { FilterTabs } from '../components/ui/ToggleGroup';
 import { api } from '../services/api';
 
 const HAND_LABELS = { RIGHT: 'Правша', LEFT: 'Левша' };
+const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 
 export function Leaderboard({ user, onNavigate }) {
   const [period, setPeriod] = useState('all');
@@ -48,7 +50,6 @@ export function Leaderboard({ user, onNavigate }) {
     try {
       const params = {};
       if (period !== 'all') params.period = period;
-      // If a specific region is selected, use it; otherwise if a country with 1 region, use that region
       if (regionId !== 'all') {
         params.regionId = regionId;
       } else if (countryFilter !== 'all' && countryRegions.length === 1) {
@@ -65,8 +66,6 @@ export function Leaderboard({ user, onNavigate }) {
   const openProfile = (player) => {
     onNavigate('playerProfile', { userId: player.id });
   };
-
-  const medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
 
   return (
     <div style={{ paddingBottom: 80 }}>
@@ -145,7 +144,7 @@ export function Leaderboard({ user, onNavigate }) {
 
       {!loading && players.length === 0 && (
         <div style={{ textAlign: 'center', padding: 40 }}>
-          <span style={{ fontSize: 48 }}>{'\u{1F4CA}'}</span>
+          <BarChart3 size={48} color={COLORS.textDim} />
           <p style={{ color: COLORS.textDim, marginTop: 12 }}>Рейтинг пока пуст</p>
         </div>
       )}
@@ -168,8 +167,8 @@ export function Leaderboard({ user, onNavigate }) {
               >
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <Avatar src={p.photoUrl} name={p.firstName} size={isFirst ? 64 : 52} />
-                  <span style={{ position: 'absolute', bottom: -4, right: -4, fontSize: 20 }}>
-                    {medals[idx]}
+                  <span style={{ position: 'absolute', bottom: -4, right: -4 }}>
+                    <Medal size={20} color={MEDAL_COLORS[idx]} fill={MEDAL_COLORS[idx]} />
                   </span>
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginTop: 6 }}>{p.firstName}</p>
@@ -206,7 +205,8 @@ export function Leaderboard({ user, onNavigate }) {
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: '1px 5px',
                         borderRadius: 4, background: `${COLORS.gold}25`, color: COLORS.gold,
-                      }}>⭐ VIP</span>
+                        display: 'inline-flex', alignItems: 'center', gap: 2,
+                      }}><Star size={10} fill={COLORS.gold} /> VIP</span>
                     )}
                     {p.hand && <Badge style={{ fontSize: 10, padding: '2px 6px' }}>{HAND_LABELS[p.hand]}</Badge>}
                   </div>
