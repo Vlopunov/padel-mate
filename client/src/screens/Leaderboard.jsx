@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3, Medal, Star } from 'lucide-react';
+import { BarChart3, Star } from 'lucide-react';
 import { COLORS, getLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -149,11 +149,15 @@ export function Leaderboard({ user, onNavigate }) {
         </div>
       )}
 
-      {/* Top 3 */}
+      {/* Top 3 Podium */}
       {!loading && players.length >= 3 && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 8, marginBottom: 24, padding: '0 12px' }}>
           {players.slice(0, 3).map((p, idx) => {
-            const isFirst = idx === 0;
+            const place = idx + 1;
+            const podiumHeight = place === 1 ? 44 : place === 2 ? 28 : 16;
+            const avatarSize = place === 1 ? 72 : 56;
+            const badgeSize = place === 1 ? 28 : 24;
+            const badgeBg = MEDAL_COLORS[idx];
             return (
               <div
                 key={p.id}
@@ -161,18 +165,54 @@ export function Leaderboard({ user, onNavigate }) {
                 style={{
                   textAlign: 'center',
                   cursor: 'pointer',
-                  transform: isFirst ? 'scale(1.1)' : 'none',
-                  order: idx === 0 ? 1 : idx === 1 ? 0 : 2,
+                  order: place === 1 ? 1 : place === 2 ? 0 : 2,
+                  flex: 1,
+                  maxWidth: place === 1 ? 130 : 110,
                 }}
               >
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <Avatar src={p.photoUrl} name={p.firstName} size={isFirst ? 64 : 52} />
-                  <span style={{ position: 'absolute', bottom: -4, right: -4 }}>
-                    <Medal size={20} color={MEDAL_COLORS[idx]} fill={MEDAL_COLORS[idx]} />
-                  </span>
+                {/* Avatar + badge */}
+                <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
+                  <div style={{
+                    borderRadius: '50%',
+                    padding: 3,
+                    background: `linear-gradient(135deg, ${badgeBg}44, ${badgeBg})`,
+                    display: 'inline-block',
+                  }}>
+                    <Avatar src={p.photoUrl} name={p.firstName} size={avatarSize} />
+                  </div>
+                  {/* Place badge */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: -6,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: badgeSize,
+                    height: badgeSize,
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${badgeBg}, ${badgeBg}cc)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: place === 1 ? 14 : 12,
+                    fontWeight: 900,
+                    color: '#000',
+                    border: `2px solid ${COLORS.bg}`,
+                    boxShadow: `0 2px 8px ${badgeBg}66`,
+                  }}>
+                    {place}
+                  </div>
                 </div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginTop: 6 }}>{p.firstName}</p>
-                <p style={{ fontSize: 16, fontWeight: 800, color: COLORS.accent }}>{p.rating}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.text, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.firstName}</p>
+                <p style={{ fontSize: place === 1 ? 18 : 15, fontWeight: 800, color: COLORS.accent }}>{p.rating}</p>
+                {/* Podium bar */}
+                <div style={{
+                  height: podiumHeight,
+                  borderRadius: '8px 8px 0 0',
+                  background: `linear-gradient(180deg, ${badgeBg}33, ${badgeBg}11)`,
+                  border: `1px solid ${badgeBg}44`,
+                  borderBottom: 'none',
+                  marginTop: 4,
+                }} />
               </div>
             );
           })}
