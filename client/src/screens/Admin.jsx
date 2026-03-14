@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Settings, BarChart3, Users, CircleDot, Trophy, Hourglass, Check, CheckCircle, XCircle, Star, Ban, Trash2, PenLine, Plus, Calendar, TrendingUp, MapPin, ChevronRight, Building2, MessageCircle, Crown, Clock, Timer, RefreshCw, Pause, FlaskConical, DollarSign, Tv, Link2, ArrowRight, Medal, AlertTriangle, Clipboard } from 'lucide-react';
+import { ArrowLeft, Settings, BarChart3, Users, CircleDot, Circle, Trophy, Hourglass, Check, CheckCircle, XCircle, Star, Ban, Trash2, PenLine, Plus, Calendar, TrendingUp, MapPin, ChevronRight, Building2, MessageCircle, Crown, Clock, Timer, RefreshCw, Pause, FlaskConical, DollarSign, Tv, Link2, ArrowRight, Medal, AlertTriangle, Clipboard } from 'lucide-react';
 import { COLORS, LEVELS, getLevel, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
