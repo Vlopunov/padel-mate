@@ -13,19 +13,29 @@ function setCache(key, data) {
   cache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
 }
 
-async function ycFetch(formId, path) {
-  // Use api.yclients.com — works with any Bearer token
+async function ycFetch(formId, path, retries = 2) {
   const url = `https://api.yclients.com/api/v1${path}`;
   const headers = {
     'Accept': 'application/vnd.yclients.v2+json',
     'Accept-Language': 'ru',
     'Authorization': `Bearer ${YCLIENTS_BEARER_TOKEN}`,
   };
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`YClients API ${res.status}`);
-  const json = await res.json();
-  if (json.success === false) throw new Error(json.meta?.message || 'YClients error');
-  return json.data || json;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error(`YClients API ${res.status}`);
+      const json = await res.json();
+      if (json.success === false) throw new Error(json.meta?.message || 'YClients error');
+      return json.data || json;
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(`YClients fetch retry ${attempt + 1}/${retries}: ${err.message}`);
+        await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
 }
 
 async function getServices(formId, companyId) {
