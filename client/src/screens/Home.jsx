@@ -237,6 +237,21 @@ export function Home({ user, onNavigate }) {
         </div>
       </Card>
 
+      {/* Contact & Cooperation */}
+      <Card
+        onClick={() => window.open('https://t.me/lopunow', '_blank')}
+        style={{ marginBottom: 16, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.purple}12, ${COLORS.accent}08)` }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>{'\u{1F4AC}'}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>Вопросы и сотрудничество</p>
+            <p style={{ fontSize: 12, color: COLORS.textDim }}>Напишите в Telegram — @lopunow</p>
+          </div>
+          <span style={{ color: COLORS.textDim }}>{'\u2192'}</span>
+        </div>
+      </Card>
+
       {/* HIDDEN: Training sessions & homework sections — will enable later */}
 
       {/* Upcoming match */}
