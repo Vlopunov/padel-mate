@@ -170,6 +170,8 @@ model User {
   onboarded       Boolean   @default(false)
   isAdmin         Boolean   @default(false)
   isVip           Boolean   @default(false)
+  isPro           Boolean   @default(false)
+  proExpiresAt    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -202,6 +204,8 @@ model User {
   tmTeam2Player2  TournamentMatch[]      @relation("tm2p2")
   tStandings      TournamentStanding[]
   tRatingChanges  TournamentRatingChange[]
+
+  subscriptions         Subscription[]
 
   // Coach relations
   coachStudents         CoachStudent[]         @relation("CoachRelation")
@@ -631,4 +635,24 @@ model CoachReview {
   createdAt DateTime @default(now())
 
   @@unique([coachId, authorId])
+}
+
+// === Subscription & Payments ===
+
+model Subscription {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+  plan            String   // "pro_monthly", "pro_yearly"
+  status          String   @default("active") // "active", "expired", "cancelled"
+  provider        String   @default("telegram_stars") // "telegram_stars", "stripe", etc.
+  providerPaymentId String? // Telegram charge_id or external ID
+  amount          Int      // price in Stars (or cents)
+  currency        String   @default("XTR") // XTR = Telegram Stars
+  startedAt       DateTime @default(now())
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
 }

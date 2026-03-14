@@ -17,6 +17,7 @@ const coachRoutes = require("./routes/coach");
 const trainingRoutes = require("./routes/training");
 const coachesRoutes = require("./routes/coaches");
 const regionsRoutes = require("./routes/regions");
+const subscriptionRoutes = require("./routes/subscriptions");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,6 +50,7 @@ app.use("/api/coach", coachRoutes);
 app.use("/api/training", trainingRoutes);
 app.use("/api/coaches", coachesRoutes);
 app.use("/api/regions", regionsRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
 // Health check
 app.get("/api/health", (req, res) => {

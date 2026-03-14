@@ -220,6 +220,13 @@ export const api = {
     homework: () => api.fetch('/training/homework'),
   },
 
+  // Subscriptions
+  subscriptions: {
+    status: () => api.fetch('/subscriptions/status'),
+    createInvoice: (planId) => api.fetch('/subscriptions/create-invoice', { method: 'POST', body: JSON.stringify({ planId }) }),
+    history: () => api.fetch('/subscriptions/history'),
+  },
+
   // Admin
   admin: {
     stats: () => api.fetch('/admin/stats'),

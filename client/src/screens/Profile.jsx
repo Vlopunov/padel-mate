@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CircleDot, Megaphone, MessageCircle, BarChart3, HelpCircle, Settings, ChevronRight, Bell, Globe, MapPin, Clock, Users, PenLine, Star } from 'lucide-react';
+import { CircleDot, Megaphone, MessageCircle, BarChart3, HelpCircle, Settings, ChevronRight, Bell, Globe, MapPin, Clock, Users, PenLine, Star, Crown } from 'lucide-react';
 import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -164,6 +164,36 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <BarChart3 size={20} color={COLORS.accent} />
             <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>Статистика и достижения</span>
+          </div>
+          <ChevronRight size={16} color={COLORS.textDim} />
+        </div>
+      </Card>
+
+      {/* PRO subscription */}
+      <Card onClick={() => onNavigate('premium')} style={{
+        marginBottom: 12, cursor: 'pointer',
+        border: user.isPro ? `1px solid ${COLORS.purple}40` : `1px solid ${COLORS.gold}40`,
+        background: user.isPro ? `linear-gradient(135deg, ${COLORS.purple}08, ${COLORS.card})` : `linear-gradient(135deg, ${COLORS.gold}08, ${COLORS.card})`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Crown size={20} color={user.isPro ? COLORS.purple : COLORS.gold} />
+            <div>
+              <span style={{ fontSize: 15, fontWeight: 600, color: user.isPro ? COLORS.purple : COLORS.gold }}>
+                {user.isPro ? 'Padel GO PRO' : 'Get Padel GO PRO'}
+              </span>
+              {!user.isPro && (
+                <p style={{ fontSize: 11, color: COLORS.textDim, marginTop: 1 }}>
+                  Unlock advanced stats, H2H & more
+                </p>
+              )}
+              {user.isPro && user.proExpiresAt && (
+                <p style={{ fontSize: 11, color: COLORS.textDim, marginTop: 1 }}>
+                  {'Active until '}
+                  {new Date(user.proExpiresAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              )}
+            </div>
           </div>
           <ChevronRight size={16} color={COLORS.textDim} />
         </div>

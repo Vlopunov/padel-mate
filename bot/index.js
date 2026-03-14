@@ -221,6 +221,81 @@ bot.on("callback_query", async (query) => {
   } catch (_) {}
 });
 
+// ─── Telegram Stars Payments ─────────────────────────
+
+// Pre-checkout: must answer within 10 seconds
+bot.on("pre_checkout_query", async (query) => {
+  try {
+    await bot.answerPreCheckoutQuery(query.id, true);
+  } catch (err) {
+    console.error("Pre-checkout error:", err);
+    try {
+      await bot.answerPreCheckoutQuery(query.id, false, { error_message: "Payment error, try again" });
+    } catch (_) {}
+  }
+});
+
+// Successful payment: activate subscription
+bot.on("message", async (msg) => {
+  if (!msg.successful_payment) return;
+
+  const payment = msg.successful_payment;
+  const telegramId = msg.from.id;
+
+  try {
+    let payload;
+    try {
+      payload = JSON.parse(payment.invoice_payload);
+    } catch (_) {
+      console.error("Invalid payment payload:", payment.invoice_payload);
+      return;
+    }
+
+    const { userId, planId } = payload;
+
+    const res = await fetch(`${API_URL}/api/subscriptions/activate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Bot-Token": BOT_TOKEN,
+      },
+      body: JSON.stringify({
+        userId,
+        planId,
+        providerPaymentId: payment.telegram_payment_charge_id,
+        totalAmount: payment.total_amount,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const expiresDate = new Date(data.expiresAt).toLocaleDateString("ru-RU", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+      await bot.sendMessage(telegramId,
+        `\u2B50 <b>Padel GO PRO \u2014 \u0430\u043A\u0442\u0438\u0432\u0438\u0440\u043E\u0432\u0430\u043D!</b>\n\n` +
+        `\u0421\u043F\u0430\u0441\u0438\u0431\u043E \u0437\u0430 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u043A\u0443! \u0422\u0435\u043F\u0435\u0440\u044C \u0432\u0430\u043C \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B \u0432\u0441\u0435 PRO-\u0444\u0443\u043D\u043A\u0446\u0438\u0438.\n` +
+        `\u0414\u0435\u0439\u0441\u0442\u0432\u0443\u0435\u0442 \u0434\u043E: <b>${expiresDate}</b>`,
+        {
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: "\uD83D\uDCF1 \u041E\u0442\u043A\u0440\u044B\u0442\u044C Padel GO", web_app: { url: MINI_APP_URL } }],
+            ],
+          },
+        }
+      );
+    } else {
+      console.error("Activate subscription failed:", await res.text());
+      await bot.sendMessage(telegramId,
+        "\u274C \u041E\u043F\u043B\u0430\u0442\u0430 \u043F\u0440\u043E\u0448\u043B\u0430, \u043D\u043E \u0430\u043A\u0442\u0438\u0432\u0430\u0446\u0438\u044F \u043D\u0435 \u0443\u0434\u0430\u043B\u0430\u0441\u044C. \u041D\u0430\u043F\u0438\u0448\u0438\u0442\u0435 @lopunow \u0434\u043B\u044F \u0440\u0435\u0448\u0435\u043D\u0438\u044F."
+      );
+    }
+  } catch (err) {
+    console.error("Successful payment handler error:", err);
+  }
+});
+
 // ─── Set bot commands menu ─────────────────────────
 bot.setMyCommands([
   { command: "start", description: "🎾 Запустить Padel GO" },

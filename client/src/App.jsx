@@ -43,6 +43,7 @@ import { PlayerProfile } from './screens/PlayerProfile';
 import { FAQ } from './screens/FAQ';
 import { TournamentLive } from './screens/TournamentLive';
 import { BookCourt } from './screens/BookCourt';
+import { Premium } from './screens/Premium';
 // HIDDEN: Padel Camp — will enable later
 // import { PadelCamp } from './screens/PadelCamp';
 // HIDDEN: Coach features — will enable later
@@ -168,7 +169,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt', 'premium'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -310,6 +311,16 @@ export default function App() {
               <BookCourt
                 venueId={subScreen.params?.venueId}
                 onBack={() => setSubScreen(null)}
+              />
+            </div>
+          );
+        case 'premium':
+          return (
+            <div style={containerStyle}>
+              <Premium
+                user={user}
+                onBack={() => setSubScreen(null)}
+                onUpdate={refreshUser}
               />
             </div>
           );

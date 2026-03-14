@@ -29,8 +29,24 @@ router.get("/me", authMiddleware, async (req, res) => {
     // Recent trend
     const trend = user.ratingHistory.length > 0 ? user.ratingHistory[0].change : 0;
 
+    // Check if PRO expired
+    let isPro = user.isPro;
+    if (isPro && user.proExpiresAt && user.proExpiresAt < new Date()) {
+      await prisma.user.update({
+        where: { id: req.userId },
+        data: { isPro: false, isVip: false },
+      });
+      await prisma.subscription.updateMany({
+        where: { userId: req.userId, status: "active" },
+        data: { status: "expired" },
+      });
+      isPro = false;
+    }
+
     res.json({
       ...serializeUser(user),
+      isPro,
+      proExpiresAt: isPro ? user.proExpiresAt : null,
       level: level.level,
       levelCategory: level.category,
       levelName: level.name,
