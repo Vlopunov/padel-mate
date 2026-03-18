@@ -53,12 +53,11 @@ import { BookCourt } from './screens/BookCourt';
 import { Premium } from './screens/Premium';
 // HIDDEN: Padel Camp — will enable later
 // import { PadelCamp } from './screens/PadelCamp';
-// HIDDEN: Coach features — will enable later
-// import { CoachPanel } from './screens/CoachPanel';
-// import { CoachStudentDetail } from './screens/CoachStudentDetail';
-// import { CoachSessionDetail } from './screens/CoachSessionDetail';
-// import { FindCoach } from './screens/FindCoach';
-// import { CoachProfile } from './screens/CoachProfile';
+import { CoachPanel } from './screens/CoachPanel';
+import { CoachStudentDetail } from './screens/CoachStudentDetail';
+import { CoachSessionDetail } from './screens/CoachSessionDetail';
+import { FindCoach } from './screens/FindCoach';
+import { CoachProfile } from './screens/CoachProfile';
 
 export default function App() {
   const { user: tgUser, initData, hapticFeedback } = useTelegram();
@@ -176,7 +175,7 @@ export default function App() {
     hapticFeedback('selection');
 
     // Sub-screens
-    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt', 'premium'].includes(target)) {
+    if (['createMatch', 'score', 'stats', 'admin', 'playerProfile', 'faq', 'tournamentLive', 'bookCourt', 'premium', 'coachPanel', 'coachStudentDetail', 'coachSessionDetail', 'findCoach', 'coachProfile'].includes(target)) {
       setSubScreen({ name: target, params });
       return;
     }
@@ -338,12 +337,36 @@ export default function App() {
         //       <PadelCamp onBack={() => setSubScreen(null)} />
         //     </div>
         //   );
-        // HIDDEN: Coach screens — will enable later
-        // case 'coachPanel':
-        // case 'coachStudentDetail':
-        // case 'coachSessionDetail':
-        // case 'findCoach':
-        // case 'coachProfile':
+        case 'coachPanel':
+          return (
+            <div style={containerStyle}>
+              <CoachPanel user={user} onNavigate={handleNavigate} onBack={() => setSubScreen(null)} />
+            </div>
+          );
+        case 'coachStudentDetail':
+          return (
+            <div style={containerStyle}>
+              <CoachStudentDetail studentId={subScreen.params?.studentId} onNavigate={handleNavigate} onBack={() => setSubScreen({ name: 'coachPanel', params: {} })} />
+            </div>
+          );
+        case 'coachSessionDetail':
+          return (
+            <div style={containerStyle}>
+              <CoachSessionDetail sessionId={subScreen.params?.sessionId} onNavigate={handleNavigate} onBack={() => setSubScreen({ name: 'coachPanel', params: {} })} />
+            </div>
+          );
+        case 'findCoach':
+          return (
+            <div style={containerStyle}>
+              <FindCoach user={user} onNavigate={handleNavigate} onBack={() => setSubScreen(null)} />
+            </div>
+          );
+        case 'coachProfile':
+          return (
+            <div style={containerStyle}>
+              <CoachProfile coachId={subScreen.params?.coachId} user={user} onNavigate={handleNavigate} onBack={() => setSubScreen({ name: 'findCoach', params: {} })} />
+            </div>
+          );
         default:
           return null;
       }

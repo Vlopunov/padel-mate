@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CircleDot, Megaphone, MessageCircle, BarChart3, HelpCircle, Settings, ChevronRight, Bell, Globe, MapPin, Clock, Users, PenLine, Star } from 'lucide-react';
+import { CircleDot, Megaphone, MessageCircle, BarChart3, HelpCircle, Settings, ChevronRight, Bell, Globe, MapPin, Clock, Users, PenLine, Star, GraduationCap, Search } from 'lucide-react';
 import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -182,7 +182,29 @@ export function Profile({ user, onUpdate, onLogout, onNavigate }) {
         </div>
       </Card>
 
-      {/* HIDDEN: Coach panel link — will enable later */}
+      {/* Coach panel — for coaches */}
+      {user.isCoach && (
+        <Card onClick={() => onNavigate('coachPanel')} style={{ marginBottom: 12, cursor: 'pointer', border: `1px solid ${COLORS.purple}40` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <GraduationCap size={20} color={COLORS.purple} />
+              <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.purple }}>Панель тренера</span>
+            </div>
+            <ChevronRight size={16} color={COLORS.textDim} />
+          </div>
+        </Card>
+      )}
+
+      {/* Find coach — for all users */}
+      <Card onClick={() => onNavigate('findCoach')} style={{ marginBottom: 12, cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Search size={20} color={COLORS.textDim} />
+            <span style={{ fontSize: 15, fontWeight: 600, color: COLORS.text }}>Найти тренера</span>
+          </div>
+          <ChevronRight size={16} color={COLORS.textDim} />
+        </div>
+      </Card>
 
       {/* Admin link */}
       {user.isAdmin && (

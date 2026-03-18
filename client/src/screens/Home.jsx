@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, PenLine, Trophy, Plus, Search, CircleDot, HelpCircle, MessageCircle, ChevronRight, Check } from 'lucide-react';
+import { Bell, PenLine, Trophy, Plus, Search, CircleDot, HelpCircle, MessageCircle, ChevronRight, Check, GraduationCap, BookOpen, Calendar } from 'lucide-react';
 import { COLORS, APP_NAME, TG_CHANNEL, TG_CHAT, getLevel, getLevelByValue, getXpLevel } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -15,6 +15,8 @@ export function Home({ user, onNavigate }) {
   const [pendingMatches, setPendingMatches] = useState([]);
   const [tournament, setTournament] = useState(null);
   const [bookableVenue, setBookableVenue] = useState(null);
+  const [trainingSessions, setTrainingSessions] = useState([]);
+  const [homework, setHomework] = useState([]);
   const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
@@ -46,17 +48,16 @@ export function Home({ user, onNavigate }) {
         if (bv) setBookableVenue(bv);
       } catch (e) { /* not critical */ }
 
-      // HIDDEN: Coach features (training sessions & homework) — will enable later
-      // try {
-      //   const [mySessions, myHomework] = await Promise.all([
-      //     api.training.my(),
-      //     api.training.homework(),
-      //   ]);
-      //   setTrainingSessions(mySessions.slice(0, 3));
-      //   setHomework(myHomework.slice(0, 3));
-      // } catch (e) {
-      //   // Not critical — may not have training sessions
-      // }
+      try {
+        const [mySessions, myHomework] = await Promise.all([
+          api.training.my(),
+          api.training.homework(),
+        ]);
+        setTrainingSessions(mySessions.slice(0, 3));
+        setHomework(myHomework.slice(0, 3));
+      } catch (e) {
+        // Not critical — may not have training sessions
+      }
     } catch (err) {
       console.error('Home load error:', err);
       setLoadError(err.message || 'Ошибка загрузки');
@@ -224,7 +225,22 @@ export function Home({ user, onNavigate }) {
         </Card>
       )}
 
-      {/* HIDDEN: Find a coach banner — will enable later */}
+      {/* Find a coach */}
+      <Card
+        onClick={() => onNavigate('findCoach')}
+        style={{ marginBottom: 12, cursor: 'pointer', background: `linear-gradient(135deg, ${COLORS.purple}15, ${COLORS.purple}05)`, border: `1px solid ${COLORS.purple}30` }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <GraduationCap size={20} color={COLORS.purple} />
+            <div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>Найти тренера</span>
+              <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>Запишись на тренировку</p>
+            </div>
+          </div>
+          <ChevronRight size={16} color={COLORS.textDim} />
+        </div>
+      </Card>
 
       {/* FAQ link */}
       <Card
@@ -256,7 +272,46 @@ export function Home({ user, onNavigate }) {
         </div>
       </Card>
 
-      {/* HIDDEN: Training sessions & homework sections — will enable later */}
+      {/* Training sessions */}
+      {trainingSessions.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10 }}>Мои тренировки</h3>
+          {trainingSessions.map(s => (
+            <Card key={s.id} style={{ marginBottom: 8, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Calendar size={16} color={COLORS.purple} />
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.text }}>{s.title || 'Тренировка'}</span>
+                  <p style={{ fontSize: 12, color: COLORS.textDim, margin: 0 }}>
+                    {new Date(s.startTime).toLocaleDateString('ru', { day: 'numeric', month: 'short' })} в {new Date(s.startTime).toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <Badge style={{ fontSize: 10 }}>{s.status === 'CONFIRMED' ? 'Подтверждено' : s.status}</Badge>
+              </div>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {/* Homework */}
+      {homework.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: COLORS.text, marginBottom: 10, marginTop: 16 }}>Домашние задания</h3>
+          {homework.map(h => (
+            <Card key={h.id} style={{ marginBottom: 8, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <BookOpen size={16} color={COLORS.warning} />
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 13, color: COLORS.text }}>{h.text}</span>
+                  <p style={{ fontSize: 11, color: COLORS.textDim, margin: 0 }}>
+                    от {h.coach?.firstName || 'Тренер'} — {new Date(h.createdAt).toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </>
+      )}
 
       {/* Upcoming match */}
       {matches.length > 0 && (
