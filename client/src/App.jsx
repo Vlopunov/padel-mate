@@ -5,17 +5,24 @@ import { COLORS } from './config';
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
   componentDidCatch(error, info) { console.error('App crash:', error, info); }
   render() {
     if (this.state.hasError) {
+      const err = this.state.error;
+      const msg = err?.message || err?.toString?.() || 'Unknown error';
+      const stack = err?.stack?.split('\n').slice(0, 5).join('\n') || '';
       return (
         <div style={{ padding: 40, textAlign: 'center', color: '#FF4757', background: '#0A0E1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <p style={{ fontSize: 48, marginBottom: 16 }}><AlertTriangle size={48} color="#FF4757" /></p>
           <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Произошла ошибка</p>
-          <p style={{ fontSize: 14, color: '#8a8fa8', marginBottom: 20 }}>Попробуйте перезагрузить приложение</p>
+          <p style={{ fontSize: 14, color: '#8a8fa8', marginBottom: 12 }}>Попробуйте перезагрузить приложение</p>
+          <div style={{ padding: 12, background: '#1a1a2e', borderRadius: 10, marginBottom: 16, maxWidth: 340, width: '100%', textAlign: 'left' }}>
+            <p style={{ fontSize: 12, color: '#FF4757', wordBreak: 'break-all', marginBottom: 6 }}>{msg}</p>
+            <p style={{ fontSize: 10, color: '#888', wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}>{stack}</p>
+          </div>
           <button onClick={() => window.location.reload()} style={{ padding: '10px 24px', borderRadius: 10, background: '#00E68A', color: '#000', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
             Перезагрузить
           </button>
