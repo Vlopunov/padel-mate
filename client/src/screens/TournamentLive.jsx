@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { Trophy, CircleDot, Rocket, Share2, ArrowRight, Flag, TrendingUp, Check, Circle, PenLine, Medal } from 'lucide-react';
+import { Trophy, CircleDot, Play, Share2, ArrowRight, Flag, TrendingUp, Check, Circle, PenLine, Medal } from 'lucide-react';
 import { COLORS, BOT_USERNAME } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -185,7 +185,7 @@ export function TournamentLive({ tournamentId, user, onBack, onNavigate }) {
           </p>
           {isAdmin && tournament.status === 'REGISTRATION' && (
             <Button variant="accent" onClick={handleStart} fullWidth>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Rocket size={16} /> Запустить турнир</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Play size={16} /> Запустить турнир</span>
             </Button>
           )}
         </Card>

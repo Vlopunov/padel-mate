@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Settings, BarChart3, Users, CircleDot, Circle, Trophy, Hourglass, Check, CheckCircle, XCircle, Star, Ban, Trash2, PenLine, Plus, Calendar, TrendingUp, MapPin, ChevronRight, Building2, MessageCircle, Crown, Clock, Timer, RefreshCw, Pause, FlaskConical, DollarSign, Tv, Link2, ArrowRight, Medal, AlertTriangle, Clipboard } from 'lucide-react';
+import { ArrowLeft, Settings, BarChart3, Users, CircleDot, Circle, Trophy, Hourglass, Check, CheckCircle, XCircle, Star, Ban, Trash2, PenLine, Plus, Calendar, TrendingUp, MapPin, ChevronRight, Building2, MessageCircle, Crown, Clock, Timer, RefreshCw, Pause, FlaskConical, DollarSign, Tv, Link2, ArrowRight, Medal, AlertTriangle, Clipboard, Play, Flag } from 'lucide-react';
 import { COLORS, LEVELS, getLevel, getLevelByValue } from '../config';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
@@ -937,7 +937,7 @@ export function Admin({ onBack }) {
 
       {/* Tournament Detail */}
       {!loading && tab === 'tournaments' && selectedTournament && !showTournamentForm && (
-        <TournamentDetail
+        <TournamentDetailSafe
           tournament={selectedTournament}
           allUsers={users}
           onBack={() => setSelectedTournament(null)}
@@ -1797,6 +1797,31 @@ function MatchEditForm({ match, venues, onBack, onSave }) {
   );
 }
 
+// ─── Tournament Detail Safe Wrapper ───
+
+class TournamentDetailSafe extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { console.error('TournamentDetail crash:', error, info); }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 20 }}>
+          <button onClick={this.props.onBack} style={{ background: COLORS.surface, border: `1px solid ${COLORS.border}`, borderRadius: 10, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: COLORS.textDim, marginBottom: 12 }}>
+            <ArrowLeft size={16} />
+          </button>
+          <div style={{ padding: 20, background: `${COLORS.danger}15`, borderRadius: 14, border: `1px solid ${COLORS.danger}30` }}>
+            <p style={{ color: COLORS.danger, fontWeight: 700, marginBottom: 8 }}>Ошибка отрисовки турнира</p>
+            <p style={{ color: COLORS.textDim, fontSize: 12, wordBreak: 'break-all' }}>{this.state.error?.message || String(this.state.error)}</p>
+            <p style={{ color: COLORS.textDim, fontSize: 11, marginTop: 8, wordBreak: 'break-all' }}>{this.state.error?.stack?.split('\n').slice(0, 3).join('\n')}</p>
+          </div>
+        </div>
+      );
+    }
+    return <TournamentDetail {...this.props} />;
+  }
+}
+
 // ─── Tournament Detail View (Enhanced with Live Controls) ───
 
 function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDeleteReg, onAddPlayer, onChangeStatus }) {
@@ -1996,7 +2021,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
       {isLiveFormat && isRegistration && (
         <Card style={{ marginBottom: 12, padding: 16, textAlign: 'center' }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.text, marginBottom: 8 }}>
-            {<Rocket size={14} />} Готовы к старту?
+            {<Play size={14} />} Готовы к старту?
           </p>
           <p style={{ fontSize: 12, color: COLORS.textDim, marginBottom: 14 }}>
             {t.teamsRegistered} {isIndividual ? 'игроков' : 'пар'} зарегистрировано (минимум 4 игрока)
@@ -2011,7 +2036,7 @@ function TournamentDetail({ tournament, allUsers, onBack, onEdit, onDelete, onDe
               fontSize: 15, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            {actionLoading ? 'Запуск...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Rocket size={14} /> Запустить турнир</span>}
+            {actionLoading ? 'Запуск...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Play size={14} /> Запустить турнир</span>}
           </button>
         </Card>
       )}
