@@ -156,7 +156,7 @@ export function Leaderboard({ user, onNavigate }) {
             const place = idx + 1;
             const podiumHeight = place === 1 ? 44 : place === 2 ? 28 : 16;
             const avatarSize = place === 1 ? 72 : 56;
-            const badgeSize = place === 1 ? 28 : 24;
+            const badgeSize = place === 1 ? 32 : 26;
             const badgeBg = MEDAL_COLORS[idx];
             return (
               <div
@@ -193,11 +193,11 @@ export function Leaderboard({ user, onNavigate }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: place === 1 ? 14 : 12,
+                    fontSize: place === 1 ? 16 : 13,
                     fontWeight: 900,
                     color: '#000',
-                    border: `2px solid ${COLORS.bg}`,
-                    boxShadow: `0 2px 8px ${badgeBg}66`,
+                    border: `3px solid ${COLORS.bg}`,
+                    boxShadow: `0 2px 10px ${badgeBg}88`,
                   }}>
                     {place}
                   </div>
