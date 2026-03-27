@@ -53,4 +53,26 @@ function authMiddleware(req, res, next) {
   }
 }
 
-module.exports = { validateTelegramInitData, generateToken, authMiddleware, SECRET };
+function validateMaxInitData(initData) {
+  const params = new URLSearchParams(initData);
+  const hash = params.get("hash");
+  params.delete("hash");
+
+  const entries = [...params.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const dataCheckString = entries.map(([k, v]) => `${k}=${v}`).join("\n");
+
+  const maxToken = process.env.MAX_BOT_TOKEN || "";
+  const secretKey = crypto
+    .createHmac("sha256", "WebAppData")
+    .update(maxToken)
+    .digest();
+
+  const calculatedHash = crypto
+    .createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex");
+
+  return calculatedHash === hash;
+}
+
+module.exports = { validateTelegramInitData, validateMaxInitData, generateToken, authMiddleware, SECRET };

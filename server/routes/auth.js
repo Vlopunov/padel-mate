@@ -1,6 +1,6 @@
 const express = require("express");
 const prisma = require("../lib/prisma");
-const { validateTelegramInitData, generateToken } = require("../middleware/auth");
+const { validateTelegramInitData, validateMaxInitData, generateToken } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -94,6 +94,99 @@ router.post("/telegram", async (req, res) => {
     });
   } catch (err) {
     console.error("Auth error:", err);
+    res.status(500).json({ error: "Ошибка авторизации" });
+  }
+});
+
+// ─── MAX Messenger Auth ────────────────────────────
+router.post("/max", async (req, res) => {
+  try {
+    const { initData } = req.body;
+
+    if (!initData) {
+      return res.status(400).json({ error: "initData обязателен" });
+    }
+
+    const skipValidation = process.env.SKIP_TG_VALIDATION === "true" && process.env.NODE_ENV !== "production";
+    if (!skipValidation && !validateMaxInitData(initData)) {
+      return res.status(401).json({ error: "Невалидные данные MAX" });
+    }
+
+    const params = new URLSearchParams(initData);
+    const userRaw = params.get("user");
+    if (!userRaw) {
+      return res.status(400).json({ error: "Данные пользователя отсутствуют" });
+    }
+
+    let maxUser;
+    try {
+      maxUser = JSON.parse(userRaw);
+    } catch (e) {
+      return res.status(400).json({ error: "Невалидные данные пользователя" });
+    }
+    if (!maxUser || !maxUser.id) {
+      return res.status(400).json({ error: "ID пользователя отсутствует" });
+    }
+
+    // MAX user IDs are stored in the same telegramId field for simplicity
+    const telegramId = BigInt(maxUser.id);
+
+    let user = await prisma.user.findUnique({
+      where: { telegramId },
+    });
+
+    const isNew = !user;
+
+    if (isNew) {
+      user = await prisma.user.create({
+        data: {
+          telegramId,
+          firstName: maxUser.first_name || maxUser.name || "User",
+          lastName: maxUser.last_name || null,
+          username: maxUser.username || null,
+          photoUrl: maxUser.photo_url || null,
+        },
+      });
+
+      // Notify admins
+      try {
+        const { sendTelegramMessage } = require("../services/notifications");
+        const admins = await prisma.user.findMany({
+          where: { isAdmin: true },
+          select: { telegramId: true },
+        });
+        const nameStr = `${user.firstName}${user.lastName ? " " + user.lastName : ""}`;
+        const total = await prisma.user.count();
+        const msg = `🆕 Новый игрок (MAX): <b>${nameStr}</b>\n👥 Всего игроков: <b>${total}</b>`;
+        for (const admin of admins) {
+          sendTelegramMessage(admin.telegramId.toString(), msg).catch(() => {});
+        }
+      } catch (notifyErr) {
+        console.error("New MAX user notify error:", notifyErr.message);
+      }
+    } else {
+      user = await prisma.user.update({
+        where: { telegramId },
+        data: {
+          firstName: maxUser.first_name || maxUser.name || user.firstName,
+          lastName: maxUser.last_name,
+          username: maxUser.username,
+          photoUrl: maxUser.photo_url || user.photoUrl,
+        },
+      });
+    }
+
+    const token = generateToken(user);
+    const safeUser = { ...user, telegramId: user.telegramId.toString() };
+
+    res.json({
+      token,
+      user: safeUser,
+      isNew,
+      needsOnboarding: !user.onboarded,
+    });
+  } catch (err) {
+    console.error("MAX auth error:", err);
     res.status(500).json({ error: "Ошибка авторизации" });
   }
 });

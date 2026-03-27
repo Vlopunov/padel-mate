@@ -32,7 +32,7 @@ class ErrorBoundary extends Component {
     return this.props.children;
   }
 }
-import { useTelegram } from './hooks/useTelegram';
+import { usePlatform } from './hooks/usePlatform';
 import { api } from './services/api';
 
 import { TabBar } from './components/ui/TabBar';
@@ -60,7 +60,7 @@ import { FindCoach } from './screens/FindCoach';
 import { CoachProfile } from './screens/CoachProfile';
 
 export default function App() {
-  const { user: tgUser, initData, hapticFeedback } = useTelegram();
+  const { platform, user: tgUser, initData, hapticFeedback } = usePlatform();
   const [state, setState] = useState('loading'); // loading, onboarding, app
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
@@ -121,16 +121,17 @@ export default function App() {
 
       if (!authData) {
         const tgAvailable = !!window.Telegram;
+        const maxAvailable = !!window.WebApp;
         const webAppAvailable = !!window.Telegram?.WebApp;
-        const initDataValue = window.Telegram?.WebApp?.initData;
-        const version = window.Telegram?.WebApp?.version;
-        const platform = window.Telegram?.WebApp?.platform;
-        setError(`Откройте приложение через Telegram\n\nDebug: TG=${tgAvailable}, WebApp=${webAppAvailable}, initData=${!!initDataValue}, v=${version}, platform=${platform}`);
+        setError(`Откройте приложение через Telegram или MAX\n\nDebug: TG=${tgAvailable}, MAX=${maxAvailable}, WebApp=${webAppAvailable}, platform=${platform}`);
         setState('error');
         return;
       }
 
-      const result = await api.auth.telegram(authData);
+      // Use platform-specific auth endpoint
+      const result = platform === 'max'
+        ? await api.auth.max(authData)
+        : await api.auth.telegram(authData);
       api.setToken(result.token);
       setUser(result.user);
 
@@ -403,7 +404,7 @@ export default function App() {
 const containerStyle = {
   maxWidth: 420,
   margin: '0 auto',
-  padding: 'calc(12px + var(--tg-content-safe-area-inset-top, 0px) + var(--tg-safe-area-inset-top, 0px)) 16px 12px',
+  padding: 'calc(12px + var(--tg-content-safe-area-inset-top, var(--max-safe-area-inset-top, 0px)) + var(--tg-safe-area-inset-top, 0px)) 16px 12px',
   minHeight: '100vh',
   background: COLORS.bg,
 };

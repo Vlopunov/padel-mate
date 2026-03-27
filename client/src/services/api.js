@@ -53,6 +53,7 @@ export const api = {
   // Auth
   auth: {
     telegram: (initData) => api.fetch('/auth/telegram', { method: 'POST', body: JSON.stringify({ initData }) }),
+    max: (initData) => api.fetch('/auth/max', { method: 'POST', body: JSON.stringify({ initData }) }),
   },
 
   // Users
